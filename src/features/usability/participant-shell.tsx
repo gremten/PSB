@@ -15,12 +15,6 @@ const tabs = [
   { href: "/more", label: "Ещё", icon: "/figma/home/tab-more.svg", dataTrack: "tab.more.unavailable", unavailable: true },
 ];
 
-function ConceptNotice() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
-  return <button type="button" className="concept-notice" aria-label="Закрыть уведомление: концепт интерфейса, не продукт банка" data-track="concept.notice.dismiss" onClick={() => { window.localStorage.setItem("psb-concept-notice-dismissed", "1"); setVisible(false); }}><span>Концепт интерфейса · не продукт банка</span><span className="concept-notice-close" aria-hidden="true">×</span></button>;
-}
-
 function DemoUnavailableToast() {
   const [visible, setVisible] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,7 +39,7 @@ function DemoUnavailableToast() {
 function ShellBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
-  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="participant-phone"><div className="participant-content">{children}</div><ConceptNotice /><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div></div></>;
+  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div><div className="participant-phone"><div className="participant-content">{children}</div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div></div></>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {
