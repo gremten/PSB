@@ -17,6 +17,7 @@ interface TelegramWebApp {
   ready(): void;
   expand(): void;
   requestFullscreen?(): void;
+  exitFullscreen?(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
   setBottomBarColor?(color: string): void;
