@@ -94,7 +94,9 @@ h1, h2, h3, p { margin-top: 0; }
 
 html[data-telegram-mini-app="true"] body:has(.participant-stage) {
   height: min(var(--app-tg-viewport-height, 100dvh), 980px);
+  background: var(--bg-surface);
 }
+html[data-telegram-mini-app="true"] { background: var(--bg-surface); }
 html[data-telegram-mini-app="true"] .participant-stage {
   height: min(var(--app-tg-viewport-height, 100dvh), 980px);
   min-height: 0;
@@ -123,6 +125,10 @@ html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .telegram-d
   font-weight: 560;
   line-height: 14px;
   white-space: nowrap;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   pointer-events: none;
 }
 .participant-content::-webkit-scrollbar { display: none; }
