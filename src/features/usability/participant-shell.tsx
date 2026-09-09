@@ -1,11 +1,13 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Tabbar } from "@/components/ui";
 import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
 import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
 import { ParticipantProvider } from "./participant-provider";
+import { PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
+import { resetParticipantState } from "@/lib/testing/participant-state";
 
 const tabs = [
   { href: "/", label: "Главная", icon: "/figma/home/tab-home.svg", dataTrack: "tab.home.open" },
@@ -54,8 +56,10 @@ function DemoUnavailableToast() {
 
 function ShellBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const participantEntered = useSyncExternalStore(subscribeToRole, participantRoleSnapshot, () => false);
+  const [participantName, setParticipantName] = useState("");
+  const [entryError, setEntryError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
 
   const enterParticipant = () => {
@@ -63,7 +67,38 @@ function ShellBody({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event(ROLE_CHANGED_EVENT));
   };
 
-  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className="role-gate" aria-labelledby="role-gate-title"><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Выберите роль</h1><p>Участник проходит тест. Доступ модератора защищён паролем.</p><div className="role-gate__actions"><button type="button" data-track="role.participant.enter" onClick={enterParticipant}>Участник</button><button type="button" className="role-gate__secondary" data-track="role.moderator.enter" onClick={() => router.push("/moderator")}>Модератор</button></div></section> : <div className="participant-phone"><div className="participant-content">{children}</div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
+  const createParticipantSession = async (event: FormEvent) => {
+    event.preventDefault();
+    const cleanName = participantName.trim();
+    if (!cleanName) return;
+    setSubmitting(true);
+    setEntryError("");
+    try {
+      const response = await fetch("/api/testing/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantName: cleanName }),
+      });
+      const payload = await response.json() as { session?: { id: string }; error?: string };
+      if (!response.ok || !payload.session) throw new Error(payload.error ?? "Не удалось начать тест");
+      window.sessionStorage.setItem(PARTICIPANT_SESSION_KEY, payload.session.id);
+      resetParticipantState("disconnected");
+      enterParticipant();
+      void track("screen_view", { screen: pathname, action: "screen.home.view" });
+    } catch (cause) {
+      setEntryError(cause instanceof Error ? cause.message : "Не удалось начать тест");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const skipParticipantSession = () => {
+    window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
+    resetParticipantState("disconnected");
+    enterParticipant();
+  };
+
+  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className="role-gate" aria-labelledby="role-gate-title"><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Начать тест</h1><p>Введите псевдоним или код участника — без фамилии и других личных данных.</p><form className="role-gate__form" onSubmit={createParticipantSession}><label htmlFor="participant-name">Псевдоним участника</label><div className="role-gate__input-row"><input id="participant-name" name="participantName" maxLength={32} autoComplete="off" placeholder="Например, P-01" value={participantName} onChange={(event) => setParticipantName(event.target.value)} /><button type="submit" aria-label="Продолжить" data-track="participant.session.create" disabled={!participantName.trim() || submitting}>→</button></div>{entryError && <p className="role-gate__error" role="alert">{entryError}</p>}<button type="button" className="role-gate__skip" data-track="participant.session.skip" onClick={skipParticipantSession}>Пропустить</button></form></section> : <div className="participant-phone"><div className="participant-content">{children}</div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {

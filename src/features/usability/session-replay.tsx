@@ -52,17 +52,20 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
 
   if (!current) return <div className={styles.empty}>Для replay пока нет событий.</div>;
 
-  const x = numberMetadata(current, "x");
-  const y = numberMetadata(current, "y");
-  const viewportWidth = numberMetadata(current, "viewportWidth");
-  const viewportHeight = numberMetadata(current, "viewportHeight");
-  const hasPoint = current.type === "tap" && x !== null && y !== null && viewportWidth && viewportHeight;
+  const visibleTaps = replayEvents.slice(0, safeIndex + 1).filter((event) => event.type === "tap" && (event.screen ?? "/") === screen).slice(-30).flatMap((event) => {
+    const x = numberMetadata(event, "x");
+    const y = numberMetadata(event, "y");
+    const viewportWidth = numberMetadata(event, "viewportWidth");
+    const viewportHeight = numberMetadata(event, "viewportHeight");
+    if (x === null || y === null || !viewportWidth || !viewportHeight) return [];
+    return [{ event, left: x / viewportWidth * 402, top: y / viewportHeight * 874 }];
+  });
 
   return <div className={styles.replayGrid}>
     <div>
       <div className={styles.replayViewport}>
         <iframe ref={iframeRef} key={screen} src={replayUrl(screen)} title={`Replay экрана ${screen}`} onLoad={syncScroll} />
-        {hasPoint && <span className={styles.replayPoint} style={{ left: `${Math.min(100, Math.max(0, x / viewportWidth * 100))}%`, top: `${Math.min(100, Math.max(0, y / viewportHeight * 100))}%` }}><i /></span>}
+        {visibleTaps.map(({ event, left, top }) => <span key={event.id} className={`${styles.replayPoint} ${event.id === current.id ? styles.replayPointCurrent : styles.replayPointPast}`} style={{ left: Math.min(402, Math.max(0, left)), top: Math.min(874, Math.max(0, top)) }}><i /></span>)}
       </div>
       <div className={styles.replayControls}>
         <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (safeIndex >= replayEvents.length - 1) setIndex(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>
@@ -72,7 +75,7 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type}</p>
     </div>
     <div className={styles.replayTimeline}>
-      {replayEvents.map((event, eventIndex) => <button type="button" className={eventIndex === index ? styles.replayEventActive : ""} key={event.id} onClick={() => { setPlaying(false); setIndex(eventIndex); }}>
+      {replayEvents.map((event, eventIndex) => <button type="button" className={`${eventIndex === index ? styles.replayEventActive : ""} ${event.type === "tap" ? styles.replayTapEvent : ""}`} key={event.id} onClick={() => { setPlaying(false); setIndex(eventIndex); }}>
         <span>{eventElapsed(event, startedAt, replayEvents[0].timestamp)}</span>
         <strong>{event.type}</strong>
         <small>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</small>

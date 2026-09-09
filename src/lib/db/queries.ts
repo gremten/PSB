@@ -148,6 +148,19 @@ export async function createSession(participantCode: string, variant: CashbackVa
   return (await getSession(id))!;
 }
 
+export async function createParticipantSession(participantName: string) {
+  const id = randomUUID();
+  const timestamp = now();
+  const cleanName = participantName.trim().replace(/\s+/g, " ").slice(0, 32);
+  if (!cleanName) throw new Error("Укажите имя или псевдоним");
+  await getDatabase().run(
+    "INSERT INTO sessions (id, participant_code, variant, created_at, started_at, build_id) VALUES (?, ?, 'disconnected', ?, ?, ?)",
+    [id, cleanName, timestamp, timestamp, buildId()],
+  );
+  await insertEvent({ sessionId: id, type: "session_started", screen: "/", action: "participant.session.started" });
+  return (await getSession(id))!;
+}
+
 export async function startSession(id: string) {
   const session = await getSession(id);
   if (!session) throw new Error("Session not found");
@@ -198,16 +211,17 @@ async function insertEvent(input: {
 
 export async function recordParticipantEvent(input: {
   eventName: string;
+  sessionId?: string;
   screen?: string;
   action?: string;
   target?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const state = await getResearchState();
-  if (!state.sessionId || state.sessionStatus !== "running") return null;
+  if (!input.sessionId) return null;
+  const session = await getSession(input.sessionId);
+  if (!session?.startedAt || session.endedAt) return null;
   return insertEvent({
-    sessionId: state.sessionId,
-    taskRunId: state.currentTaskRunId,
+    sessionId: session.id,
     type: input.eventName,
     screen: input.screen,
     action: input.action,

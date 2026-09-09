@@ -54,10 +54,10 @@ export function Transaction({ icon, imageSrc, title, meta, amount, bonus }: { ic
 
 export function SettingsRow({ label, icon, dataTrack }: { label: string; icon?: string; dataTrack: string }) {
   return (
-    <button className={`${styles.settingsRow} ${icon ? "" : styles.settingsRowSimple}`} data-track={dataTrack}>
+    <button type="button" className={`${styles.settingsRow} ${icon ? "" : styles.settingsRowSimple}`} data-track={dataTrack} onClick={showDemoUnavailable}>
       {icon && <span className={styles.settingIcon} aria-hidden="true">{icon}</span>}
       <span className={styles.settingsLabel}>{label}</span>
-      <span className={styles.chevron} aria-hidden="true">›</span>
+      <Image className={styles.settingsArrow} src="/figma/account/arrow-forward.svg" alt="" width={24} height={24} />
     </button>
   );
 }

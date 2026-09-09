@@ -1,8 +1,8 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { getInitialParticipantState, loadParticipantState, resetParticipantState, saveParticipantState } from "@/lib/testing/participant-state";
+import { usePathname } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { loadParticipantState, saveParticipantState } from "@/lib/testing/participant-state";
 import { track } from "@/lib/testing/tracking";
 import type { ParticipantProductState, ResearchSessionState } from "@/lib/testing/types";
 
@@ -21,32 +21,18 @@ const ParticipantContext = createContext<ParticipantContextValue | null>(null);
 
 export function ParticipantProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [researchState, setResearchState] = useState(idleResearchState);
-  const [productState, setProductState] = useState(getInitialParticipantState("disconnected"));
-  const seenReset = useRef<number | null>(null);
-
-  const applyResearchState = useCallback((next: ResearchSessionState, initial = false) => {
-    const resetChanged = seenReset.current !== null && seenReset.current !== next.resetVersion;
-    setResearchState(next);
-    if (initial) setProductState(loadParticipantState(next.cashbackVariant));
-    if (resetChanged) {
-      setProductState(resetParticipantState(next.cashbackVariant));
-      router.replace("/");
-    }
-    seenReset.current = next.resetVersion;
-  }, [router]);
+  const [researchState] = useState(idleResearchState);
+  const [productState, setProductState] = useState(() => loadParticipantState("disconnected"));
 
   useEffect(() => {
-    fetch("/api/testing/state").then((response) => response.json()).then((data) => applyResearchState(data, true)).catch(() => {});
-    const source = new EventSource("/api/testing/state/stream");
-    source.addEventListener("control", (event) => applyResearchState(JSON.parse((event as MessageEvent).data)));
-    return () => source.close();
-  }, [applyResearchState]);
+    const handleReset = (event: Event) => setProductState((event as CustomEvent<ParticipantProductState>).detail);
+    window.addEventListener("psb:participant-reset", handleReset);
+    return () => window.removeEventListener("psb:participant-reset", handleReset);
+  }, []);
 
   useEffect(() => {
     track("screen_view", { screen: pathname, action: `screen.${pathname === "/" ? "home" : pathname.slice(1).replaceAll("/", ".")}.view` });
-  }, [pathname, researchState.sessionId]);
+  }, [pathname]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {

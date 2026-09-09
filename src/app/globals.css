@@ -60,6 +60,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin-top: 0; }
 
+:where(button:not(:disabled), a[href], [role="button"]) {
+  scale: 1;
+  transition: scale 100ms ease-out;
+}
+:where(button:not(:disabled), a[href], [role="button"]):active { scale: .95; }
+
 .participant-stage {
   position: relative;
   width: 100%;
@@ -102,9 +108,15 @@ h1, h2, h3, p { margin-top: 0; }
 .role-gate__eyebrow { margin-bottom: 8px; color: var(--action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .role-gate h1 { margin-bottom: 8px; font-size: 28px; line-height: 34px; }
 .role-gate > p:not(.role-gate__eyebrow) { margin-bottom: 24px; color: var(--text-secondary); font-size: 14px; line-height: 20px; }
-.role-gate__actions { display: grid; gap: 10px; }
-.role-gate__actions button { min-height: 50px; border: 0; border-radius: 16px; color: var(--text-on-color); background: var(--action-primary); font-weight: 700; cursor: pointer; }
-.role-gate__actions .role-gate__secondary { border: 1px solid var(--border-primary); color: var(--text-primary); background: var(--bg-elevated); }
+.role-gate__form { display: grid; gap: 10px; }
+.role-gate__form > label { color: var(--text-secondary); font-size: 12px; }
+.role-gate__input-row { display: grid; grid-template-columns: minmax(0, 1fr) 50px; gap: 8px; }
+.role-gate__input-row input { min-width: 0; min-height: 50px; border: 1px solid var(--border-primary); border-radius: 16px; padding: 0 16px; color: var(--text-primary); background: var(--bg-elevated); outline: none; }
+.role-gate__input-row input:focus { border-color: var(--action-primary); }
+.role-gate__input-row button { border: 0; border-radius: 16px; color: var(--text-on-color); background: var(--action-primary); font-size: 24px; font-weight: 700; cursor: pointer; }
+.role-gate__input-row button:disabled { cursor: not-allowed; opacity: .4; }
+.role-gate__skip { min-height: 48px; border: 1px solid var(--border-primary); border-radius: 16px; color: var(--text-primary); background: transparent; font-weight: 700; cursor: pointer; }
+.role-gate__error { margin: 0 !important; color: #ff8272 !important; font-size: 12px !important; }
 
 html[data-telegram-mini-app="true"] body:has(.participant-stage) {
   height: min(var(--app-tg-viewport-height, 100dvh), 980px);

@@ -1,15 +1,73 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { DetailHeader, RouteButton, SettingsRow, styles } from "@/features/bank/bank-ui";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
+import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
+import { track } from "@/lib/testing/tracking";
 
 export const fakeCard = { number: "4588 2344 4563 3124", expiry: "07/28", cvv: "456" };
 
+const cards = [
+  { id: "night", type: "night", ending: "2345", logo: "/figma/card/logo-night.svg", mir: "/figma/card/mir-night.svg" },
+  { id: "orange", type: "orange", ending: "3124", logo: "/figma/card/logo-orange.svg", mir: "/figma/card/mir-orange.svg" },
+] as const;
+
+type CardType = (typeof cards)[number]["type"];
+
+function CardFront({ type, ending, logo, mir, hidden }: { type: CardType; ending: string; logo: string; mir: string; hidden: boolean }) {
+  return (
+    <div aria-hidden={hidden} className={`${styles.flipFace} ${styles.flipFront} ${type === "orange" ? styles.flipFrontOrange : styles.flipFrontNight}`}>
+      <Image className={styles.flipLogo} src={logo} alt="" width={213} height={213} unoptimized />
+      <span className={styles.flipMir}><Image src={mir} alt="МИР" width={83} height={23} unoptimized /></span>
+      <span className={`${styles.flipEnding} ${type === "orange" ? styles.flipEndingDark : ""}`}>*{ending}</span>
+      <span className={styles.flipBadge}><Image src="/figma/card/show.svg" alt="" width={16} height={16} />Данные карты</span>
+    </div>
+  );
+}
+
+function CardField({ label, value, dataTrack, onCopy, wide = false, interactive }: { label: string; value: string; dataTrack: string; onCopy: () => void; wide?: boolean; interactive: boolean }) {
+  return (
+    <label className={`${styles.flipField} ${wide ? styles.flipFieldWide : ""}`}>
+      <span>{label}</span>
+      <button type="button" tabIndex={interactive ? 0 : -1} data-track={dataTrack} onClick={(event) => { event.stopPropagation(); onCopy(); }}>
+        <strong>{value}</strong><Image src="/figma/card/copy.svg" alt="Скопировать" width={16} height={16} />
+      </button>
+    </label>
+  );
+}
+
+function CardBack({ type, onCopy, onHide, visible }: { type: CardType; onCopy: (kind: keyof typeof fakeCard) => void; onHide: () => void; visible: boolean }) {
+  return (
+    <div aria-hidden={!visible} className={`${styles.flipFace} ${styles.flipBack} ${type === "orange" ? styles.flipBackOrange : styles.flipBackNight}`}>
+      <div className={styles.flipFields}>
+        <CardField wide interactive={visible} label="Номер карты" value={fakeCard.number} dataTrack={`card.${type}.number.copy`} onCopy={() => onCopy("number")} />
+        <div className={styles.flipFieldPair}>
+          <CardField interactive={visible} label="Срок" value={fakeCard.expiry} dataTrack={`card.${type}.expiry.copy`} onCopy={() => onCopy("expiry")} />
+          <CardField interactive={visible} label="CVV" value={fakeCard.cvv} dataTrack={`card.${type}.cvv.copy`} onCopy={() => onCopy("cvv")} />
+        </div>
+      </div>
+      <button type="button" tabIndex={visible ? 0 : -1} className={styles.flipBadge} data-track={`card.${type}.details.hide`} onClick={(event) => { event.stopPropagation(); onHide(); }}>
+        <Image src="/figma/card/hide.svg" alt="" width={16} height={16} />Скрыть
+      </button>
+    </div>
+  );
+}
+
 export default function CardPage() {
   const { productState, updateProductState } = useParticipant();
+  const [activeCard, setActiveCard] = useState(0);
+  const [flipped, setFlipped] = useState<boolean[]>([productState.cardDetailsRevealed, false]);
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
+  const pointerStart = useRef<number | null>(null);
+  const dragged = useRef(false);
+
+  const setCardSide = (index: number, next: boolean) => {
+    setFlipped((current) => current.map((value, cardIndex) => cardIndex === index ? next : value));
+    updateProductState({ cardDetailsRevealed: next }, next ? `card.${cards[index].type}.details.reveal` : `card.${cards[index].type}.details.hide`);
+    if (!next) setCopied(null);
+  };
 
   const copy = async (kind: keyof typeof fakeCard) => {
     try { await navigator.clipboard.writeText(fakeCard[kind]); } catch {}
@@ -17,40 +75,72 @@ export default function CardPage() {
     window.setTimeout(() => setCopied((current) => current === kind ? null : current), 1300);
   };
 
-  const toggleDetails = () => {
-    const revealed = !productState.cardDetailsRevealed;
-    updateProductState({ cardDetailsRevealed: revealed }, revealed ? "card.details.reveal" : "card.details.hide");
-    if (!revealed) setCopied(null);
+  const selectCard = (index: number, method: "tap" | "swipe") => {
+    setActiveCard(index);
+    setCopied(null);
+    void track("card_selection", { screen: "/card", action: `card.${cards[index].type}.select.${method}`, target: cards[index].id, metadata: { index } });
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerStart.current = event.clientX;
+    dragged.current = false;
+  };
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerStart.current === null) return;
+    const delta = event.clientX - pointerStart.current;
+    pointerStart.current = null;
+    if (Math.abs(delta) < 40) return;
+    dragged.current = true;
+    const next = delta < 0 ? Math.min(cards.length - 1, activeCard + 1) : Math.max(0, activeCard - 1);
+    if (next !== activeCard) selectCard(next, "swipe");
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerStart.current === null || dragged.current) return;
+    const delta = event.clientX - pointerStart.current;
+    if (Math.abs(delta) < 40) return;
+    pointerStart.current = null;
+    dragged.current = true;
+    const next = delta < 0 ? Math.min(cards.length - 1, activeCard + 1) : Math.max(0, activeCard - 1);
+    if (next !== activeCard) selectCard(next, "swipe");
   };
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} data-screen="card">
       <DetailHeader title="Карта «Твой банк»" subtitle="Платежный счет *6777" backHref="/account" />
-      <div className={styles.cardCarousel}>
-        <div className={styles.peekCard} aria-hidden="true" />
-        {!productState.cardDetailsRevealed ? (
-          <section className={`${styles.paymentCard} ${styles.paymentCardFront}`} aria-label="Карта Твой банк">
-            <div className={styles.cardTop}>
-              <Image src="/figma/icons/psb-logo.svg" alt="ПСБ" width={88} height={28} />
-              <Image src="/figma/icons/mir-logo.svg" alt="МИР" width={54} height={18} />
+
+      <section className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; }}>
+        {cards.map((card, index) => {
+          const positionClass = index === activeCard ? styles.cardSlideActive : index < activeCard ? styles.cardSlidePrevious : styles.cardSlideNext;
+          return (
+            <div
+              key={card.id}
+              className={`${styles.cardSlide} ${positionClass}`}
+              role="button"
+              tabIndex={index === activeCard ? 0 : -1}
+              aria-label={`${card.type === "night" ? "Карта Сильные люди" : "Карта Твой банк"}, ${flipped[index] ? "данные показаны" : "лицевая сторона"}`}
+              data-track={`card.${card.type}.${index === activeCard ? "flip" : "select"}`}
+              onClick={() => {
+                if (dragged.current) { dragged.current = false; return; }
+                if (index !== activeCard) { selectCard(index, "tap"); return; }
+                setCardSide(index, !flipped[index]);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (index !== activeCard) selectCard(index, "tap"); else setCardSide(index, !flipped[index]);
+              }}
+            >
+              <div className={`${styles.flipCardInner} ${flipped[index] ? styles.flipCardInnerBack : ""}`}>
+                <CardFront type={card.type} ending={card.ending} logo={card.logo} mir={card.mir} hidden={flipped[index]} />
+                <CardBack type={card.type} onCopy={copy} onHide={() => setCardSide(index, false)} visible={flipped[index]} />
+              </div>
             </div>
-            <span className={styles.maskedNumber}>•••• •••• •••• 2345</span>
-            <button className={styles.cardRevealButton} onClick={toggleDetails} data-track="card.details.reveal"><Image src="/figma/icons/card-show.svg" alt="" width={16} height={16} />Данные карты</button>
-          </section>
-        ) : (
-          <section className={`${styles.paymentCard} ${styles.paymentCardBack}`} aria-label="Данные карты">
-            {copied && <div className={styles.copiedToast} role="status">✓ Скопировано</div>}
-            <div className={styles.cardFieldList}>
-              <button className={styles.cardField} onClick={() => copy("number")} data-track="card.number.copy"><span><small>Номер карты</small><strong>{fakeCard.number}</strong></span><span className={styles.copyGlyph}>⧉</span></button>
-              <button className={styles.cardField} onClick={() => copy("expiry")} data-track="card.expiry.copy"><span><small>Срок действия</small><strong>{fakeCard.expiry}</strong></span><span className={styles.copyGlyph}>⧉</span></button>
-            </div>
-            <div className={styles.backSide}>
-              <button className={styles.cardField} onClick={() => copy("cvv")} data-track="card.cvv.copy"><span><small>CVV</small><strong>{fakeCard.cvv}</strong></span><span className={styles.copyGlyph}>⧉</span></button>
-              <button className={styles.cardRevealButton} onClick={toggleDetails} data-track="card.details.hide">Скрыть</button>
-            </div>
-          </section>
-        )}
-      </div>
+          );
+        })}
+        {copied && <div className={styles.copiedToast} role="status">Скопировано</div>}
+      </section>
 
       <section className={styles.cardSettings}>
         <div className={styles.surface}>
@@ -62,14 +152,11 @@ export default function CardPage() {
             <SettingsRow label="Перевыпустить" dataTrack="card.reissue.open" />
           </div>
           <div className={styles.dangerRow}>
-            <button className={styles.dangerPill} data-track="card.block.open">Заблокировать карту</button>
-            <button className={styles.dangerPill} data-track="card.close.open">Закрыть карту</button>
+            <button type="button" className={styles.dangerPill} data-track="card.block.open" onClick={showDemoUnavailable}>Заблокировать карту</button>
+            <button type="button" className={styles.dangerPill} data-track="card.close.open" onClick={showDemoUnavailable}>Закрыть карту</button>
           </div>
         </div>
       </section>
-      <div className={styles.buttonInset} style={{ marginTop: 20 }}>
-        <RouteButton href="/payment" className={styles.fullButton} dataTrack="card.payment.open">Перейти к тестовой оплате</RouteButton>
-      </div>
       <p className={styles.helperText}>Все реквизиты вымышлены и работают только в этой демонстрации.</p>
     </main>
   );
