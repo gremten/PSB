@@ -17,7 +17,7 @@ const tabs = [
 function ConceptNotice() {
   const [visible, setVisible] = useState(true);
   if (!visible) return null;
-  return <div className="concept-notice"><span>Концепт интерфейса · не продукт банка</span><button aria-label="Закрыть уведомление" data-track="concept.notice.dismiss" onClick={() => { window.localStorage.setItem("psb-concept-notice-dismissed", "1"); setVisible(false); }}>×</button></div>;
+  return <button type="button" className="concept-notice" aria-label="Закрыть уведомление: концепт интерфейса, не продукт банка" data-track="concept.notice.dismiss" onClick={() => { window.localStorage.setItem("psb-concept-notice-dismissed", "1"); setVisible(false); }}><span>Концепт интерфейса · не продукт банка</span><span className="concept-notice-close" aria-hidden="true">×</span></button>;
 }
 
 function DemoUnavailableToast() {
@@ -38,7 +38,7 @@ function DemoUnavailableToast() {
   }, []);
 
   if (!visible) return null;
-  return <div className="demo-toast" role="status" aria-live="polite" data-track="demo.unavailable.toast">Недоступно в демо-демонстрации</div>;
+  return <button type="button" className="demo-toast" aria-live="polite" data-track="demo.unavailable.toast.dismiss" onClick={() => setVisible(false)}>Недоступно в демо-демонстрации</button>;
 }
 
 function ShellBody({ children }: { children: React.ReactNode }) {
