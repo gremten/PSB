@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Tabbar } from "@/components/ui";
+import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
 import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
 import { ParticipantProvider } from "./participant-provider";
 
@@ -44,7 +45,7 @@ function DemoUnavailableToast() {
 function ShellBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
-  return <div className="participant-stage"><div className="participant-phone"><div className="participant-content">{children}</div><ConceptNotice /><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div></div>;
+  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="participant-phone"><div className="participant-content">{children}</div><ConceptNotice /><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div></div></>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {

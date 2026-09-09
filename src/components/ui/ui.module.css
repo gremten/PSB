@@ -21,7 +21,7 @@
 .cellTrailing { color: var(--text-secondary); }
 .badge { display: inline-flex; width: fit-content; align-items: center; min-height: 28px; border-radius: var(--radius-pill); padding: 4px 10px; color: var(--text-primary); background: var(--bg-elevated); font-size: 12px; font-weight: 650; }
 .badgeAccent { color: var(--text-on-color); background: var(--action-primary); }
-.tabbar { position: absolute; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; height: calc(67px + max(32px, env(safe-area-inset-bottom))); grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: 0; border-radius: 32px 32px 0 0; padding: 12px 16px max(32px, env(safe-area-inset-bottom)); background: #242a33bf; backdrop-filter: blur(11.2px); }
+.tabbar { position: absolute; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; height: calc(67px + max(32px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom))); grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: 0; border-radius: 32px 32px 0 0; padding: 12px 16px max(32px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom)); background: #242a33bf; backdrop-filter: blur(11.2px); }
 .tab { display: grid; width: 100%; min-width: 0; min-height: 44px; justify-items: center; gap: 4px; border: 0; padding: 0 2px; color: var(--icon-secondary); background: transparent; font-size: 12px; line-height: 16px; cursor: pointer; }
 .tabActive { color: var(--action-primary); }
 .tabIcon { width: 24px; height: 24px; background: currentColor; -webkit-mask: var(--tab-icon) center / 24px 24px no-repeat; mask: var(--tab-icon) center / 24px 24px no-repeat; }

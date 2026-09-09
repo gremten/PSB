@@ -4,6 +4,8 @@ Browser-ready moderated usability prototype of a PSB mobile-bank concept. The pa
 
 The participant viewport is limited to 440 × 980 px. Longer screens scroll inside the viewport while the header and bottom navigation stay fixed. Required Figma assets are committed locally under `public/figma`; the runtime does not depend on temporary Figma asset URLs.
 
+The same build is prepared for Telegram Mini Apps. Telegram launch and BotFather setup are documented in [`docs/TELEGRAM_MINI_APP.md`](docs/TELEGRAM_MINI_APP.md).
+
 The project also contains persistent research sessions, a protected moderator dashboard, semantic instrumentation, SSE live events, session reset controls, and aggregate metrics.
 
 ## Run locally

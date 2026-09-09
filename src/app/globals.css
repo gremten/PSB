@@ -31,6 +31,10 @@
   --space-6: 24px;
   --space-8: 32px;
   --font-onest: "Onest Variable", "Onest", system-ui, sans-serif;
+  --app-tg-safe-top: 0px;
+  --app-tg-safe-right: 0px;
+  --app-tg-safe-bottom: 0px;
+  --app-tg-safe-left: 0px;
 }
 
 * { box-sizing: border-box; }
@@ -79,11 +83,26 @@ h1, h2, h3, p { margin-top: 0; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: none;
-  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  padding-bottom: calc(104px + max(env(safe-area-inset-bottom), var(--app-tg-safe-bottom)));
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 .participant-content:has(.homeScreen) { background: var(--bg-surface); }
+
+html[data-telegram-mini-app="true"] body:has(.participant-stage) {
+  height: min(var(--app-tg-viewport-height, 100dvh), 980px);
+}
+html[data-telegram-mini-app="true"] .participant-stage {
+  height: min(var(--app-tg-viewport-height, 100dvh), 980px);
+  min-height: 0;
+  padding-top: var(--app-tg-safe-top);
+  padding-right: var(--app-tg-safe-right);
+  padding-left: var(--app-tg-safe-left);
+  background: var(--bg-surface);
+}
+html[data-telegram-mini-app="true"] .participant-phone {
+  height: 100%;
+}
 .participant-content::-webkit-scrollbar { display: none; }
 .concept-notice {
   position: absolute;
