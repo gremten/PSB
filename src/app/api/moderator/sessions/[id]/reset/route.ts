@@ -7,6 +7,6 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const unauthorized = requireModeratorResponse(request);
   if (unauthorized) return unauthorized;
-  try { const { id } = await context.params; resetParticipant(id); return NextResponse.json({ snapshot: getSessionSnapshot(id), research: getResearchState() }); }
+  try { const { id } = await context.params; await resetParticipant(id); return NextResponse.json({ snapshot: await getSessionSnapshot(id), research: await getResearchState() }); }
   catch (error) { return apiError(error); }
 }

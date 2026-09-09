@@ -3,7 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { HorizontalScroller } from "@/components/ui";
 import { ProfileHeader, Transaction, styles } from "@/features/bank/bank-ui";
+import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
 
 const quickActions = [
@@ -22,11 +24,11 @@ const currencies = [
 function SectionBar({ title, action, track }: { title: string; action: string; track: string }) {
   return (
     <div className={styles.sectionBar}>
-      <button className={styles.sectionTitleButton} data-track={`${track}.toggle`}>
+      <button className={styles.sectionTitleButton} data-track={`${track}.toggle`} onClick={showDemoUnavailable}>
         <span>{title}</span>
         <Image src="/figma/home/chevron-up.svg" alt="" width={16} height={16} />
       </button>
-      <button className={styles.sectionPill} data-track={`${track}.action`}>{action}</button>
+      <button className={styles.sectionPill} data-track={`${track}.action`} onClick={showDemoUnavailable}>{action}</button>
     </div>
   );
 }
@@ -37,19 +39,22 @@ export default function HomePage() {
 
   return (
     <main className={`${styles.screen} ${styles.homeScreen}`}>
+      <ProfileHeader />
       <section className={styles.homeTop}>
-        <ProfileHeader />
-
-        <div className={styles.promoScroller} aria-label="Предложения">
+        <HorizontalScroller className={styles.promoScroller} ariaLabel="Предложения">
           <article className={styles.promoCard} aria-label="Новые возможности. Попробуйте новые карты с хорошими условиями">
-            <Image className={styles.promoFullImage} src="/figma/home/banner-new-full.png" alt="" width={272} height={88} priority />
-            <button className={styles.promoCloseHit} aria-label="Закрыть предложение Новые возможности" data-track="home.promo.cards.dismiss" />
+            <Image className={styles.promoBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={438} height={290} priority />
+            <div className={styles.promoCopy}><strong>Новые возможности</strong><span>Попробуйте новые карты<br />с хорошими условиями</span></div>
+            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkCards}`}><Image src="/figma/home/banner-new.png" alt="" width={1200} height={1200} priority /></div>
+            <button className={styles.promoCloseHit} aria-label="Закрыть предложение Новые возможности" data-track="home.promo.cards.dismiss" onClick={showDemoUnavailable}><Image src="/figma/home/close.svg" alt="" width={16} height={16} /></button>
           </article>
           <article className={styles.promoCard} aria-label="Время сильных. Получайте больше выгоды, инвестируя в заводы">
-            <Image className={styles.promoFullImage} src="/figma/home/banner-strong-full.png" alt="" width={272} height={88} priority />
-            <button className={styles.promoCloseHit} aria-label="Закрыть предложение Время сильных" data-track="home.promo.strong.dismiss" />
+            <Image className={styles.promoBackdrop} src="/figma/home/banner-strong-bg.svg" alt="" width={438} height={290} priority />
+            <div className={styles.promoCopy}><strong>Время сильных</strong><span>Получайте больше выгоды,<br />инвестируя в заводы</span></div>
+            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkStrong}`}><Image src="/figma/home/banner-strong.png" alt="" width={800} height={800} priority /></div>
+            <button className={styles.promoCloseHit} aria-label="Закрыть предложение Время сильных" data-track="home.promo.strong.dismiss" onClick={showDemoUnavailable}><Image src="/figma/home/close.svg" alt="" width={16} height={16} /></button>
           </article>
-        </div>
+        </HorizontalScroller>
 
         <section className={styles.balanceArea} aria-label="Счета">
           <p className={styles.balanceCaption}>Всего на счетах</p>
@@ -61,12 +66,12 @@ export default function HomePage() {
                 <Image src="/figma/home/cashback.svg" alt="" width={16} height={16} />
               </Link>
             </div>
-            <button className={styles.balanceVisibility} aria-label="Скрыть баланс" data-track="home.balance.hide">
+            <button className={styles.balanceVisibility} aria-label="Скрыть баланс" data-track="home.balance.hide" onClick={showDemoUnavailable}>
               <Image src="/figma/home/hide.svg" alt="" width={24} height={24} />
             </button>
           </div>
 
-          <div className={styles.accountScroller}>
+          <HorizontalScroller className={styles.accountScroller} ariaLabel="Счета и продукты">
             <Link className={styles.accountCard} href="/account" data-track="home.account.open">
               <span className={styles.accountBadge}>
                 <Image src="/figma/home/bankcard.svg" alt="" width={16} height={16} />
@@ -77,25 +82,25 @@ export default function HomePage() {
                 <span className={styles.accountAmount}>11 726 777,<span className={styles.kopecks}>61</span> ₽</span>
               </span>
             </Link>
-            <button className={styles.accountCard} data-track="home.savings.open">
+            <button className={styles.accountCard} data-track="home.savings.open" onClick={showDemoUnavailable}>
               <span className={styles.accountBadge}>ставка 5%</span>
               <span>
                 <span className={styles.accountName}>Накопительный *1401</span>
                 <span className={styles.accountAmount}>554 711,<span className={styles.kopecks}>04</span> ₽</span>
               </span>
             </button>
-            <button className={`${styles.accountCard} ${styles.addProductCard}`} data-track="home.product.add">
+            <button className={`${styles.accountCard} ${styles.addProductCard}`} data-track="home.product.add" onClick={showDemoUnavailable}>
               <Image src="/figma/home/add-product.svg" alt="" width={32} height={32} />
               <span className={styles.addProductLabel}>Добавить</span>
             </button>
-          </div>
+          </HorizontalScroller>
         </section>
       </section>
 
       <div className={styles.homeFlow}>
         <nav className={styles.quickActions} aria-label="Быстрые действия">
           {quickActions.map((item) => (
-            <button className={styles.quickAction} key={item.track} data-track={item.track}>
+            <button className={styles.quickAction} key={item.track} data-track={item.track} onClick={showDemoUnavailable}>
               <span className={`${styles.quickIcon} ${item.primary ? styles.quickIconPrimary : ""}`}>
                 <Image src={item.icon} alt="" width={32} height={32} />
               </span>
@@ -138,12 +143,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <button className={`${styles.secondaryButton} ${styles.fullButton} ${styles.exchangeButton}`} data-track="home.exchange.open">Перейти к обмену</button>
+            <button className={`${styles.secondaryButton} ${styles.fullButton} ${styles.exchangeButton}`} data-track="home.exchange.open" onClick={showDemoUnavailable}>Перейти к обмену</button>
           </div>
         </section>
 
         <div className={styles.buttonInset}>
-          <button className={`${styles.primaryButton} ${styles.fullButton}`} data-track="home.customize.open">Настроить экран</button>
+          <button className={`${styles.primaryButton} ${styles.fullButton}`} data-track="home.customize.open" onClick={showDemoUnavailable}>Настроить экран</button>
         </div>
       </div>
 

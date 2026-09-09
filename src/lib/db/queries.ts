@@ -53,48 +53,29 @@ const eventSelect = `
   SELECT id, session_id sessionId, task_run_id taskRunId, timestamp, type,
          screen, action, target, metadata FROM events`;
 
-export function listSessions(limit = 30): ResearchSession[] {
-  return getDatabase()
-    .prepare(`${sessionSelect} ORDER BY created_at DESC LIMIT ?`)
-    .all(limit) as unknown as SessionRow[];
+export async function listSessions(limit = 30): Promise<ResearchSession[]> {
+  return getDatabase().all<SessionRow>(`${sessionSelect} ORDER BY created_at DESC LIMIT ?`, [limit]);
 }
 
-export function getSession(id: string): ResearchSession | null {
-  return (getDatabase().prepare(`${sessionSelect} WHERE id = ?`).get(id) as SessionRow | undefined) ?? null;
+export async function getSession(id: string): Promise<ResearchSession | null> {
+  return getDatabase().first<SessionRow>(`${sessionSelect} WHERE id = ?`, [id]);
 }
 
-export function getTaskRun(id: string): TaskRun | null {
-  const row = getDatabase().prepare(`${taskSelect} WHERE id = ?`).get(id) as TaskRunRow | undefined;
+export async function getTaskRun(id: string): Promise<TaskRun | null> {
+  const row = await getDatabase().first<TaskRunRow>(`${taskSelect} WHERE id = ?`, [id]);
   return row ? asTaskRun(row) : null;
 }
 
-export function getSessionSnapshot(id: string, eventLimit = 500): SessionSnapshot | null {
-  const session = getSession(id);
+export async function getSessionSnapshot(id: string, eventLimit = 500): Promise<SessionSnapshot | null> {
+  const session = await getSession(id);
   if (!session) return null;
-  const taskRuns = (
-    getDatabase().prepare(`${taskSelect} WHERE session_id = ? ORDER BY started_at`).all(id) as unknown as TaskRunRow[]
-  ).map(asTaskRun);
-  const events = (
-    getDatabase()
-      .prepare(`${eventSelect} WHERE session_id = ? ORDER BY id DESC LIMIT ?`)
-      .all(id, eventLimit) as unknown as EventRow[]
-  )
-    .reverse()
-    .map(asEvent);
+  const taskRuns = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id = ? ORDER BY started_at`, [id])).map(asTaskRun);
+  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id = ? ORDER BY id DESC LIMIT ?`, [id, eventLimit])).reverse().map(asEvent);
   return { session, taskRuns, events };
 }
 
-export function getResearchState(): ResearchSessionState {
-  const row = getDatabase()
-    .prepare(`
-      SELECT c.session_id sessionId, c.participant_code participantCode, c.variant,
-             c.current_task currentTask, c.current_task_run_id currentTaskRunId,
-             c.current_screen currentScreen, c.reset_version resetVersion,
-             s.started_at startedAt, s.ended_at endedAt
-      FROM research_control c LEFT JOIN sessions s ON s.id = c.session_id WHERE c.id = 1
-    `)
-    .get() as
-    | {
+export async function getResearchState(): Promise<ResearchSessionState> {
+  const row = await getDatabase().first<{
         sessionId: string | null;
         participantCode: string | null;
         variant: CashbackVariant;
@@ -104,8 +85,13 @@ export function getResearchState(): ResearchSessionState {
         resetVersion: number;
         startedAt: string | null;
         endedAt: string | null;
-      }
-    | undefined;
+      }>(`
+      SELECT c.session_id sessionId, c.participant_code participantCode, c.variant,
+             c.current_task currentTask, c.current_task_run_id currentTaskRunId,
+             c.current_screen currentScreen, c.reset_version resetVersion,
+             s.started_at startedAt, s.ended_at endedAt
+      FROM research_control c LEFT JOIN sessions s ON s.id = c.session_id WHERE c.id = 1
+    `);
   if (!row) {
     return {
       cashbackVariant: "disconnected",
@@ -137,45 +123,43 @@ export function getResearchState(): ResearchSessionState {
   };
 }
 
-function publishControl() {
-  eventBus.emit("control", getResearchState());
+async function publishControl() {
+  eventBus.emit("control", await getResearchState());
 }
 
-export function createSession(participantCode: string, variant: CashbackVariant) {
+export async function createSession(participantCode: string, variant: CashbackVariant) {
   const db = getDatabase();
   const id = randomUUID();
   const timestamp = now();
-  db.exec("BEGIN IMMEDIATE");
-  try {
-    db.prepare(
-      "INSERT INTO sessions (id, participant_code, variant, created_at, build_id) VALUES (?, ?, ?, ?, ?)",
-    ).run(id, participantCode.trim().slice(0, 32), variant, timestamp, buildId());
-    db.prepare(`
-      UPDATE research_control SET session_id = ?, participant_code = ?, variant = ?,
+  const cleanCode = participantCode.trim().slice(0, 32);
+  await db.batch([
+    {
+      sql: "INSERT INTO sessions (id, participant_code, variant, created_at, build_id) VALUES (?, ?, ?, ?, ?)",
+      params: [id, cleanCode, variant, timestamp, buildId()],
+    },
+    {
+      sql: `UPDATE research_control SET session_id = ?, participant_code = ?, variant = ?,
         current_task = NULL, current_task_run_id = NULL, current_screen = '/',
-        reset_version = reset_version + 1, updated_at = ? WHERE id = 1
-    `).run(id, participantCode.trim().slice(0, 32), variant, timestamp);
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
-  publishControl();
-  return getSession(id)!;
+        reset_version = reset_version + 1, updated_at = ? WHERE id = 1`,
+      params: [id, cleanCode, variant, timestamp],
+    },
+  ]);
+  await publishControl();
+  return (await getSession(id))!;
 }
 
-export function startSession(id: string) {
-  const session = getSession(id);
+export async function startSession(id: string) {
+  const session = await getSession(id);
   if (!session) throw new Error("Session not found");
   if (session.endedAt) throw new Error("Session already ended");
   if (!session.startedAt) {
-    getDatabase().prepare("UPDATE sessions SET started_at = ? WHERE id = ?").run(now(), id);
+    await getDatabase().run("UPDATE sessions SET started_at = ? WHERE id = ?", [now(), id]);
   }
-  publishControl();
-  return getSession(id)!;
+  await publishControl();
+  return (await getSession(id))!;
 }
 
-function insertEvent(input: {
+async function insertEvent(input: {
   sessionId: string;
   taskRunId?: string | null;
   type: string;
@@ -186,12 +170,10 @@ function insertEvent(input: {
 }) {
   const db = getDatabase();
   const timestamp = now();
-  const result = db
-    .prepare(`
+  const result = await db.run(`
       INSERT INTO events (session_id, task_run_id, timestamp, type, screen, action, target, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    .run(
+    `, [
       input.sessionId,
       input.taskRunId ?? null,
       timestamp,
@@ -200,26 +182,28 @@ function insertEvent(input: {
       input.action?.slice(0, 160) ?? null,
       input.target?.slice(0, 160) ?? null,
       JSON.stringify(sanitizeMetadata(input.metadata)),
-    );
+    ]);
   if (input.screen && (input.type === "screen_view" || input.type === "navigation")) {
-    db.prepare("UPDATE research_control SET current_screen = ?, updated_at = ? WHERE session_id = ?")
-      .run(input.screen.slice(0, 128), timestamp, input.sessionId);
+    await db.run("UPDATE research_control SET current_screen = ?, updated_at = ? WHERE session_id = ?", [
+      input.screen.slice(0, 128), timestamp, input.sessionId,
+    ]);
   }
-  const row = db.prepare(`${eventSelect} WHERE id = ?`).get(Number(result.lastInsertRowid)) as EventRow;
+  const row = await db.first<EventRow>(`${eventSelect} WHERE id = ?`, [result.lastRowId]);
+  if (!row) throw new Error("Event could not be read after insert");
   const event = asEvent(row);
   eventBus.emit(`session:${input.sessionId}`, event);
-  if (input.screen) publishControl();
+  if (input.screen) await publishControl();
   return event;
 }
 
-export function recordParticipantEvent(input: {
+export async function recordParticipantEvent(input: {
   eventName: string;
   screen?: string;
   action?: string;
   target?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const state = getResearchState();
+  const state = await getResearchState();
   if (!state.sessionId || state.sessionStatus !== "running") return null;
   return insertEvent({
     sessionId: state.sessionId,
@@ -232,8 +216,8 @@ export function recordParticipantEvent(input: {
   });
 }
 
-export function startTask(sessionId: string, taskCode: string) {
-  const state = getResearchState();
+export async function startTask(sessionId: string, taskCode: string) {
+  const state = await getResearchState();
   if (state.sessionId !== sessionId || state.sessionStatus !== "running") {
     throw new Error("Start the active session first");
   }
@@ -241,18 +225,22 @@ export function startTask(sessionId: string, taskCode: string) {
   if (!getTask(taskCode)) throw new Error("Unknown task code");
   const id = randomUUID();
   const timestamp = now();
-  getDatabase()
-    .prepare("INSERT INTO task_runs (id, session_id, task_code, started_at) VALUES (?, ?, ?, ?)")
-    .run(id, sessionId, taskCode, timestamp);
-  getDatabase()
-    .prepare(`UPDATE research_control SET current_task = ?, current_task_run_id = ?, updated_at = ? WHERE session_id = ?`)
-    .run(taskCode, id, timestamp, sessionId);
-  insertEvent({ sessionId, taskRunId: id, type: "task_started", action: taskCode });
-  publishControl();
-  return getTaskRun(id)!;
+  await getDatabase().batch([
+    {
+      sql: "INSERT INTO task_runs (id, session_id, task_code, started_at) VALUES (?, ?, ?, ?)",
+      params: [id, sessionId, taskCode, timestamp],
+    },
+    {
+      sql: "UPDATE research_control SET current_task = ?, current_task_run_id = ?, updated_at = ? WHERE session_id = ?",
+      params: [taskCode, id, timestamp, sessionId],
+    },
+  ]);
+  await insertEvent({ sessionId, taskRunId: id, type: "task_started", action: taskCode });
+  await publishControl();
+  return (await getTaskRun(id))!;
 }
 
-export function finishTask(
+export async function finishTask(
   taskRunId: string,
   input: {
     result: TaskResult;
@@ -262,17 +250,17 @@ export function finishTask(
     corruptedReason?: string;
   },
 ) {
-  const run = getTaskRun(taskRunId);
+  const run = await getTaskRun(taskRunId);
   if (!run || run.endedAt) throw new Error("Active task not found");
   const result = run.wasAided && input.result === "unaided" ? "aided" : input.result;
   if (result === "corrupted" && !input.corruptedReason?.trim()) {
     throw new Error("Corrupted reason is required");
   }
   const timestamp = now();
-  getDatabase().prepare(`
+  await getDatabase().run(`
     UPDATE task_runs SET ended_at = ?, result = ?, ease_score = ?, ease_reason = ?,
       moderator_note = ?, corrupted_reason = ? WHERE id = ?
-  `).run(
+  `, [
     timestamp,
     result,
     Math.min(7, Math.max(1, input.easeScore)),
@@ -280,19 +268,17 @@ export function finishTask(
     input.moderatorNote?.trim().slice(0, 4000) || run.moderatorNote,
     input.corruptedReason?.trim().slice(0, 2000) || null,
     taskRunId,
-  );
-  insertEvent({ sessionId: run.sessionId, taskRunId, type: "task_finished", action: result });
-  getDatabase()
-    .prepare(`UPDATE research_control SET current_task = NULL, current_task_run_id = NULL, updated_at = ? WHERE session_id = ?`)
-    .run(timestamp, run.sessionId);
-  publishControl();
-  return getTaskRun(taskRunId)!;
+  ]);
+  await insertEvent({ sessionId: run.sessionId, taskRunId, type: "task_finished", action: result });
+  await getDatabase().run("UPDATE research_control SET current_task = NULL, current_task_run_id = NULL, updated_at = ? WHERE session_id = ?", [timestamp, run.sessionId]);
+  await publishControl();
+  return (await getTaskRun(taskRunId))!;
 }
 
-export function markHint(sessionId: string) {
-  const state = getResearchState();
+export async function markHint(sessionId: string) {
+  const state = await getResearchState();
   if (state.sessionId !== sessionId || !state.currentTaskRunId) throw new Error("No active task");
-  getDatabase().prepare("UPDATE task_runs SET was_aided = 1 WHERE id = ?").run(state.currentTaskRunId);
+  await getDatabase().run("UPDATE task_runs SET was_aided = 1 WHERE id = ?", [state.currentTaskRunId]);
   return insertEvent({
     sessionId,
     taskRunId: state.currentTaskRunId,
@@ -301,22 +287,20 @@ export function markHint(sessionId: string) {
   });
 }
 
-export function saveModeratorNote(sessionId: string, note: string) {
-  const state = getResearchState();
+export async function saveModeratorNote(sessionId: string, note: string) {
+  const state = await getResearchState();
   if (state.sessionId !== sessionId || !state.currentTaskRunId) throw new Error("No active task");
-  getDatabase()
-    .prepare("UPDATE task_runs SET moderator_note = ? WHERE id = ?")
-    .run(note.trim().slice(0, 4000) || null, state.currentTaskRunId);
-  return getTaskRun(state.currentTaskRunId)!;
+  await getDatabase().run("UPDATE task_runs SET moderator_note = ? WHERE id = ?", [
+    note.trim().slice(0, 4000) || null, state.currentTaskRunId,
+  ]);
+  return (await getTaskRun(state.currentTaskRunId))!;
 }
 
-export function resetParticipant(sessionId: string) {
-  const state = getResearchState();
+export async function resetParticipant(sessionId: string) {
+  const state = await getResearchState();
   if (state.sessionId !== sessionId) throw new Error("Session is not active");
-  getDatabase()
-    .prepare("UPDATE research_control SET reset_version = reset_version + 1, current_screen = '/', updated_at = ? WHERE session_id = ?")
-    .run(now(), sessionId);
-  const event = insertEvent({
+  await getDatabase().run("UPDATE research_control SET reset_version = reset_version + 1, current_screen = '/', updated_at = ? WHERE session_id = ?", [now(), sessionId]);
+  const event = await insertEvent({
     sessionId,
     taskRunId: state.currentTaskRunId,
     type: "product_state_change",
@@ -324,28 +308,24 @@ export function resetParticipant(sessionId: string) {
     action: "participant.state.reset",
     metadata: { variant: state.cashbackVariant },
   });
-  publishControl();
+  await publishControl();
   return event;
 }
 
-export function endSession(id: string) {
-  const session = getSession(id);
+export async function endSession(id: string) {
+  const session = await getSession(id);
   if (!session || session.endedAt) throw new Error("Open session not found");
-  const state = getResearchState();
+  const state = await getResearchState();
   if (state.sessionId === id && state.currentTaskRunId) throw new Error("Finish the current task first");
   const timestamp = now();
-  getDatabase().prepare("UPDATE sessions SET ended_at = ? WHERE id = ?").run(timestamp, id);
-  insertEvent({ sessionId: id, type: "action", action: "session.ended" });
-  publishControl();
-  return getSession(id)!;
+  await getDatabase().run("UPDATE sessions SET ended_at = ? WHERE id = ?", [timestamp, id]);
+  await insertEvent({ sessionId: id, type: "action", action: "session.ended" });
+  await publishControl();
+  return (await getSession(id))!;
 }
 
-export function getAggregateMetrics() {
-  const runs = (
-    getDatabase().prepare(`${taskSelect} WHERE ended_at IS NOT NULL AND result IS NOT NULL`).all() as unknown as TaskRunRow[]
-  ).map(asTaskRun);
-  const events = (
-    getDatabase().prepare(`${eventSelect} WHERE task_run_id IS NOT NULL ORDER BY id`).all() as unknown as EventRow[]
-  ).map(asEvent);
+export async function getAggregateMetrics() {
+  const runs = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE ended_at IS NOT NULL AND result IS NOT NULL`)).map(asTaskRun);
+  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE task_run_id IS NOT NULL ORDER BY id`)).map(asEvent);
   return aggregateTaskMetrics(runs.map((run) => calculateTaskMetrics(run, events, getTask(run.taskCode))));
 }

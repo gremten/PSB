@@ -5,13 +5,14 @@ import type { ResearchSessionState } from "@/lib/testing/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
   const encoder = new TextEncoder();
+  const initialState = await getResearchState();
   let cleanup = () => {};
   const stream = new ReadableStream({
     start(controller) {
       const send = (state: ResearchSessionState) => controller.enqueue(encoder.encode(`event: control\ndata: ${JSON.stringify(state)}\n\n`));
-      send(getResearchState());
+      send(initialState);
       const listener = (state: ResearchSessionState) => send(state);
       eventBus.on("control", listener);
       const heartbeat = setInterval(() => {

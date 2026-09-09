@@ -11,14 +11,15 @@ export async function GET(request: NextRequest) {
   const unauthorized = requireModeratorResponse(request);
   if (unauthorized) return unauthorized;
   const sessionId = request.nextUrl.searchParams.get("sessionId");
-  if (!sessionId || !getSessionSnapshot(sessionId, 1)) return new Response("Session not found", { status: 404 });
+  if (!sessionId || !(await getSessionSnapshot(sessionId, 1))) return new Response("Session not found", { status: 404 });
+  const initialEvents = (await getSessionSnapshot(sessionId, 100))?.events ?? [];
   const encoder = new TextEncoder();
   let cleanup = () => {};
   const stream = new ReadableStream({
     start(controller) {
       const send = (name: string, data: unknown) => controller.enqueue(encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`));
       send("ready", { sessionId });
-      for (const event of getSessionSnapshot(sessionId, 100)?.events ?? []) send("tracked", event);
+      for (const event of initialEvents) send("tracked", event);
       const listener = (event: TrackedEvent) => send("tracked", event);
       eventBus.on(`session:${sessionId}`, listener);
       const heartbeat = setInterval(() => {

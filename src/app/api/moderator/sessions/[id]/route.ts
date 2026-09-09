@@ -9,8 +9,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const unauthorized = requireModeratorResponse(request);
   if (unauthorized) return unauthorized;
   const { id } = await context.params;
-  const snapshot = getSessionSnapshot(id);
-  return snapshot ? NextResponse.json({ snapshot, research: getResearchState(), metrics: getAggregateMetrics() }) : NextResponse.json({ error: "Not found" }, { status: 404 });
+  const snapshot = await getSessionSnapshot(id);
+  return snapshot ? NextResponse.json({ snapshot, research: await getResearchState(), metrics: await getAggregateMetrics() }) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -19,8 +19,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   try {
     const { id } = await context.params;
     const body = (await request.json()) as { action?: string };
-    const session = body.action === "start" ? startSession(id) : body.action === "end" ? endSession(id) : null;
+    const session = body.action === "start" ? await startSession(id) : body.action === "end" ? await endSession(id) : null;
     if (!session) throw new Error("Unknown session action");
-    return NextResponse.json({ session, research: getResearchState(), snapshot: getSessionSnapshot(id) });
+    return NextResponse.json({ session, research: await getResearchState(), snapshot: await getSessionSnapshot(id) });
   } catch (error) { return apiError(error); }
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import styles from "./bank.module.css";
 
 export function ProfileHeader() {
@@ -14,8 +15,8 @@ export function ProfileHeader() {
         <span>Александр К.</span>
       </div>
       <div className={styles.toolbar}>
-        <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open"><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
-        <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open"><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
+        <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open" onClick={showDemoUnavailable}><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
+        <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open" onClick={showDemoUnavailable}><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
       </div>
     </header>
   );

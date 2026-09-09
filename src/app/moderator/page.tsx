@@ -12,6 +12,6 @@ export default async function ModeratorPage() {
   if (!isValidModeratorToken(cookieStore.get(MODERATOR_COOKIE)?.value)) {
     return <ModeratorLogin configured={Boolean(process.env.MODERATOR_SECRET)} />;
   }
-  const research = getResearchState();
-  return <ModeratorDashboard initialSessions={listSessions()} initialResearch={research} initialSnapshot={research.sessionId ? getSessionSnapshot(research.sessionId) : null} initialMetrics={getAggregateMetrics()} tasks={usabilityTasks} />;
+  const research = await getResearchState();
+  return <ModeratorDashboard initialSessions={await listSessions()} initialResearch={research} initialSnapshot={research.sessionId ? await getSessionSnapshot(research.sessionId) : null} initialMetrics={await getAggregateMetrics()} tasks={usabilityTasks} />;
 }

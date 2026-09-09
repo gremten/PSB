@@ -5,3 +5,6 @@ data/*.sqlite
 data/*.sqlite-*
 *.tsbuildinfo
 coverage/
+/dist/
+.vinext/
+.wrangler/

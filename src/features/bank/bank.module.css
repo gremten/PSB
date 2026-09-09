@@ -127,8 +127,15 @@
   overflow-x: auto;
   padding: 0 20px;
   scrollbar-width: none;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: none;
+  cursor: grab;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x pan-y;
+  user-select: none;
 }
+
+.promoScroller[data-dragging="true"],
+.accountScroller[data-dragging="true"] { cursor: grabbing; scroll-snap-type: none; }
 
 .promoScroller::-webkit-scrollbar,
 .accountScroller::-webkit-scrollbar { display: none; }
@@ -492,13 +499,49 @@
   background: #161a20;
 }
 
-.homeTop .profileHeader {
+.homeScreen > .profileHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  isolation: isolate;
   min-height: 44px;
-  padding: 0 20px;
+  padding: 20px 20px 0;
+  background: transparent;
+}
+
+.homeScreen > .profileHeader::before,
+.homeScreen > .profileHeader::after {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+}
+
+.homeScreen > .profileHeader::before {
+  inset: 0;
+  bottom: -18px;
+  background: rgb(22 26 32 / 42%);
+  backdrop-filter: blur(2px) saturate(112%);
+}
+
+.homeScreen > .profileHeader::after {
+  inset: 0;
+  bottom: -34px;
+  background: linear-gradient(to bottom, rgb(22 26 32 / 14%) 0 62%, transparent 100%);
+  backdrop-filter: blur(4px);
+  mask-image: linear-gradient(to bottom, #000 0 58%, rgb(0 0 0 / 72%) 76%, transparent 100%);
 }
 
 .homeTop .promoScroller {
-  margin-top: 20px;
+  margin-top: 0;
+  padding: 0;
+}
+
+.homeTop .promoScroller::before,
+.homeTop .promoScroller::after {
+  width: 12px;
+  flex: 0 0 12px;
+  content: "";
 }
 
 .profileHeader {
@@ -523,18 +566,74 @@
   width: 272px;
   height: 88px;
   padding: 0;
-  background: transparent;
+  background: rgb(88 88 146 / 50%);
 }
 
 .promoCard:nth-child(2) {
-  background: transparent;
+  background: rgb(88 88 146 / 50%);
 }
 
-.promoFullImage {
-  display: block;
-  width: 272px;
-  height: 88px;
-  object-fit: cover;
+.promoBackdrop {
+  position: absolute;
+  top: -147px;
+  left: -156px;
+  width: 655px;
+  height: 510px;
+  max-width: none;
+}
+
+.promoCopy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 192px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.promoCopy strong { font-weight: 500; }
+.promoCopy span { color: rgb(255 255 255 / 80%); }
+
+.promoArtworkFrame {
+  position: absolute;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.promoArtworkCards {
+  top: 22px;
+  left: 150px;
+  width: 105px;
+  height: 74px;
+}
+
+.promoArtworkStrong {
+  top: 8px;
+  left: 167px;
+  width: 129px;
+  height: 102px;
+}
+
+.promoArtworkFrame img {
+  position: absolute;
+  max-width: none;
+}
+
+.promoArtworkCards img {
+  top: -6.69px;
+  left: -3.96px;
+  width: 124.29px;
+  height: 124.29px;
+}
+
+.promoArtworkStrong img {
+  top: 0;
+  left: 0;
+  width: 102.67px;
+  height: 102px;
 }
 
 .promoCloseHit {
@@ -545,13 +644,24 @@
   height: 24px;
   border: 0;
   border-radius: 999px;
-  padding: 0;
-  background: transparent;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  background: rgb(36 42 51 / 50%);
+  backdrop-filter: blur(6px);
   cursor: pointer;
 }
 
+.promoCloseHit img { width: 16px; height: 16px; }
+
 .homeTop .balanceArea {
   margin-top: 48px;
+}
+
+.homeTop .accountScroller {
+  width: calc(100% + 20px);
+  padding-right: 20px;
 }
 
 .balanceCaption {

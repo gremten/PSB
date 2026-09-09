@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     const body = (await request.json()) as { taskCode?: string };
     if (!body.taskCode) throw new Error("Выберите задачу");
-    const taskRun = startTask(id, body.taskCode);
-    return NextResponse.json({ taskRun, research: getResearchState(), snapshot: getSessionSnapshot(id) });
+    const taskRun = await startTask(id, body.taskCode);
+    return NextResponse.json({ taskRun, research: await getResearchState(), snapshot: await getSessionSnapshot(id) });
   } catch (error) { return apiError(error); }
 }

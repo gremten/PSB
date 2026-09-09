@@ -14,11 +14,19 @@ function resolveBuildId() {
 }
 
 const buildId = resolveBuildId();
+const isVinext = process.env.npm_lifecycle_event?.includes("vinext") ?? false;
 
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: buildId },
   generateBuildId: async () => buildId,
   serverExternalPackages: ["better-sqlite3"],
+  ...(isVinext ? {} : {
+    turbopack: {
+      resolveAlias: {
+        "@/lib/db/runtime": "./src/lib/db/runtime.local.ts",
+      },
+    },
+  }),
 };
 
 export default nextConfig;

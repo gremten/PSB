@@ -5,7 +5,7 @@ import { requireModeratorResponse } from "@/lib/moderator-api";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export function GET(request: NextRequest) {
+export async function GET(request: NextRequest) {
   const unauthorized = requireModeratorResponse(request);
-  return unauthorized ?? NextResponse.json({ metrics: getAggregateMetrics() });
+  return unauthorized ?? NextResponse.json({ metrics: await getAggregateMetrics() });
 }

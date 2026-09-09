@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!body?.eventName || typeof body.eventName !== "string") {
     return NextResponse.json({ error: "eventName is required" }, { status: 400 });
   }
-  const event = recordParticipantEvent({
+  const event = await recordParticipantEvent({
     eventName: body.eventName,
     screen: typeof body.screen === "string" ? body.screen : undefined,
     action: typeof body.action === "string" ? body.action : undefined,

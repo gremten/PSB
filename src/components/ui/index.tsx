@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 import styles from "./ui.module.css";
 
+export { HorizontalScroller } from "./horizontal-scroller";
+
 export function Screen({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <main className={`${styles.screen} ${className}`}>{children}</main>;
 }
