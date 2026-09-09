@@ -1,0 +1,21 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { getTask } from "@/config/test-scenarios";
+import styles from "@/app/moderator/moderator.module.css";
+import { getSessionSnapshot } from "@/lib/db/queries";
+import { calculateTaskMetrics } from "@/lib/testing/metrics";
+import { isValidModeratorToken, MODERATOR_COOKIE } from "@/lib/moderator-auth";
+import { ModeratorLogin } from "@/features/usability/moderator-login";
+
+export const dynamic = "force-dynamic";
+
+export default async function SessionSummaryPage({ params }: { params: Promise<{ id: string }> }) {
+  const cookieStore = await cookies();
+  if (!isValidModeratorToken(cookieStore.get(MODERATOR_COOKIE)?.value)) return <ModeratorLogin configured={Boolean(process.env.MODERATOR_SECRET)} />;
+  const { id } = await params;
+  const snapshot = getSessionSnapshot(id, 2000);
+  if (!snapshot) notFound();
+  const taskMetrics = snapshot.taskRuns.map((run) => ({ run, metric: calculateTaskMetrics(run, snapshot.events, getTask(run.taskCode)) }));
+  return <main className={styles.page}><div className={`${styles.shell} ${styles.summary}`}><header className={styles.topbar}><div><p className={styles.build}>session summary · build {snapshot.session.buildId}</p><h1 className={styles.brand}>{snapshot.session.participantCode} · {snapshot.session.variant}</h1></div><Link className={styles.link} href="/moderator">← Dashboard</Link></header><section className={styles.card}><div className={styles.status}><div className={styles.stat}><span>Начало</span><strong>{snapshot.session.startedAt ? new Date(snapshot.session.startedAt).toLocaleString("ru-RU") : "не начата"}</strong></div><div className={styles.stat}><span>Окончание</span><strong>{snapshot.session.endedAt ? new Date(snapshot.session.endedAt).toLocaleString("ru-RU") : "не завершена"}</strong></div><div className={styles.stat}><span>События</span><strong>{snapshot.events.length}</strong></div></div></section>{taskMetrics.map(({ run, metric }) => <section className={styles.card} key={run.id}><div className="row-between"><h2>{run.taskCode} · {getTask(run.taskCode)?.title ?? "Задача"}</h2><strong className={run.result === "corrupted" ? "error-text" : styles.success}>{run.result ?? "running"}</strong></div><div className={styles.status}><div className={styles.stat}><span>Время</span><strong>{metric.completionTimeMs === null ? "—" : `${(metric.completionTimeMs / 1000).toFixed(1)} сек`}</strong></div><div className={styles.stat}><span>Шаги / golden</span><strong>{metric.meaningfulSteps} / {metric.goldenPathSteps ?? "—"}</strong></div><div className={styles.stat}><span>Ease</span><strong>{metric.easeScore ?? "—"} / 7</strong></div></div><p><strong>Первое действие:</strong> {metric.firstMeaningfulAction ?? "—"}</p>{run.easeReason && <p><strong>Причина оценки:</strong> {run.easeReason}</p>}{run.moderatorNote && <p><strong>Заметка:</strong> {run.moderatorNote}</p>}{run.corruptedReason && <p><strong>Причина corrupted:</strong> {run.corruptedReason}</p>}<details><summary>Последовательность экранов и действий</summary><ol className={styles.sequence}>{metric.sequence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ol></details></section>)}<section className={styles.card}><h2>Полный журнал событий</h2><div className={styles.eventLog}>{snapshot.events.map((event) => <div className={styles.event} key={event.id}><span>{new Date(event.timestamp).toLocaleTimeString("ru-RU")}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>)}</div></section></div></main>;
+}
