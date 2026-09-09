@@ -7,6 +7,7 @@
 - Keep participant product state separate from research/session state.
 - Use fake banking data only; never record payment values, clipboard contents, or personal data.
 - Follow existing project patterns before changing architecture.
+- Do not guess interface dimensions, spacing, positions, effects, colors, assets, component states, or behavior when the value is available in the current Figma file or a component specification. Inspect the exact relevant node and its dependencies first; if the source remains genuinely ambiguous or contradictory, ask the user before implementing.
 
 ## Figma access
 

@@ -494,13 +494,13 @@
 /* Home screen: exact t-main component geometry at the 402 px reference width. */
 .homeScreen {
   min-height: auto;
-  background: #0a0c0f;
+  background: #161a20;
 }
 
 .homeTop {
   overflow: hidden;
   border-radius: 0 0 20px 20px;
-  padding: 20px 0;
+  padding: 10px 0 20px;
   background: #161a20;
 }
 
@@ -509,8 +509,8 @@
   top: 0;
   z-index: 30;
   isolation: isolate;
-  min-height: 44px;
-  padding: 20px 20px 0;
+  min-height: 61px;
+  padding: 5px 20px 12px;
   background: transparent;
 }
 
@@ -521,7 +521,7 @@
   right: 0;
   left: 0;
   z-index: -1;
-  height: 123px;
+  height: 69px;
   border-radius: 0 0 20px 20px;
   background: rgb(255 255 255 / 0.01%);
   pointer-events: none;
@@ -737,6 +737,7 @@
   flex-direction: column;
   gap: 24px;
   padding: 24px 0 34px;
+  background: #0a0c0f;
 }
 
 .homeScreen .quickActions {
