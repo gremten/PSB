@@ -1,6 +1,6 @@
 # PSB usability project rules
 
-- Build an adaptive web version for browser-based usability testing and reproduce the documented flows faithfully. The participant viewport is limited to 440 px wide and 980 px high.
+- Build an adaptive web version for browser-based usability testing and reproduce the documented flows faithfully. Mobile and Telegram participant viewports are limited to 440 px wide and 980 px high; desktop uses the full browser viewport without a simulated-device frame or maximum dimensions.
 - Completely ignore the Figma group `Итерации`: do not open, read, cite, or use its files and frames for visual implementation, product logic, or reference context.
 - Read component specifications carefully before implementing their layout, behavior, or states.
 - Preserve usability instrumentation. Every key control needs a stable semantic tracking ID.
