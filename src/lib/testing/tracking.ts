@@ -7,6 +7,7 @@ export interface TrackData {
 
 export async function track(eventName: string, data: TrackData = {}) {
   if (typeof window === "undefined") return;
+  if (new URLSearchParams(window.location.search).has("replay")) return;
   try {
     await fetch("/api/events", {
       method: "POST",

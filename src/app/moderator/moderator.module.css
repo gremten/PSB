@@ -13,7 +13,7 @@
 .input, .select, .textarea { width: 100%; border: 1px solid #343e4b; border-radius: 10px; padding: 10px 12px; color: #eef2f7; background: #0f141b; outline: none; }
 .input:focus, .select:focus, .textarea:focus { border-color: #e86630; }
 .textarea { min-height: 76px; resize: vertical; }
-.button { min-height: 42px; border: 0; border-radius: 11px; padding: 0 15px; color: #15100d; background: #e86630; font-weight: 700; cursor: pointer; }
+.button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; border: 0; border-radius: 11px; padding: 0 15px; color: #15100d; background: #e86630; font-weight: 700; text-decoration: none; cursor: pointer; }
 .button:disabled { cursor: not-allowed; opacity: .45; }
 .secondary { color: #eef2f7; background: #29313d; }
 .danger { color: #fff; background: #942d2d; }
@@ -41,10 +41,36 @@
 .login { width: min(420px, calc(100% - 32px)); margin: 15vh auto 0; }
 .summary { display: grid; gap: 18px; }
 .sequence { margin: 8px 0 0; padding-left: 20px; color: #aeb7c4; font: 12px/1.6 ui-monospace, monospace; }
+.sessionTableWrap { overflow-x: auto; }
+.sessionTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sessionTable th, .sessionTable td { border-bottom: 1px solid #27303b; padding: 10px 8px; text-align: left; white-space: nowrap; }
+.sessionTable th { color: #818c9a; font-weight: 500; }
+.sessionTable td:first-child { color: #eef2f7; font-weight: 700; }
+.sessionTable button { border: 0; padding: 0; color: #f28c59; background: transparent; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.replayGrid { display: grid; grid-template-columns: 402px minmax(300px, 1fr); gap: 18px; align-items: start; }
+.replayViewport { position: relative; width: 402px; height: 720px; overflow: hidden; border: 1px solid #343e4b; border-radius: 24px; background: #0a0c0f; }
+.replayViewport iframe { width: 402px; height: 874px; border: 0; pointer-events: none; }
+.replayPoint { position: absolute; z-index: 4; width: 34px; height: 34px; transform: translate(-50%, -50%); border: 2px solid #fff; border-radius: 999px; background: rgb(232 102 48 / 38%); box-shadow: 0 0 0 7px rgb(232 102 48 / 16%); pointer-events: none; animation: replay-pulse 900ms ease-in-out infinite alternate; }
+.replayPoint i { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; }
+@keyframes replay-pulse { to { box-shadow: 0 0 0 12px rgb(232 102 48 / 5%); } }
+.replayControls { display: grid; grid-template-columns: 1fr 90px; gap: 8px; margin-top: 10px; }
+.replayControls .select { height: 42px; }
+.replayRange { width: 100%; accent-color: #e86630; }
+.replayNow { min-height: 44px; margin: 4px 0 0; color: #aeb7c4; font: 12px/1.5 ui-monospace, monospace; overflow-wrap: anywhere; }
+.replayNow strong { color: #ff9d6d; }
+.replayTimeline { max-height: 846px; overflow: auto; border: 1px solid #27303b; border-radius: 12px; background: #0a0e13; }
+.replayTimeline button { display: grid; width: 100%; grid-template-columns: 68px 105px minmax(0, 1fr); gap: 8px; border: 0; border-bottom: 1px solid #202733; padding: 10px; color: #cad2dd; background: transparent; font: 11px/1.35 ui-monospace, monospace; text-align: left; cursor: pointer; }
+.replayTimeline button:last-child { border-bottom: 0; }
+.replayTimeline button:hover, .replayTimeline .replayEventActive { background: #242a33; }
+.replayTimeline span { color: #ff9d6d; }
+.replayTimeline strong { color: #eef2f7; }
+.replayTimeline small { overflow-wrap: anywhere; color: #aeb7c4; }
 
 @media (max-width: 880px) {
   .page { padding: 16px; }
   .grid { grid-template-columns: 1fr; }
   .status { grid-template-columns: 1fr; }
   .event { grid-template-columns: 70px 100px minmax(0, 1fr); }
+  .replayGrid { grid-template-columns: 1fr; }
+  .replayViewport { max-width: 100%; }
 }

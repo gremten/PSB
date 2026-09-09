@@ -7,8 +7,14 @@ export function getInitialParticipantState(variant: CashbackVariant): Participan
     cashbackConnected: variant === "connected",
     selectedCashbackCategories:
       variant === "connected" ? ["На все покупки", "Авиабилеты", "Транспорт"] : [],
+    nextMonthCashbackCategories: [],
+    cashbackNextMonthSelectionAvailable: variant === "connected",
     cardDetailsRevealed: false,
     cashbackSuccessVisible: false,
+    accountsHidden: false,
+    dismissedHomePromos: [],
+    homeHistoryCollapsed: false,
+    homeCurrencyCollapsed: false,
   };
 }
 
@@ -36,7 +42,23 @@ export function loadParticipantState(variant: CashbackVariant): ParticipantProdu
     ) {
       return resetParticipantState(variant);
     }
-    return { ...parsed, cashbackSuccessVisible: Boolean(parsed.cashbackSuccessVisible) };
+    return {
+      ...parsed,
+      nextMonthCashbackCategories: Array.isArray(parsed.nextMonthCashbackCategories)
+        ? parsed.nextMonthCashbackCategories.filter((item): item is string => typeof item === "string")
+        : [],
+      cashbackNextMonthSelectionAvailable:
+        typeof parsed.cashbackNextMonthSelectionAvailable === "boolean"
+          ? parsed.cashbackNextMonthSelectionAvailable
+          : parsed.cashbackConnected,
+      cashbackSuccessVisible: Boolean(parsed.cashbackSuccessVisible),
+      accountsHidden: Boolean(parsed.accountsHidden),
+      dismissedHomePromos: Array.isArray(parsed.dismissedHomePromos)
+        ? parsed.dismissedHomePromos.filter((item): item is string => typeof item === "string")
+        : [],
+      homeHistoryCollapsed: Boolean(parsed.homeHistoryCollapsed),
+      homeCurrencyCollapsed: Boolean(parsed.homeCurrencyCollapsed),
+    };
   } catch {
     return resetParticipantState(variant);
   }

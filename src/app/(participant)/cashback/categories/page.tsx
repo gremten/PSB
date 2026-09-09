@@ -19,7 +19,7 @@ const categories = [
 
 export default function CashbackCategoriesPage() {
   const router = useRouter();
-  const { updateProductState } = useParticipant();
+  const { productState, updateProductState } = useParticipant();
   const [selected, setSelected] = useState<string[]>([]);
   const [shake, setShake] = useState(0);
 
@@ -38,11 +38,15 @@ export default function CashbackCategoriesPage() {
       return;
     }
     const selectedLabels = categories.filter((category) => selected.includes(category.id)).map((category) => category.stateLabel);
-    updateProductState({
+    updateProductState(productState.cashbackConnected ? {
+      nextMonthCashbackCategories: selectedLabels,
+      cashbackNextMonthSelectionAvailable: true,
+    } : {
       cashbackConnected: true,
       selectedCashbackCategories: selectedLabels,
+      cashbackNextMonthSelectionAvailable: true,
       cashbackSuccessVisible: true,
-    }, "cashback.categories.confirmed");
+    }, productState.cashbackConnected ? "cashback.next_month.categories.confirmed" : "cashback.categories.confirmed");
     router.push("/");
   };
 

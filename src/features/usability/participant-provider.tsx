@@ -52,7 +52,24 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
     const handleClick = (event: MouseEvent) => {
       const element = (event.target as HTMLElement).closest<HTMLElement>("[data-track]");
       if (!element?.dataset.track) return;
-      track("tap", { screen: pathname, action: element.dataset.track, target: element.dataset.track });
+      const rect = element.getBoundingClientRect();
+      const scrollContainer = element.closest<HTMLElement>(".participant-content");
+      track("tap", {
+        screen: pathname,
+        action: element.dataset.track,
+        target: element.dataset.track,
+        metadata: {
+          x: Math.round(event.clientX),
+          y: Math.round(event.clientY),
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          scrollY: Math.round(scrollContainer?.scrollTop ?? window.scrollY ?? document.documentElement.scrollTop ?? 0),
+          targetX: Math.round(rect.left),
+          targetY: Math.round(rect.top),
+          targetWidth: Math.round(rect.width),
+          targetHeight: Math.round(rect.height),
+        },
+      });
     };
     document.addEventListener("click", handleClick, true);
     return () => document.removeEventListener("click", handleClick, true);

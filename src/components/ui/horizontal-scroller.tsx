@@ -40,6 +40,7 @@ export function HorizontalScroller({
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType === "touch" || event.button !== 0) return;
+    if ((event.target as HTMLElement).closest("button, a")) return;
     const scroller = scrollerRef.current;
     if (!scroller) return;
 

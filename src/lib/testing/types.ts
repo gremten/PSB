@@ -5,8 +5,14 @@ export type TaskResult = "unaided" | "aided" | "failed" | "corrupted";
 export interface ParticipantProductState {
   cashbackConnected: boolean;
   selectedCashbackCategories: string[];
+  nextMonthCashbackCategories: string[];
+  cashbackNextMonthSelectionAvailable: boolean;
   cardDetailsRevealed: boolean;
   cashbackSuccessVisible: boolean;
+  accountsHidden: boolean;
+  dismissedHomePromos: string[];
+  homeHistoryCollapsed: boolean;
+  homeCurrencyCollapsed: boolean;
 }
 
 // Research context intentionally has no banking/product fields.
