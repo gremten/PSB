@@ -3,15 +3,15 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Tabbar } from "@/components/ui";
-import { DEMO_UNAVAILABLE_EVENT } from "./demo-feedback";
+import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
 import { ParticipantProvider } from "./participant-provider";
 
 const tabs = [
   { href: "/", label: "Главная", icon: "/figma/home/tab-home.svg", dataTrack: "tab.home.open" },
-  { href: "/payment", label: "Платежи", icon: "/figma/home/tab-payments.svg", dataTrack: "tab.payments.open" },
+  { href: "/payment", label: "Платежи", icon: "/figma/home/tab-payments.svg", dataTrack: "tab.payments.unavailable", unavailable: true },
   { href: "/cashback", label: "Выгода", icon: "/figma/home/tab-benefit.svg", dataTrack: "cashback.tab.open" },
-  { href: "/chat", label: "Чат", icon: "/figma/home/tab-chat.svg", dataTrack: "tab.chat.open" },
-  { href: "/more", label: "Ещё", icon: "/figma/home/tab-more.svg", dataTrack: "tab.more.open" },
+  { href: "/chat", label: "Чат", icon: "/figma/home/tab-chat.svg", dataTrack: "tab.chat.unavailable", unavailable: true },
+  { href: "/more", label: "Ещё", icon: "/figma/home/tab-more.svg", dataTrack: "tab.more.unavailable", unavailable: true },
 ];
 
 function ConceptNotice() {
@@ -44,7 +44,7 @@ function DemoUnavailableToast() {
 function ShellBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
-  return <div className="participant-stage"><div className="participant-phone"><div className="participant-content">{children}</div><ConceptNotice /><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} />}</div></div>;
+  return <div className="participant-stage"><div className="participant-phone"><div className="participant-content">{children}</div><ConceptNotice /><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div></div>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {

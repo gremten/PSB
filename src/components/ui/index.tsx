@@ -85,10 +85,10 @@ export function Cell({ href, label, description, leading, trailing = "›", data
   return href ? <Link href={href} className={styles.cell} data-track={dataTrack}>{content}</Link> : <button className={styles.cell} data-track={dataTrack} onClick={onClick}>{content}</button>;
 }
 
-export interface TabItem { href: string; label: string; icon: string; dataTrack: string }
+export interface TabItem { href: string; label: string; icon: string; dataTrack: string; unavailable?: boolean }
 
-export function Tabbar({ items, pathname }: { items: TabItem[]; pathname: string }) {
-  return <nav aria-label="Основная навигация" className={styles.tabbar}>{items.map((item) => { const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href); return <Link key={item.href} href={item.href} className={`${styles.tab} ${active ? styles.tabActive : ""}`} data-track={item.dataTrack}><span aria-hidden="true" className={styles.tabIcon} style={{ "--tab-icon": `url("${item.icon}")` } as CSSProperties} /><span>{item.label}</span></Link>; })}</nav>;
+export function Tabbar({ items, pathname, onUnavailable }: { items: TabItem[]; pathname: string; onUnavailable?: () => void }) {
+  return <nav aria-label="Основная навигация" className={styles.tabbar}>{items.map((item) => { const active = !item.unavailable && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)); const content = <><span aria-hidden="true" className={styles.tabIcon} style={{ "--tab-icon": `url("${item.icon}")` } as CSSProperties} /><span>{item.label}</span></>; return item.unavailable ? <button key={item.href} type="button" className={styles.tab} aria-label={`${item.label}: недоступно в демо`} data-track={item.dataTrack} onClick={onUnavailable}>{content}</button> : <Link key={item.href} href={item.href} className={`${styles.tab} ${active ? styles.tabActive : ""}`} data-track={item.dataTrack}>{content}</Link>; })}</nav>;
 }
 
 export function SegmentedControl<T extends string>({ options, value, onChange, dataTrackPrefix }: { options: { value: T; label: string }[]; value: T; onChange: (value: T) => void; dataTrackPrefix: string }) {

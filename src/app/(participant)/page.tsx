@@ -45,13 +45,13 @@ export default function HomePage() {
           <article className={styles.promoCard} aria-label="Новые возможности. Попробуйте новые карты с хорошими условиями">
             <Image className={styles.promoBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={438} height={290} priority />
             <div className={styles.promoCopy}><strong>Новые возможности</strong><span>Попробуйте новые карты<br />с хорошими условиями</span></div>
-            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkCards}`}><Image src="/figma/home/banner-new.png" alt="" width={1200} height={1200} priority /></div>
+            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkCards}`}><Image src="/figma/home/banner-new.webp" alt="" width={256} height={256} priority /></div>
             <button className={styles.promoCloseHit} aria-label="Закрыть предложение Новые возможности" data-track="home.promo.cards.dismiss" onClick={showDemoUnavailable}><Image src="/figma/home/close.svg" alt="" width={16} height={16} /></button>
           </article>
           <article className={styles.promoCard} aria-label="Время сильных. Получайте больше выгоды, инвестируя в заводы">
             <Image className={styles.promoBackdrop} src="/figma/home/banner-strong-bg.svg" alt="" width={438} height={290} priority />
             <div className={styles.promoCopy}><strong>Время сильных</strong><span>Получайте больше выгоды,<br />инвестируя в заводы</span></div>
-            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkStrong}`}><Image src="/figma/home/banner-strong.png" alt="" width={800} height={800} priority /></div>
+            <div className={`${styles.promoArtworkFrame} ${styles.promoArtworkStrong}`}><Image src="/figma/home/banner-strong.webp" alt="" width={208} height={208} priority /></div>
             <button className={styles.promoCloseHit} aria-label="Закрыть предложение Время сильных" data-track="home.promo.strong.dismiss" onClick={showDemoUnavailable}><Image src="/figma/home/close.svg" alt="" width={16} height={16} /></button>
           </article>
         </HorizontalScroller>
@@ -115,14 +115,14 @@ export default function HomePage() {
             <div className={styles.historyDay}>
               <p className={styles.dateHeading}>21 марта, воскресенье</p>
               <div className={styles.historyList}>
-                <Transaction imageSrc="/figma/home/merchant-reg.png" title="REG.RU MOSKVA RUS" meta="Оплата услуг" amount="– 1 161 ₽" bonus="+ 20 ₽" />
-                <Transaction imageSrc="/figma/home/merchant-tpp.png" title="TPP_TRANSPORT_FIGMA RUS" meta="Оплата по QR-коду" amount="– 290 ₽" />
+                <Transaction imageSrc="/figma/home/merchant-reg.webp" title="REG.RU MOSKVA RUS" meta="Оплата услуг" amount="– 1 161 ₽" bonus="+ 20 ₽" />
+                <Transaction imageSrc="/figma/home/merchant-tpp.webp" title="TPP_TRANSPORT_FIGMA RUS" meta="Оплата по QR-коду" amount="– 290 ₽" />
               </div>
             </div>
             <div className={styles.historyDay}>
               <p className={styles.dateHeading}>20 марта, суббота</p>
               <div className={styles.historyList}>
-                <Transaction imageSrc="/figma/home/merchant-five.png" title="Пятёрочка" meta="Продукты" amount="– 290 ₽" bonus="+ 20 ₽" />
+                <Transaction imageSrc="/figma/home/merchant-five.webp" title="Пятёрочка" meta="Продукты" amount="– 290 ₽" bonus="+ 20 ₽" />
               </div>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function HomePage() {
         <div className={styles.successOverlay} role="presentation">
           <section className={styles.successSheet} role="dialog" aria-modal="true" aria-labelledby="cashback-success-title">
             <div className={styles.grabber} />
-            <Image className={styles.successImage} src="/figma/success/asset-14.png" alt="" width={164} height={164} priority />
+            <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
             <h2 id="cashback-success-title" className={styles.successTitle}>Кешбек подключен!</h2>
             <p className={styles.successText}>Категории на апрель<br />активируются в течение 15 минут.</p>
             <button className={`${styles.primaryButton} ${styles.fullButton}`} data-track="cashback.success.close" onClick={() => updateProductState({ cashbackSuccessVisible: false }, "cashback.success.dismissed")}>Хорошо!</button>

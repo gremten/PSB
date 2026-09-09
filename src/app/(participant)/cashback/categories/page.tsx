@@ -8,13 +8,13 @@ import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
 
 const categories = [
-  { id: "all", title: "1.5% На все покупки", stateLabel: "На все покупки", description: "Любые покупки с дебетовой карты", image: "/figma/categories/asset-06.png" },
-  { id: "flights", title: "2% Авиабилеты", stateLabel: "Авиабилеты", description: "Только на авиасейлс", image: "/figma/categories/asset-04.png" },
-  { id: "scooters", title: "2% Самокаты", stateLabel: "Самокаты", description: "Яндекс, Whoosh и Юрент", image: "/figma/categories/asset-05.png" },
-  { id: "taxi", title: "3% На такси", stateLabel: "Такси", description: "Яндекс GO и Ситимобил", image: "/figma/categories/asset-01.png" },
-  { id: "delivery", title: "7% Деливери", stateLabel: "Деливери", description: "Все виды доставок", image: "/figma/categories/asset-03.png" },
-  { id: "fuel", title: "3% На бензин", stateLabel: "Бензин", description: "Лукойл, ТНК, Газпром", image: "/figma/categories/asset-12.png" },
-  { id: "family", title: "2% На укрепление семьи", stateLabel: "Укрепление семьи", description: "Розовый кролик", image: "/figma/categories/asset-08.png" },
+  { id: "all", title: "1.5% На все покупки", stateLabel: "На все покупки", description: "Любые покупки с дебетовой карты", image: "/figma/categories/asset-06.webp" },
+  { id: "flights", title: "2% Авиабилеты", stateLabel: "Авиабилеты", description: "Только на авиасейлс", image: "/figma/categories/asset-04.webp" },
+  { id: "scooters", title: "2% Самокаты", stateLabel: "Самокаты", description: "Яндекс, Whoosh и Юрент", image: "/figma/categories/asset-05.webp" },
+  { id: "taxi", title: "3% На такси", stateLabel: "Такси", description: "Яндекс GO и Ситимобил", image: "/figma/categories/asset-01.webp" },
+  { id: "delivery", title: "7% Деливери", stateLabel: "Деливери", description: "Все виды доставок", image: "/figma/categories/asset-03.webp" },
+  { id: "fuel", title: "3% На бензин", stateLabel: "Бензин", description: "Лукойл, ТНК, Газпром", image: "/figma/categories/asset-12.webp" },
+  { id: "family", title: "2% На укрепление семьи", stateLabel: "Укрепление семьи", description: "Розовый кролик", image: "/figma/categories/asset-08.webp" },
 ] as const;
 
 export default function CashbackCategoriesPage() {
@@ -50,7 +50,7 @@ export default function CashbackCategoriesPage() {
     <main className={`${styles.screen} ${styles.categoryScreen}`}>
       <DetailHeader title="Категории кешбека" backHref="/cashback" />
       <div className={styles.categoryHero}>
-        <Image src="/figma/categories/asset-02.png" alt="" width={310} height={310} priority />
+        <Image src="/figma/categories/asset-02.webp" alt="" width={310} height={310} priority />
       </div>
       <section className={styles.categorySheet}>
         <h1 className={styles.categoryTitle}>Какие категории<br />подключить на апрель?</h1>

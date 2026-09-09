@@ -22,19 +22,19 @@ Open `http://localhost:3000` for the participant app and `http://localhost:3000/
 ```powershell
 npm test
 npm run typecheck
+npm run build:next
 npm run build
-npm run build:vinext
 ```
 
 ## Cloudflare Worker
 
-The repository contains a vinext Worker build, Wrangler configuration, and D1 migration. Create the production D1 database once, place its ID in `wrangler.jsonc`, and then run:
+The repository contains a vinext Worker build, Wrangler configuration, a provisioned D1 binding, and the initial migration. To deploy manually, run:
 
 ```powershell
 npm run build:vinext
 npm run deploy:cloudflare
 ```
 
-For Cloudflare Git integration use `npm run build:vinext` as the build command and `npm run deploy:cloudflare` as the production deploy command. Add `MODERATOR_SECRET` as an encrypted Worker secret. The full account-side setup is documented in `CLOUDFLARE.md`.
+Cloudflare Git integration can use its standard `npm run build` build command and `npx wrangler deploy` deploy command. Add `MODERATOR_SECRET` as an encrypted Worker secret. The full account-side setup is documented in `CLOUDFLARE.md`.
 
 The prototype uses fake data and has no bank integration or third-party telemetry. Onest is bundled from the installed package and causes no runtime font request.
