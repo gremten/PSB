@@ -7,9 +7,9 @@ const PAGE_COLOR = "#0A0C0F";
 const BOTTOM_BAR_COLOR = "#242A33";
 // Some Telegram iOS builds report an inset that covers the status bar but not
 // the floating Close/menu controls. The fallback is based on their measured
-// lower edge; product content then keeps the requested 16px breathing room.
+// lower edge; product content then keeps the requested breathing room.
 const FULLSCREEN_TOP_CONTROLS_FALLBACK = 76;
-const FULLSCREEN_CONTENT_GAP = 16;
+const FULLSCREEN_CONTENT_GAP = 32;
 const MOBILE_TELEGRAM_PLATFORMS = new Set(["android", "android_x", "ios"]);
 
 function setInset(name: string, value: number | undefined) {
