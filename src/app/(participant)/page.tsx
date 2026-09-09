@@ -38,7 +38,7 @@ export default function HomePage() {
   const [currencyMode, setCurrencyMode] = useState<"buy" | "sell">("buy");
 
   return (
-    <main className={`${styles.screen} ${styles.homeScreen}`}>
+    <main className={`${styles.screen} ${styles.homeScreen}`} data-screen="home">
       <ProfileHeader />
       <section className={styles.homeTop}>
         <HorizontalScroller className={styles.promoScroller} ariaLabel="Предложения">

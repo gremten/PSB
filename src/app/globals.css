@@ -105,6 +105,9 @@ html[data-telegram-mini-app="true"] .participant-stage {
   padding-left: var(--app-tg-safe-left);
   background: var(--bg-surface);
 }
+html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="home"]) {
+  padding-top: 0;
+}
 html[data-telegram-mini-app="true"] .participant-phone {
   height: 100%;
 }

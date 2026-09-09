@@ -538,6 +538,16 @@
   mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
 }
 
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .homeScreen > .profileHeader {
+  min-height: calc(61px + var(--app-tg-safe-top));
+  padding-top: calc(5px + var(--app-tg-safe-top));
+}
+
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .homeScreen > .profileHeader::before,
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .homeScreen > .profileHeader::after {
+  height: calc(69px + var(--app-tg-safe-top));
+}
+
 .homeTop .promoScroller {
   margin-top: 0;
   padding: 0;
