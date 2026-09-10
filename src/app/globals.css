@@ -131,6 +131,14 @@ html[data-telegram-mini-app="true"] .participant-stage {
   padding-left: var(--app-tg-safe-left);
   background: var(--bg-surface);
 }
+html[data-telegram-mini-app="true"]:has([data-screen="account"]),
+html[data-telegram-mini-app="true"]:has([data-screen="card"]),
+html[data-telegram-mini-app="true"] body:has([data-screen="account"]),
+html[data-telegram-mini-app="true"] body:has([data-screen="card"]),
+html[data-telegram-mini-app="true"] .participant-stage:has([data-screen="account"]),
+html[data-telegram-mini-app="true"] .participant-stage:has([data-screen="card"]) {
+  background: var(--bg-page);
+}
 html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="home"]) {
   padding-top: 0;
 }

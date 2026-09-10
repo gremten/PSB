@@ -20,13 +20,28 @@ const categories = [
 export default function CashbackCategoriesPage() {
   const router = useRouter();
   const { productState, updateProductState } = useParticipant();
-  const [selected, setSelected] = useState<string[]>([]);
+  const selectingNextMonth = productState.cashbackConnected;
+  const [selected, setSelected] = useState<string[]>(() => selectingNextMonth
+    ? categories.filter((category) => productState.nextMonthCashbackCategories.includes(category.stateLabel)).map((category) => category.id)
+    : []);
   const [shake, setShake] = useState(0);
 
   const toggle = (id: string) => {
     setSelected((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : current.length < 3 ? [...current, id] : current;
-      track("action", { screen: "/cashback/categories", action: "cashback.category.selection_changed", target: id, metadata: { selectedCount: next.length } });
+      const period = selectingNextMonth ? "next_month" : "current_month";
+      track("action", { screen: "/cashback/categories", action: "cashback.category.selection_changed", target: id, metadata: { period, selectedCount: next.length } });
+      if (selectingNextMonth) {
+        const selectedLabels = categories.filter((category) => next.includes(category.id)).map((category) => category.stateLabel);
+        updateProductState({
+          nextMonthCashbackCategories: selectedLabels,
+          nextMonthCashbackSelectionStatus: next.length ? "draft" : "available",
+        }, "cashback.next_month.selection.changed", {
+          period,
+          selectedCount: next.length,
+          status: next.length ? "draft" : "available",
+        });
+      }
       return next;
     });
   };
@@ -40,13 +55,17 @@ export default function CashbackCategoriesPage() {
     const selectedLabels = categories.filter((category) => selected.includes(category.id)).map((category) => category.stateLabel);
     updateProductState(productState.cashbackConnected ? {
       nextMonthCashbackCategories: selectedLabels,
-      cashbackNextMonthSelectionAvailable: true,
+      nextMonthCashbackSelectionStatus: "confirmed",
     } : {
       cashbackConnected: true,
       selectedCashbackCategories: selectedLabels,
-      cashbackNextMonthSelectionAvailable: true,
+      nextMonthCashbackSelectionStatus: "available",
       cashbackSuccessVisible: true,
-    }, productState.cashbackConnected ? "cashback.next_month.categories.confirmed" : "cashback.categories.confirmed");
+    }, productState.cashbackConnected ? "cashback.next_month.categories.confirmed" : "cashback.categories.confirmed", {
+      period: productState.cashbackConnected ? "next_month" : "current_month",
+      selectedCount: selectedLabels.length,
+      status: productState.cashbackConnected ? "confirmed" : "connected",
+    });
     router.push("/");
   };
 

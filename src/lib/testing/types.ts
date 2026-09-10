@@ -1,12 +1,13 @@
 export type CashbackVariant = "connected" | "disconnected";
 export type TaskResult = "unaided" | "aided" | "failed" | "corrupted";
+export type NextMonthCashbackSelectionStatus = "locked" | "available" | "draft" | "confirmed";
 
 // Product state intentionally has no moderator or session fields.
 export interface ParticipantProductState {
   cashbackConnected: boolean;
   selectedCashbackCategories: string[];
   nextMonthCashbackCategories: string[];
-  cashbackNextMonthSelectionAvailable: boolean;
+  nextMonthCashbackSelectionStatus: NextMonthCashbackSelectionStatus;
   cardDetailsRevealed: boolean;
   cashbackSuccessVisible: boolean;
   accountsHidden: boolean;

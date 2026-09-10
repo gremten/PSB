@@ -339,7 +339,7 @@
 .accountForeground { position: relative; z-index: 1; }
 .accountGradientFrame {
   position: absolute;
-  top: -54px;
+  top: 0;
   left: 50%;
   width: 402px;
   height: 874px;
@@ -349,33 +349,59 @@
 }
 .accountGradientPosition {
   position: absolute;
-  top: 0;
-  left: 0;
+  display: flex;
+  top: 121.37px;
+  left: 176px;
+  width: 292.805px;
+  height: 296.032px;
+  align-items: center;
+  justify-content: center;
+  animation: account-background-position 39s linear infinite;
+  will-change: top, left, width, height;
+}
+.accountGradientRotation {
+  flex: none;
+  transform: rotate(-34.863deg);
+  animation: account-background-rotation 39s linear infinite;
+}
+.accountGradientBlob {
+  position: relative;
   width: 205.003px;
   height: 217.97px;
-  transform-origin: 0 0;
-  transform: translate(176px, 238.552px) rotate(-34.863deg);
-  animation: account-background-loop 39s linear infinite;
-  will-change: transform;
+  animation: account-background-size 39s linear infinite;
 }
-.accountGradientBlob { position: absolute; inset: 0; }
 .accountGradientBlob img {
   position: absolute;
   top: -128.31%;
+  right: -187.92%;
+  bottom: -162.76%;
   left: -118.05%;
-  width: 405.997%;
-  height: 391.07%;
+  width: auto;
+  height: auto;
   max-width: none;
+  animation: account-background-inset 39s linear infinite;
 }
-/* bg_animation 1123:2108: live variant 3 → 4 → 5 → 6 → 1 → 2 → 3,
-   each SMART_ANIMATE transition is 6.5s LINEAR, pivot at the node origin. */
-@keyframes account-background-loop {
-  0%, 100% { transform: translate(176px, 238.552px) rotate(-34.863deg) scale(1); }
-  16.666667% { transform: translate(4px, -.451px) rotate(-34.863deg) scale(1.344467); }
-  33.333333% { transform: translate(-243px, 149.181px) rotate(-34.863deg) scale(1); }
-  50% { transform: translate(-226px, 594.549px) rotate(-34.863deg) scale(1.344467); }
-  66.666667% { transform: translate(99px, 626px) rotate(0deg) scale(1); }
-  83.333333% { transform: translate(176px, 594.552px) rotate(-34.863deg) scale(1.344488); }
+/* Live bg_animation component 1123:2108, frame 3 → 4 → 5 → 6 → 1 → 2 → 3.
+   Figma Smart Animate uses a 6.5s linear transition per frame. */
+@keyframes account-background-position {
+  0%, 100% { top: 121.37px; left: 176px; width: 292.805px; height: 296.032px; }
+  16.666667% { top: -158px; left: 4px; width: 393.666px; height: 398.005px; }
+  33.333333% { top: 32px; left: -243px; width: 292.8px; height: 296.028px; }
+  50% { top: 437px; left: -226px; width: 393.666px; height: 398.005px; }
+  66.666667% { top: 626px; left: 99px; width: 205px; height: 217.967px; }
+  83.333333% { top: 437px; left: 176px; width: 393.672px; height: 398.011px; }
+}
+@keyframes account-background-rotation {
+  0%, 50%, 83.333333%, 100% { transform: rotate(-34.863deg); }
+  66.666667% { transform: rotate(0deg); }
+}
+@keyframes account-background-size {
+  0%, 33.333333%, 66.666667%, 100% { width: 205px; height: 217.97px; }
+  16.666667%, 50%, 83.333333% { width: 275.62px; height: 293.053px; }
+}
+@keyframes account-background-inset {
+  0%, 33.333333%, 100% { top: -128.31%; right: -187.92%; bottom: -162.76%; left: -118.05%; }
+  16.666667%, 50%, 66.666667%, 83.333333% { top: -95.44%; right: -114.15%; bottom: -95.44%; left: -87.8%; }
 }
 .accountForeground > .detailHeaderRow { position: sticky; top: 0; z-index: 10; isolation: isolate; padding-bottom: 12px; }
 .accountForeground > .detailHeaderRow::before,
@@ -421,7 +447,7 @@
 }
 .accountCardMiniature { width: 26px; height: 18px; flex: 0 0 26px; border-radius: 4px; }
 .accountCardLabel { display: flex; min-width: 0; align-items: center; gap: 4px; }
-.accountCardLabel > span:first-child { max-width: 72px; overflow: hidden; text-overflow: ellipsis; }
+.accountCardLabel > span:first-child { display: block; max-width: 72px; overflow: hidden; text-overflow: ellipsis; }
 .accountCardMiniatureOrange { background: linear-gradient(126.897deg, #e86630 10.608%, #82391b 76.428%); }
 .accountCardMiniaturePurple { background: linear-gradient(119.982deg, #6666aa 2.3784%, #3e3e65 97.622%); }
 .accountCardMiniatureBlue { background: linear-gradient(126.897deg, #4167bc 10.608%, #1c3066 76.428%); }

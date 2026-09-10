@@ -15,7 +15,7 @@ const idleResearchState: ResearchSessionState = {
 interface ParticipantContextValue {
   productState: ParticipantProductState;
   researchState: ResearchSessionState;
-  updateProductState: (patch: Partial<ParticipantProductState>, action: string) => void;
+  updateProductState: (patch: Partial<ParticipantProductState>, action: string, metadata?: Record<string, unknown>) => void;
 }
 
 const ParticipantContext = createContext<ParticipantContextValue | null>(null);
@@ -95,13 +95,13 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
     return () => document.removeEventListener("click", handleClick, true);
   }, [pathname]);
 
-  const updateProductState = useCallback((patch: Partial<ParticipantProductState>, action: string) => {
+  const updateProductState = useCallback((patch: Partial<ParticipantProductState>, action: string, metadata: Record<string, unknown> = {}) => {
     setProductState((current) => {
       const next = { ...current, ...patch };
       saveParticipantState(next);
       return next;
     });
-    track("product_state_change", { screen: pathname, action, metadata: { changed: true } });
+    track("product_state_change", { screen: pathname, action, metadata: { changed: true, ...metadata } });
   }, [pathname]);
 
   const value = useMemo(() => ({ productState, researchState, updateProductState }), [productState, researchState, updateProductState]);

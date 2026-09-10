@@ -11,8 +11,10 @@ export default function AccountPage() {
     <main className={`${styles.screen} ${styles.accountScreen}`} data-screen="account">
       <div className={styles.accountGradientFrame} aria-hidden="true">
         <div className={styles.accountGradientPosition}>
-          <div className={styles.accountGradientBlob}>
-            <Image src="/figma/account/background-blob.svg" alt="" width={832} height={852} unoptimized />
+          <div className={styles.accountGradientRotation}>
+            <div className={styles.accountGradientBlob}>
+              <Image src="/figma/account/background-blob.svg" alt="" width={832} height={852} unoptimized />
+            </div>
           </div>
         </div>
       </div>

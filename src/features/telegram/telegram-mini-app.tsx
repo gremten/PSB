@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const HEADER_COLOR = "#161A20";
 const PAGE_COLOR = "#0A0C0F";
@@ -17,6 +18,7 @@ function setInset(name: string, value: number | undefined) {
 }
 
 export function TelegramMiniAppBridge() {
+  const pathname = usePathname();
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
     if (!webApp || (!webApp.initData && webApp.platform === "unknown")) return;
@@ -89,6 +91,12 @@ export function TelegramMiniAppBridge() {
       root.style.removeProperty("--app-tg-safe-left");
     };
   }, []);
+
+  useEffect(() => {
+    const webApp = window.Telegram?.WebApp;
+    if (!webApp || (!webApp.initData && webApp.platform === "unknown")) return;
+    webApp.setHeaderColor(pathname === "/account" || pathname === "/card" ? PAGE_COLOR : HEADER_COLOR);
+  }, [pathname]);
 
   return null;
 }

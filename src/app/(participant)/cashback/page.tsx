@@ -28,6 +28,7 @@ function DisconnectedCashback() {
 }
 
 function ConnectedCashback() {
+  const { productState } = useParticipant();
   const [period, setPeriod] = useState<"month" | "year">("month");
   const choosePeriod = (next: "month" | "year") => {
     setPeriod(next);
@@ -42,8 +43,16 @@ function ConnectedCashback() {
           <p className={styles.pointsSub}>Кэшбек приходит с 5 до 20 числа</p>
           <div className={styles.nextCategories}>
             <span className={styles.nextCategoriesTitle}>Категории на май</span>
-            <span className={styles.nextCategoriesText}>Вы уже можете выбрать категории на следующий месяц</span>
-            <Link className={styles.chooseButton} href="/cashback/categories" data-track="cashback.categories.open">Выбрать</Link>
+            <span className={styles.nextCategoriesText}>
+              {productState.nextMonthCashbackSelectionStatus === "confirmed"
+                ? productState.nextMonthCashbackCategories.join(", ")
+                : productState.nextMonthCashbackSelectionStatus === "draft"
+                  ? `Выбрано ${productState.nextMonthCashbackCategories.length} из 3 — подтвердите выбор`
+                  : "Вы уже можете выбрать категории на следующий месяц"}
+            </span>
+            <Link className={styles.chooseButton} href="/cashback/categories" data-track="cashback.next_month.categories.open">
+              {productState.nextMonthCashbackSelectionStatus === "confirmed" ? "Изменить" : "Выбрать"}
+            </Link>
           </div>
         </section>
 
