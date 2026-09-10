@@ -372,12 +372,10 @@
 }
 .accountGradientBlob img {
   position: absolute;
-  top: -128.31%;
-  right: -187.92%;
-  bottom: -162.76%;
-  left: -118.05%;
-  width: auto;
-  height: auto;
+  top: -279.68px;
+  left: -242px;
+  width: 832.251px;
+  height: 852.418px;
   max-width: none;
   animation: account-background-inset 39s linear infinite;
 }
@@ -400,8 +398,8 @@
   16.666667%, 50%, 83.333333% { width: 275.62px; height: 293.053px; }
 }
 @keyframes account-background-inset {
-  0%, 33.333333%, 100% { top: -128.31%; right: -187.92%; bottom: -162.76%; left: -118.05%; }
-  16.666667%, 50%, 66.666667%, 83.333333% { top: -95.44%; right: -114.15%; bottom: -95.44%; left: -87.8%; }
+  0%, 16.666667%, 33.333333%, 50%, 83.333333%, 100% { top: -279.68px; left: -242px; width: 832.251px; height: 852.418px; }
+  66.666667% { top: -208.04px; left: -180px; width: 619px; height: 634px; }
 }
 .accountForeground > .detailHeaderRow { position: sticky; top: 0; z-index: 10; isolation: isolate; padding-bottom: 12px; }
 .accountForeground > .detailHeaderRow::before,
@@ -1016,7 +1014,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .accountGradientPosition { animation: none; }
+  .accountGradientPosition,
+  .accountGradientRotation,
+  .accountGradientBlob,
+  .accountGradientBlob img { animation: none; }
   .sensitiveHidden::after { animation: none; }
   .cardSlide, .flipCardInner { transition-duration: 1ms; }
 }

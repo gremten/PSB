@@ -8,6 +8,8 @@ The same build is prepared for Telegram Mini Apps. Telegram launch and BotFather
 
 The project also contains persistent research sessions, a protected moderator dashboard, semantic instrumentation, SSE live events, session reset controls, and aggregate metrics.
 
+Architecture boundaries, route/state/event contracts, Figma ownership, and known scenario gaps are frozen in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). A constrained prompt for continuing visual work with an ordinary ChatGPT chat is in [`CHATGPT_HANDOFF.md`](CHATGPT_HANDOFF.md).
+
 ## Run locally
 
 ```powershell

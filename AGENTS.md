@@ -9,6 +9,30 @@
 - Follow existing project patterns before changing architecture.
 - Do not guess interface dimensions, spacing, positions, effects, colors, assets, component states, or behavior when the value is available in the current Figma file or a component specification. Inspect the exact relevant node and its dependencies first; if the source remains genuinely ambiguous or contradictory, ask the user before implementing.
 
+## Architecture freeze and safe editing
+
+The repository architecture is frozen by default. A request to fix layout, visual fidelity, spacing, color, typography, an icon, an image, animation, or a named screen is authorization for a presentation-layer change only. It is not authorization to refactor or redesign application structure.
+
+Without explicit user permission for an architectural change, never:
+
+- rename, move, delete, merge, or split existing routes, components, modules, storage keys, state fields, tracking events, API endpoints, database tables, migrations, or Cloudflare bindings;
+- change existing component props, product-state transitions, session lifecycle, moderator permissions, authentication, privacy filtering, replay semantics, analytics calculations, Telegram bridge behavior, or deployment configuration;
+- replace an existing shared component with a new abstraction, introduce a new state-management/data-fetching/UI framework, add a dependency, perform broad cleanup, or reformat unrelated files;
+- modify `src/lib/db/**`, `src/lib/testing/**`, `src/features/usability/**`, `src/features/telegram/**`, `src/config/test-scenarios.ts`, API routes, migrations, `next.config.ts`, Wrangler configuration, or global layout rules merely to complete a visual task;
+- remove or rename any existing `data-track` value, demo guard, privacy guard, participant-state migration, or architecture-contract test.
+
+For ordinary visual work, edit only the named route/component, its scoped CSS module, and the exact local assets it uses. Prefer a component-local CSS rule over `src/app/globals.css`. Preserve DOM semantics and interaction behavior. Touch a shared file only when the user explicitly requests that shared behavior and the change cannot be scoped locally.
+
+An existing architecture component may change only after the user explicitly approves that specific behavior or contract change. If a requested visual fix appears to require a protected change, stop and ask one concise question before editing it.
+
+### New interactive components
+
+A new interactive component may be added when the requested interaction does not exist. It must be additive and local: do not rewrite an old component to make room for it. Every new interactive component must have stable semantic tracking IDs, preserve privacy rules, use existing tokens/primitives, include proportional tests for its state transitions, and be registered in `docs/ARCHITECTURE.md` with its owner route, Figma source node, state, emitted events, and assets. If it changes an existing contract, explicit user permission is still required.
+
+### Required handoff discipline
+
+Before editing, read `docs/ARCHITECTURE.md` and `CHATGPT_HANDOFF.md`. Keep changes minimal and review `git diff` for unrelated edits. For code changes run typecheck, lint, and relevant tests. Do not claim visual fidelity without reading the exact live Figma node. Do not silently implement a known scenario gap listed in the architecture document.
+
 ## Figma access
 
 - You have permanent permission to use the connected Figma project for this repository.
