@@ -2,10 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Glass } from "@samasante/liquid-glass";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import styles from "./bank.module.css";
+
+const FIGMA_BACK_GLASS_OPTICS = {
+  strength: 0.8,
+  depth: 0.2,
+  dispersion: 0.5,
+  frost: 4,
+  splay: 0,
+  sheen: 1,
+  sheenAngle: -45,
+  specular: 0.8,
+};
+
+function BackGlass({ children }: { children: ReactNode }) {
+  return (
+    <Glass className={styles.backGlass} size={44} radius={22} optics={FIGMA_BACK_GLASS_OPTICS}>
+      {children}
+    </Glass>
+  );
+}
 
 export function ProfileHeader() {
   return (
@@ -25,9 +45,11 @@ export function ProfileHeader() {
 export function DetailHeader({ title, subtitle, backHref, trailing }: { title: string; subtitle?: string; backHref: string; trailing?: ReactNode }) {
   return (
     <header className={styles.detailHeaderRow}>
-      <Link className={styles.backButton} href={backHref} aria-label="Назад" data-track="navigation.back">
-        <Image src="/figma/icons/back.svg" alt="" width={24} height={24} />
-      </Link>
+      <BackGlass>
+        <Link className={styles.backButton} href={backHref} aria-label="Назад" data-track="navigation.back">
+          <Image src="/figma/icons/back.svg" alt="" width={24} height={24} />
+        </Link>
+      </BackGlass>
       <div className={styles.detailTitleWrap}>
         <h1 className={styles.detailTitle}>{title}</h1>
         {subtitle && <span className={styles.detailSubtitle}>{subtitle}</span>}
@@ -94,7 +116,13 @@ export function RouteButton({ href, children, className = "", dataTrack }: { hre
 
 export function RouterBackButton() {
   const router = useRouter();
-  return <button className={styles.backButton} aria-label="Назад" onClick={() => router.back()} data-track="navigation.back"><Image src="/figma/icons/back.svg" alt="" width={24} height={24} /></button>;
+  return (
+    <BackGlass>
+      <button className={styles.backButton} aria-label="Назад" onClick={() => router.back()} data-track="navigation.back">
+        <Image src="/figma/icons/back.svg" alt="" width={24} height={24} />
+      </button>
+    </BackGlass>
+  );
 }
 
 export { styles };
