@@ -62,9 +62,9 @@ h1, h2, h3, p { margin-top: 0; }
 
 :where(button:not(:disabled), a[href], [role="button"]) {
   scale: 1;
-  transition: scale 100ms ease-out;
+  transition: scale 180ms cubic-bezier(.2, .75, .25, 1);
 }
-:where(button:not(:disabled), a[href], [role="button"]):active { scale: .95; }
+:where(button:not(:disabled), a[href], [role="button"]):active { scale: .975; }
 
 .participant-stage {
   position: relative;

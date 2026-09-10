@@ -3,8 +3,7 @@
 .headerTitle { margin: 0; font-size: 20px; font-weight: 650; line-height: 28px; text-align: center; }
 .headerSide { display: flex; align-items: center; min-width: 44px; }
 .headerSide:last-child { justify-content: flex-end; }
-.button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: var(--radius-md); padding: 0 20px; font-weight: 650; cursor: pointer; transition: transform .12s ease, opacity .12s ease; }
-.button:active { transform: scale(.98); }
+.button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: var(--radius-md); padding: 0 20px; font-weight: 650; cursor: pointer; transition: opacity .12s ease; }
 .button:disabled { cursor: not-allowed; opacity: .45; }
 .primary { color: var(--text-on-color); background: var(--action-primary); }
 .secondary { color: var(--text-primary); background: var(--action-secondary); }

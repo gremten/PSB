@@ -931,6 +931,11 @@
 
 .homeTop .balanceArea {
   margin-top: 48px;
+  transition: margin-top 320ms cubic-bezier(.2, .75, .25, 1);
+}
+
+.homeTop .promoRegionEmpty + .balanceArea {
+  margin-top: 0;
 }
 
 .homeTop .accountScroller {
