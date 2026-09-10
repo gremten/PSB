@@ -1,8 +1,8 @@
-const PULL_LIMIT = 7;
+const PULL_LIMIT = 6;
 const PULL_RANGE = 24;
-const CENTER_RANGE = 0.16;
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const PRESSED_SCALE = 0.975;
+const MAX_STRETCH = 0.02;
+const MAX_SQUASH = 0.01;
 
 function rubberAxis(delta: number) {
   if (delta === 0) return 0;
@@ -10,16 +10,18 @@ function rubberAxis(delta: number) {
   return Math.sign(delta) * magnitude;
 }
 
-export function getElasticGlassPull(deltaX: number, deltaY: number, width: number, height: number) {
+export function getElasticGlassPull(deltaX: number, deltaY: number) {
   const x = rubberAxis(deltaX);
   const y = rubberAxis(deltaY);
-  const safeWidth = Math.max(width, 1);
-  const safeHeight = Math.max(height, 1);
+  const magnitude = Math.min(1, Math.hypot(x, y) / PULL_LIMIT);
+  const total = Math.abs(x) + Math.abs(y);
+  const xWeight = total > 0 ? Math.abs(x) / total : 0;
+  const yWeight = total > 0 ? Math.abs(y) / total : 0;
 
   return {
     x,
     y,
-    centerX: clamp(0.5 + deltaX / (safeWidth * 2.5), 0.5 - CENTER_RANGE, 0.5 + CENTER_RANGE),
-    centerY: clamp(0.5 + deltaY / (safeHeight * 2.5), 0.5 - CENTER_RANGE, 0.5 + CENTER_RANGE),
+    scaleX: PRESSED_SCALE + magnitude * (MAX_STRETCH * xWeight - MAX_SQUASH * yWeight),
+    scaleY: PRESSED_SCALE + magnitude * (MAX_STRETCH * yWeight - MAX_SQUASH * xWeight),
   };
 }

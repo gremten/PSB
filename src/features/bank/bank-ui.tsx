@@ -26,30 +26,29 @@ const FIGMA_GLASS_OPTICS = {
   specular: 0.8,
 };
 
-type PullState = { x: number; y: number; centerX: number; centerY: number; pressed: boolean };
-const RESTING_PULL: PullState = { x: 0, y: 0, centerX: 0.5, centerY: 0.5, pressed: false };
+type PullState = { x: number; y: number; scaleX: number; scaleY: number; pressed: boolean };
+const RESTING_PULL: PullState = { x: 0, y: 0, scaleX: 1, scaleY: 1, pressed: false };
 
 function BackGlass({ children }: { children: ReactNode }) {
   const [pull, setPull] = useState<PullState>(RESTING_PULL);
   const pointerId = useRef<number | null>(null);
   const pointerOrigin = useRef({ x: 0, y: 0 });
+  const dragged = useRef(false);
 
   const beginPull = (event: ReactPointerEvent<HTMLDivElement>) => {
     pointerId.current = event.pointerId;
     pointerOrigin.current = { x: event.clientX, y: event.clientY };
+    dragged.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
-    setPull((current) => ({ ...current, pressed: true }));
+    setPull({ ...getElasticGlassPull(0, 0), pressed: true });
   };
 
   const movePull = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (pointerId.current !== event.pointerId) return;
-    const next = getElasticGlassPull(
-      event.clientX - pointerOrigin.current.x,
-      event.clientY - pointerOrigin.current.y,
-      44,
-      44,
-    );
-    setPull({ ...next, pressed: true });
+    const deltaX = event.clientX - pointerOrigin.current.x;
+    const deltaY = event.clientY - pointerOrigin.current.y;
+    if (Math.hypot(deltaX, deltaY) > 4) dragged.current = true;
+    setPull({ ...getElasticGlassPull(deltaX, deltaY), pressed: true });
   };
 
   const endPull = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -61,10 +60,6 @@ function BackGlass({ children }: { children: ReactNode }) {
     setPull(RESTING_PULL);
   };
 
-  const pullAmount = Math.min(1, Math.hypot(pull.x, pull.y) / 7);
-  const scaleX = pull.pressed ? 0.975 + Math.abs(pull.x) * 0.005 : 1;
-  const scaleY = pull.pressed ? 0.975 + Math.abs(pull.y) * 0.005 : 1;
-
   return (
     <div
       className={styles.backGlassPull}
@@ -73,16 +68,19 @@ function BackGlass({ children }: { children: ReactNode }) {
       onPointerMove={movePull}
       onPointerUp={endPull}
       onPointerCancel={endPull}
-      style={{
-        transform: `translate3d(${pull.x}px, ${pull.y}px, 0) scale(${scaleX}, ${scaleY})`,
-        filter: pull.pressed ? `brightness(${1 + pullAmount * 0.04})` : undefined,
+      onClickCapture={(event) => {
+        if (!dragged.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragged.current = false;
       }}
+      style={{ transform: `translate3d(${pull.x}px, ${pull.y}px, 0) scale(${pull.scaleX}, ${pull.scaleY})` }}
     >
       <Glass
         className={styles.backGlass}
-        size={44}
+        width={44}
+        height={44}
         radius={22}
-        center={{ x: pull.centerX, y: pull.centerY }}
         optics={FIGMA_GLASS_OPTICS}
       >
         {children}
@@ -98,9 +96,11 @@ export function ProfileHeader() {
         <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
         <span>Александр К.</span>
       </div>
-      <Glass className={styles.toolbar} radius={999} optics={FIGMA_GLASS_OPTICS}>
-        <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open" onClick={showDemoUnavailable}><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
-        <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open" onClick={showDemoUnavailable}><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
+      <Glass className={styles.toolbarGlass} width={88} height={44} radius={22} optics={FIGMA_GLASS_OPTICS}>
+        <div className={styles.toolbar}>
+          <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open" onClick={showDemoUnavailable}><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
+          <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open" onClick={showDemoUnavailable}><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
+        </div>
       </Glass>
     </header>
   );
