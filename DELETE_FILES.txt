@@ -1,0 +1,3 @@
+Delete these two obsolete files from the previous route-transition experiment:
+src/features/bank/participant-route-transition.ts
+src/features/bank/participant-route-transition.test.ts

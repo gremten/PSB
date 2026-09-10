@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Glass } from "@samasante/liquid-glass";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
-import { getElasticGlassPull } from "./glass-interaction";
+import { getElasticGlassPull, getToolbarGlassPull } from "./glass-interaction";
 import styles from "./bank.module.css";
 
 const FIGMA_GLASS_OPTICS = {
@@ -28,6 +28,17 @@ const FIGMA_GLASS_OPTICS = {
 
 type PullState = { x: number; y: number; scaleX: number; scaleY: number; pressed: boolean };
 const RESTING_PULL: PullState = { x: 0, y: 0, scaleX: 1, scaleY: 1, pressed: false };
+const PRESSED_CONTENT_SCALE = 0.975;
+
+const PRESSED_GLASS_OPTICS = {
+  ...FIGMA_GLASS_OPTICS,
+  strength: 0.2,
+  depth: 0.28,
+  curvature: 0.84,
+  bend: 0.92,
+  sheen: 0.92,
+  specular: 0.92,
+};
 
 function BackGlass({ children }: { children: ReactNode }) {
   const [pull, setPull] = useState<PullState>(RESTING_PULL);
@@ -60,6 +71,9 @@ function BackGlass({ children }: { children: ReactNode }) {
     setPull(RESTING_PULL);
   };
 
+  const contentScaleX = pull.pressed ? PRESSED_CONTENT_SCALE / pull.scaleX : 1;
+  const contentScaleY = pull.pressed ? PRESSED_CONTENT_SCALE / pull.scaleY : 1;
+
   return (
     <div
       className={styles.backGlassPull}
@@ -81,9 +95,106 @@ function BackGlass({ children }: { children: ReactNode }) {
         width={44}
         height={44}
         radius={22}
-        optics={FIGMA_GLASS_OPTICS}
+        optics={pull.pressed ? PRESSED_GLASS_OPTICS : FIGMA_GLASS_OPTICS}
       >
-        {children}
+        <div
+          className={styles.backGlassContent}
+          style={{ transform: `scale(${contentScaleX}, ${contentScaleY})` }}
+        >
+          {children}
+        </div>
+      </Glass>
+    </div>
+  );
+}
+
+function HeaderToolbar() {
+  const [activeIndex, setActiveIndex] = useState<0 | 1>(0);
+  const [pressed, setPressed] = useState(false);
+  const [pull, setPull] = useState(() => getToolbarGlassPull(0, 0));
+  const pointerId = useRef<number | null>(null);
+  const pointerOrigin = useRef({ x: 0, y: 0 });
+  const dragged = useRef(false);
+
+  const beginPress = (index: 0 | 1) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (activeIndex !== index) setActiveIndex(index);
+    pointerId.current = event.pointerId;
+    pointerOrigin.current = { x: event.clientX, y: event.clientY };
+    dragged.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPull(getToolbarGlassPull(0, 0));
+    setPressed(true);
+  };
+
+  const movePress = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (pointerId.current !== event.pointerId) return;
+    const deltaX = event.clientX - pointerOrigin.current.x;
+    const deltaY = event.clientY - pointerOrigin.current.y;
+    if (Math.hypot(deltaX, deltaY) > 4) dragged.current = true;
+    setPull(getToolbarGlassPull(deltaX, deltaY));
+  };
+
+  const endPress = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (pointerId.current !== event.pointerId) return;
+    pointerId.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setPressed(false);
+    setPull(getToolbarGlassPull(0, 0));
+  };
+
+  const suppressDraggedClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (!dragged.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragged.current = false;
+  };
+
+  const origin = activeIndex === 0 ? "27% 50%" : "73% 50%";
+  const contentScaleX = pressed ? PRESSED_CONTENT_SCALE / pull.scaleX : 1;
+  const contentScaleY = pressed ? PRESSED_CONTENT_SCALE / pull.scaleY : 1;
+
+  return (
+    <div
+      className={styles.toolbarGlassPull}
+      data-pulling={pressed || undefined}
+      style={{
+        transform: pressed ? `translate3d(${pull.x}px, ${pull.y}px, 0) scale(${pull.scaleX}, ${pull.scaleY})` : undefined,
+        transformOrigin: origin,
+      }}
+    >
+      <Glass className={styles.toolbarGlass} width={88} height={44} radius={22} optics={pressed ? PRESSED_GLASS_OPTICS : FIGMA_GLASS_OPTICS}>
+        <div
+          className={styles.toolbar}
+          style={{
+            transform: pressed ? `scale(${contentScaleX}, ${contentScaleY})` : undefined,
+            transformOrigin: origin,
+          }}
+        >
+          <button
+            className={styles.toolbarButton}
+            aria-label="Поиск"
+            data-track="header.search.open"
+            onPointerDown={beginPress(0)}
+            onPointerMove={movePress}
+            onPointerUp={endPress}
+            onPointerCancel={endPress}
+            onClickCapture={suppressDraggedClick}
+            onClick={showDemoUnavailable}
+          ><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
+          <button
+            className={styles.toolbarButton}
+            aria-label="Уведомления"
+            data-track="header.notifications.open"
+            onPointerDown={beginPress(1)}
+            onPointerMove={movePress}
+            onPointerUp={endPress}
+            onPointerCancel={endPress}
+            onClickCapture={suppressDraggedClick}
+            onClick={showDemoUnavailable}
+          ><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
+        </div>
       </Glass>
     </div>
   );
@@ -96,12 +207,7 @@ export function ProfileHeader() {
         <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
         <span>Александр К.</span>
       </div>
-      <Glass className={styles.toolbarGlass} width={88} height={44} radius={22} optics={FIGMA_GLASS_OPTICS}>
-        <div className={styles.toolbar}>
-          <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open" onClick={showDemoUnavailable}><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
-          <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open" onClick={showDemoUnavailable}><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
-        </div>
-      </Glass>
+      <HeaderToolbar />
     </header>
   );
 }
