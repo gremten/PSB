@@ -406,6 +406,15 @@
   66.666667% { top: -388.04px; left: -360px; width: 979px; height: 994px; }
 }
 .accountForeground > .detailHeaderRow { position: sticky; top: 0; z-index: 10; isolation: isolate; padding-bottom: 12px; }
+
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="account"])) {
+  padding-top: 0;
+}
+
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .accountForeground > .detailHeaderRow {
+  min-height: calc(61px + var(--app-tg-safe-top));
+  padding-top: calc(5px + var(--app-tg-safe-top));
+}
 .accountForeground > .detailHeaderRow::before {
   position: absolute;
   inset: 0 0 auto;
@@ -943,6 +952,11 @@
 
 .homeTop .balanceArea {
   margin-top: 48px;
+  transition: margin-top 320ms cubic-bezier(.2, .75, .25, 1);
+}
+
+.homeTop .promoRegionEmpty + .balanceArea {
+  margin-top: 0;
 }
 
 .homeTop .accountScroller {
