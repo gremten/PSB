@@ -28,7 +28,7 @@ const FIGMA_GLASS_OPTICS = {
 
 type PullState = { x: number; y: number; scaleX: number; scaleY: number; pressed: boolean };
 const RESTING_PULL: PullState = { x: 0, y: 0, scaleX: 1, scaleY: 1, pressed: false };
-const PRESSED_CONTENT_SCALE = 0.975;
+const PRESSED_CONTENT_SCALE = 1;
 
 const PRESSED_GLASS_OPTICS = {
   ...FIGMA_GLASS_OPTICS,

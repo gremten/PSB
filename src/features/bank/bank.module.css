@@ -116,7 +116,6 @@
   transition: transform 100ms cubic-bezier(.2, .8, .2, 1);
 }
 
-.toolbarButton:active { transform: scale(.975); }
 .toolbarButton img { width: 24px; height: 24px; }
 
 .detailHeaderRow {
