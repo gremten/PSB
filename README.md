@@ -27,7 +27,7 @@ Open `http://localhost:3000` for the participant app and `http://localhost:3000/
 npm test
 npm run typecheck
 npm run build:next
-npm run build
+npm run build 
 ```
 
 ## Cloudflare Worker
