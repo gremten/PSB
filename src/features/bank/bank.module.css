@@ -190,7 +190,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding-bottom: 30px;
+  padding-bottom: 0;
 }
 
 .promoScroller,
@@ -491,7 +491,7 @@
   content: "";
 }
 .accountForeground .detailTitle { font-weight: 600; }
-.accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 34px; }
+.accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 0; }
 .accountOverview { display: flex; min-height: min(37.53dvh, 368px); flex-direction: column; gap: 24px; }
 .accountOperationBlock { display: flex; flex-direction: column; gap: 16px; }
 .accountBalanceBlock { display: flex; flex-direction: column; gap: 4px; padding: 0 20px; }
@@ -576,7 +576,7 @@
 .accountDangerRow { margin-top: 16px; border-top: 1px solid var(--border-primary); padding-top: 16px; }
 .accountDangerButton { display: flex; width: 100%; height: 52px; align-items: center; justify-content: center; border: 0; border-radius: 999px; padding: 12px; color: #fe1818; background: #242a33; font-size: 16px; line-height: 20px; cursor: pointer; }
 
-.screenStack { display: flex; flex-direction: column; gap: 22px; padding-bottom: 24px; }
+.screenStack { display: flex; flex-direction: column; gap: 22px; padding-bottom: 0; }
 .settingsRow { grid-template-columns: 44px minmax(0, 1fr) 24px; width: 100%; cursor: pointer; }
 .settingsRowSimple { grid-template-columns: minmax(0, 1fr) 24px; }
 .settingsLabel { font-size: 16px; line-height: 20px; }
@@ -1084,9 +1084,9 @@
 
 .sensitiveHidden {
   position: relative;
-  overflow: hidden;
-  filter: blur(4px);
-  opacity: .76;
+  overflow: visible;
+  filter: blur(5px) saturate(1.08);
+  opacity: .72;
   pointer-events: none;
   user-select: none;
   transition: filter 220ms ease, opacity 220ms ease;
@@ -1094,26 +1094,26 @@
 
 .sensitiveHidden::after {
   position: absolute;
-  inset: -8px;
+  z-index: 1;
+  inset: -7px -10px;
   background-image:
-    radial-gradient(circle, rgb(255 255 255 / 90%) 0 1px, transparent 1.7px),
-    radial-gradient(circle, rgb(255 255 255 / 66%) 0 1.2px, transparent 2px),
-    radial-gradient(circle, rgb(168 168 191 / 80%) 0 .8px, transparent 1.6px);
-  background-position: 0 0, 7px 11px, 13px 4px;
-  background-size: 17px 19px, 23px 17px, 19px 29px;
+    radial-gradient(circle, rgb(255 255 255 / 76%) 0 .9px, transparent 1.8px),
+    radial-gradient(circle, rgb(255 255 255 / 42%) 0 1.2px, transparent 2.4px),
+    radial-gradient(circle, rgb(155 165 184 / 42%) 0 .8px, transparent 1.8px);
+  background-position: 1px 2px, 8px 13px, 14px 6px;
+  background-size: 13px 15px, 19px 17px, 23px 21px;
   content: "";
-  filter: blur(1.5px);
+  filter: blur(.8px);
   mix-blend-mode: screen;
-  opacity: .85;
-  animation: sensitive-grain 680ms steps(6, end) infinite;
+  opacity: .72;
+  pointer-events: none;
+  animation: sensitive-particles 3.4s ease-in-out infinite alternate;
 }
 
-@keyframes sensitive-grain {
-  0% { transform: translate3d(-3px, -2px, 0); }
-  25% { transform: translate3d(4px, 1px, 0); }
-  50% { transform: translate3d(-1px, 4px, 0); }
-  75% { transform: translate3d(3px, -4px, 0); }
-  100% { transform: translate3d(-3px, -2px, 0); }
+@keyframes sensitive-particles {
+  0% { transform: translate3d(-1.5px, -1px, 0); opacity: .58; }
+  50% { transform: translate3d(1px, 1.5px, 0); opacity: .78; }
+  100% { transform: translate3d(2px, -.5px, 0); opacity: .66; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1121,17 +1121,68 @@
   .accountGradientRotation,
   .accountGradientBlob,
   .accountGradientBlob img { animation: none; }
-  .sensitiveHidden::after { animation: none; }
+  .sensitiveHidden::after,
+  .sensitiveHistory .merchantIcon::after,
+  .sensitiveHistory .transactionTitle::after,
+  .sensitiveHistory .transactionMeta::after,
+  .sensitiveHistory .transactionAmount::after { animation: none; }
   .cardSlide, .flipCardInner { transition-duration: 1ms; }
 }
 
 .sensitiveHistory .merchantIcon,
-.sensitiveHistory .transactionMain,
+.sensitiveHistory .transactionTitle,
+.sensitiveHistory .transactionMeta,
 .sensitiveHistory .transactionAmount {
-  filter: blur(5px);
-  opacity: .66;
+  position: relative;
+  overflow: visible;
+  filter: blur(5px) saturate(1.12);
+  opacity: .68;
   user-select: none;
   transition: filter 220ms ease, opacity 220ms ease;
+}
+
+.sensitiveHistory .merchantIcon::after,
+.sensitiveHistory .transactionTitle::after,
+.sensitiveHistory .transactionMeta::after,
+.sensitiveHistory .transactionAmount::after {
+  position: absolute;
+  z-index: 2;
+  inset: -6px -8px;
+  background-image:
+    radial-gradient(circle, rgb(255 255 255 / 72%) 0 .85px, transparent 1.7px),
+    radial-gradient(circle, rgb(255 255 255 / 38%) 0 1.1px, transparent 2.2px),
+    radial-gradient(circle, rgb(151 161 181 / 44%) 0 .75px, transparent 1.6px);
+  background-position: 0 1px, 7px 9px, 12px 4px;
+  background-size: 12px 14px, 17px 19px, 21px 16px;
+  content: "";
+  filter: blur(.7px);
+  mix-blend-mode: screen;
+  opacity: .7;
+  pointer-events: none;
+  animation: sensitive-particles 3.1s ease-in-out infinite alternate;
+}
+
+.sensitiveHistory .transactionMain,
+.sensitiveHistory .transactionTitle,
+.sensitiveHistory .transactionMeta,
+.sensitiveHistory .transactionAmount,
+.sensitiveHistory .merchantIcon {
+  overflow: visible;
+}
+
+.sensitiveHistory .transactionTitle,
+.sensitiveHistory .transactionMeta {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.sensitiveHistory .transactionAmount::after {
+  inset: -7px -10px;
+}
+
+.sensitiveHistory .merchantIcon::after {
+  inset: -5px;
+  border-radius: 10px;
 }
 
 .accountBadge {
@@ -1162,7 +1213,7 @@
   flex-direction: column;
   gap: 24px;
   margin-top: -20px;
-  padding: 44px 0 34px;
+  padding: 44px 0 0;
   background: #0a0c0f;
 }
 
@@ -1225,6 +1276,10 @@
 .collapsibleRegionInner {
   min-height: 0;
   overflow: hidden;
+}
+
+.collapsibleRegion:not(.collapsibleRegionClosed) .collapsibleRegionInner {
+  overflow: visible;
 }
 
 .sectionBar {
@@ -1423,7 +1478,32 @@
 
 .exchangeButton {
   min-height: 44px;
+  border-radius: 16px;
   padding: 8px 12px;
+  clip-path: polygon(
+    16px 0, calc(100% - 16px) 0,
+    calc(100% - 9.69px) .12px, calc(100% - 6.57px) .49px, calc(100% - 4.29px) 1.15px,
+    calc(100% - 2.55px) 2.55px, calc(100% - 1.15px) 4.29px, calc(100% - .49px) 6.57px,
+    calc(100% - .12px) 9.69px, 100% 16px,
+    100% calc(100% - 16px),
+    calc(100% - .12px) calc(100% - 9.69px), calc(100% - .49px) calc(100% - 6.57px), calc(100% - 1.15px) calc(100% - 4.29px),
+    calc(100% - 2.55px) calc(100% - 2.55px), calc(100% - 4.29px) calc(100% - 1.15px), calc(100% - 6.57px) calc(100% - .49px),
+    calc(100% - 9.69px) calc(100% - .12px), calc(100% - 16px) 100%,
+    16px 100%,
+    9.69px calc(100% - .12px), 6.57px calc(100% - .49px), 4.29px calc(100% - 1.15px),
+    2.55px calc(100% - 2.55px), 1.15px calc(100% - 4.29px), .49px calc(100% - 6.57px),
+    .12px calc(100% - 9.69px), 0 calc(100% - 16px),
+    0 16px,
+    .12px 9.69px, .49px 6.57px, 1.15px 4.29px,
+    2.55px 2.55px, 4.29px 1.15px, 6.57px .49px, 9.69px .12px
+  );
+}
+
+@supports (corner-shape: squircle) {
+  .exchangeButton {
+    clip-path: none;
+    corner-shape: squircle;
+  }
 }
 
 .homeScreen .buttonInset .primaryButton {

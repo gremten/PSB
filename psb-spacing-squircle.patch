@@ -1,0 +1,101 @@
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -92,11 +92,14 @@
+   overflow-x: hidden;
+   overflow-y: auto;
+   overscroll-behavior-y: none;
+-  padding-bottom: calc(104px + max(env(safe-area-inset-bottom), var(--app-tg-safe-bottom)));
++  padding-bottom: 24px;
+   scrollbar-width: none;
+   -webkit-overflow-scrolling: touch;
+ }
+ .participant-content:has(.homeScreen) { background: var(--bg-surface); }
++.participant-content:has(~ nav[aria-label="Основная навигация"]) {
++  padding-bottom: calc(24px + 67px + max(32px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom)));
++}
+ .role-gate {
+   width: min(392px, calc(100% - 32px));
+   border: 1px solid var(--border-primary);
+--- a/src/features/bank/bank.module.css
++++ b/src/features/bank/bank.module.css
+@@ -190,7 +190,7 @@
+   display: flex;
+   flex-direction: column;
+   gap: 24px;
+-  padding-bottom: 30px;
++  padding-bottom: 0;
+ }
+ 
+ .promoScroller,
+@@ -491,7 +491,7 @@
+   content: "";
+ }
+ .accountForeground .detailTitle { font-weight: 600; }
+-.accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 34px; }
++.accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 0; }
+ .accountOverview { display: flex; min-height: min(37.53dvh, 368px); flex-direction: column; gap: 24px; }
+ .accountOperationBlock { display: flex; flex-direction: column; gap: 16px; }
+ .accountBalanceBlock { display: flex; flex-direction: column; gap: 4px; padding: 0 20px; }
+@@ -576,7 +576,7 @@
+ .accountDangerRow { margin-top: 16px; border-top: 1px solid var(--border-primary); padding-top: 16px; }
+ .accountDangerButton { display: flex; width: 100%; height: 52px; align-items: center; justify-content: center; border: 0; border-radius: 999px; padding: 12px; color: #fe1818; background: #242a33; font-size: 16px; line-height: 20px; cursor: pointer; }
+ 
+-.screenStack { display: flex; flex-direction: column; gap: 22px; padding-bottom: 24px; }
++.screenStack { display: flex; flex-direction: column; gap: 22px; padding-bottom: 0; }
+ .settingsRow { grid-template-columns: 44px minmax(0, 1fr) 24px; width: 100%; cursor: pointer; }
+ .settingsRowSimple { grid-template-columns: minmax(0, 1fr) 24px; }
+ .settingsLabel { font-size: 16px; line-height: 20px; }
+@@ -1162,7 +1162,7 @@
+   flex-direction: column;
+   gap: 24px;
+   margin-top: -20px;
+-  padding: 44px 0 34px;
++  padding: 44px 0 0;
+   background: #0a0c0f;
+ }
+ 
+@@ -1423,7 +1423,32 @@
+ 
+ .exchangeButton {
+   min-height: 44px;
++  border-radius: 16px;
+   padding: 8px 12px;
++  clip-path: polygon(
++    16px 0, calc(100% - 16px) 0,
++    calc(100% - 9.69px) .12px, calc(100% - 6.57px) .49px, calc(100% - 4.29px) 1.15px,
++    calc(100% - 2.55px) 2.55px, calc(100% - 1.15px) 4.29px, calc(100% - .49px) 6.57px,
++    calc(100% - .12px) 9.69px, 100% 16px,
++    100% calc(100% - 16px),
++    calc(100% - .12px) calc(100% - 9.69px), calc(100% - .49px) calc(100% - 6.57px), calc(100% - 1.15px) calc(100% - 4.29px),
++    calc(100% - 2.55px) calc(100% - 2.55px), calc(100% - 4.29px) calc(100% - 1.15px), calc(100% - 6.57px) calc(100% - .49px),
++    calc(100% - 9.69px) calc(100% - .12px), calc(100% - 16px) 100%,
++    16px 100%,
++    9.69px calc(100% - .12px), 6.57px calc(100% - .49px), 4.29px calc(100% - 1.15px),
++    2.55px calc(100% - 2.55px), 1.15px calc(100% - 4.29px), .49px calc(100% - 6.57px),
++    .12px calc(100% - 9.69px), 0 calc(100% - 16px),
++    0 16px,
++    .12px 9.69px, .49px 6.57px, 1.15px 4.29px,
++    2.55px 2.55px, 4.29px 1.15px, 6.57px .49px, 9.69px .12px
++  );
++}
++
++@supports (corner-shape: squircle) {
++  .exchangeButton {
++    clip-path: none;
++    corner-shape: squircle;
++  }
+ }
+ 
+ .homeScreen .buttonInset .primaryButton {
+--- a/AGENT_READ_ME.md
++++ b/AGENT_READ_ME.md
+@@ -18,6 +18,9 @@
+ - On the home screen, the accounts/cards scroller must keep side breathing room while scrolling so cards are not visually clipped by the viewport on the left or right.
+ - The home accounts container itself ends with visible `20px` bottom-left and bottom-right corners immediately before the four quick-action buttons. The rounding belongs to the accounts/card container, not to a fake background layer underneath it.
+ 
++- Participant pages keep exactly 24 px of scroll-end spacing after the final content block when no tabbar is present; when the tabbar is present, reserve the tabbar's full height plus the same 24 px gap. Route-local wrappers must not add a second bottom gap.
++- The bottom “Перейти к обмену” button in the home currency-exchange block uses a 16 px squircle/continuous-corner shape instead of a pill. Preserve `home.exchange.open` and its existing unavailable-demo behavior.
++
+ ## Guardrails
+ 
+ - Keep changes visual and surgical unless explicitly asked otherwise.

@@ -92,11 +92,14 @@ h1, h2, h3, p { margin-top: 0; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: none;
-  padding-bottom: calc(104px + max(env(safe-area-inset-bottom), var(--app-tg-safe-bottom)));
+  padding-bottom: 24px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 .participant-content:has(.homeScreen) { background: var(--bg-surface); }
+.participant-content:has(~ nav[aria-label="Основная навигация"]) {
+  padding-bottom: calc(24px + 67px + max(32px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom)));
+}
 .role-gate {
   width: min(392px, calc(100% - 32px));
   border: 1px solid var(--border-primary);
