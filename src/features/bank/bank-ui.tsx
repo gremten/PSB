@@ -4,26 +4,90 @@ import Image from "next/image";
 import Link from "next/link";
 import { Glass } from "@samasante/liquid-glass";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
+import { getElasticGlassPull } from "./glass-interaction";
 import styles from "./bank.module.css";
 
-const FIGMA_BACK_GLASS_OPTICS = {
-  strength: 0.8,
+const FIGMA_GLASS_OPTICS = {
+  // Figma Glass: Light -45° / 80%, Refraction 80, Depth 20, Dispersion 50, Frost 4, Splay 0.
+  // The library uses normalized optics, so refraction is tuned to the same visual intensity
+  // rather than copied as 0.8 (which would move pixels by ~80% of a 44 px lens).
+  strength: 0.16,
   depth: 0.2,
+  curvature: 0.72,
   dispersion: 0.5,
+  bend: 0.8,
+  bendWidth: 0.2,
   frost: 4,
   splay: 0,
-  sheen: 1,
+  sheen: 0.8,
   sheenAngle: -45,
   specular: 0.8,
 };
 
+type PullState = { x: number; y: number; centerX: number; centerY: number; pressed: boolean };
+const RESTING_PULL: PullState = { x: 0, y: 0, centerX: 0.5, centerY: 0.5, pressed: false };
+
 function BackGlass({ children }: { children: ReactNode }) {
+  const [pull, setPull] = useState<PullState>(RESTING_PULL);
+  const pointerId = useRef<number | null>(null);
+  const pointerOrigin = useRef({ x: 0, y: 0 });
+
+  const beginPull = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerId.current = event.pointerId;
+    pointerOrigin.current = { x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPull((current) => ({ ...current, pressed: true }));
+  };
+
+  const movePull = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerId.current !== event.pointerId) return;
+    const next = getElasticGlassPull(
+      event.clientX - pointerOrigin.current.x,
+      event.clientY - pointerOrigin.current.y,
+      44,
+      44,
+    );
+    setPull({ ...next, pressed: true });
+  };
+
+  const endPull = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerId.current !== event.pointerId) return;
+    pointerId.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setPull(RESTING_PULL);
+  };
+
+  const pullAmount = Math.min(1, Math.hypot(pull.x, pull.y) / 7);
+  const scaleX = pull.pressed ? 0.975 + Math.abs(pull.x) * 0.005 : 1;
+  const scaleY = pull.pressed ? 0.975 + Math.abs(pull.y) * 0.005 : 1;
+
   return (
-    <Glass className={styles.backGlass} size={44} radius={22} optics={FIGMA_BACK_GLASS_OPTICS}>
-      {children}
-    </Glass>
+    <div
+      className={styles.backGlassPull}
+      data-pulling={pull.pressed || undefined}
+      onPointerDown={beginPull}
+      onPointerMove={movePull}
+      onPointerUp={endPull}
+      onPointerCancel={endPull}
+      style={{
+        transform: `translate3d(${pull.x}px, ${pull.y}px, 0) scale(${scaleX}, ${scaleY})`,
+        filter: pull.pressed ? `brightness(${1 + pullAmount * 0.04})` : undefined,
+      }}
+    >
+      <Glass
+        className={styles.backGlass}
+        size={44}
+        radius={22}
+        center={{ x: pull.centerX, y: pull.centerY }}
+        optics={FIGMA_GLASS_OPTICS}
+      >
+        {children}
+      </Glass>
+    </div>
   );
 }
 
@@ -34,10 +98,10 @@ export function ProfileHeader() {
         <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
         <span>Александр К.</span>
       </div>
-      <div className={styles.toolbar}>
+      <Glass className={styles.toolbar} radius={999} optics={FIGMA_GLASS_OPTICS}>
         <button className={styles.toolbarButton} aria-label="Поиск" data-track="header.search.open" onClick={showDemoUnavailable}><Image src="/figma/home/search.svg" alt="" width={24} height={24} /></button>
         <button className={styles.toolbarButton} aria-label="Уведомления" data-track="header.notifications.open" onClick={showDemoUnavailable}><Image src="/figma/home/bell.svg" alt="" width={24} height={24} /></button>
-      </div>
+      </Glass>
     </header>
   );
 }
