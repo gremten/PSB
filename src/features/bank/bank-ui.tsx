@@ -47,7 +47,7 @@ export function Transaction({ icon, imageSrc, title, meta, amount, bonus }: { ic
         <span className={styles.transactionTitle}>{title}</span>
         <span className={styles.transactionMeta}>{meta}</span>
       </span>
-      <span className={styles.transactionAmount}>{amount}{bonus && <span className={styles.transactionBonus}>{bonus}</span>}</span>
+      <span className={styles.transactionAmount} data-income={amount.startsWith("+") || undefined}>{amount}{bonus && <span className={styles.transactionBonus}>{bonus}</span>}</span>
     </div>
   );
 }

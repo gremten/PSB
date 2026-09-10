@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
@@ -55,9 +56,10 @@ function CardBack({ type, onCopy, onHide, visible }: { type: CardType; onCopy: (
   );
 }
 
-export default function CardPage() {
+function CardContent() {
+  const params = useSearchParams();
   const { productState, updateProductState } = useParticipant();
-  const [activeCard, setActiveCard] = useState(0);
+  const [activeCard, setActiveCard] = useState(params.get("card") === "orange" ? 1 : 0);
   const [flipped, setFlipped] = useState<boolean[]>([productState.cardDetailsRevealed, false]);
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
   const pointerStart = useRef<number | null>(null);
@@ -108,7 +110,7 @@ export default function CardPage() {
 
   return (
     <main className={styles.screen} data-screen="card">
-      <DetailHeader title="Карта «Твой банк»" subtitle="Платежный счет *6777" backHref="/account" />
+      <DetailHeader title={`Карта «${activeCard === 0 ? "Сильные люди" : "Твой банк"}»`} subtitle="Платежный счет *6777" backHref="/account" />
 
       <section className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; }}>
         {cards.map((card, index) => {
@@ -160,4 +162,8 @@ export default function CardPage() {
       <p className={styles.helperText}>Все реквизиты вымышлены и работают только в этой демонстрации.</p>
     </main>
   );
+}
+
+export default function CardPage() {
+  return <Suspense><CardContent /></Suspense>;
 }

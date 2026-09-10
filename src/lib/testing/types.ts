@@ -34,6 +34,8 @@ export interface ResearchSession {
   createdAt: string;
   startedAt: string | null;
   endedAt: string | null;
+  lastSeenAt?: string | null;
+  endReason?: "moderator" | "client_timeout" | null;
   buildId: string;
 }
 

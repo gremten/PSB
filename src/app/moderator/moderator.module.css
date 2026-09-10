@@ -19,6 +19,8 @@
 .secondary { color: #eef2f7; background: #29313d; }
 .danger { color: #fff; background: #942d2d; }
 .buttonRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.sessionActions { display: grid; gap: 12px; margin-bottom: 16px; }
+.sessionActions p { margin: 0; }
 .status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .metricGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .stat { padding: 12px; border-radius: 12px; background: #0f141b; }

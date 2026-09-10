@@ -6,7 +6,7 @@ import { Tabbar } from "@/components/ui";
 import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
 import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
 import { ParticipantProvider } from "./participant-provider";
-import { PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
+import { PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
 import { resetParticipantState } from "@/lib/testing/participant-state";
 
 const tabs = [
@@ -82,6 +82,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       const payload = await response.json() as { session?: { id: string }; error?: string };
       if (!response.ok || !payload.session) throw new Error(payload.error ?? "Не удалось начать тест");
       window.sessionStorage.setItem(PARTICIPANT_SESSION_KEY, payload.session.id);
+      window.dispatchEvent(new Event(PARTICIPANT_SESSION_CHANGED));
       resetParticipantState("disconnected");
       enterParticipant();
       void track("screen_view", { screen: pathname, action: "screen.home.view" });

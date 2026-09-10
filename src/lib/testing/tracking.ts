@@ -6,15 +6,18 @@ export interface TrackData {
 }
 
 export const PARTICIPANT_SESSION_KEY = "psb-participant-session-v1";
+export const PARTICIPANT_SESSION_CHANGED = "psb:participant-session-changed";
 
 export async function track(eventName: string, data: TrackData = {}) {
   if (typeof window === "undefined") return;
   if (new URLSearchParams(window.location.search).has("replay")) return;
+  const sessionId = window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY);
+  if (!sessionId) return;
   try {
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, sessionId: window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY), ...data }),
+      body: JSON.stringify({ eventName, sessionId, ...data }),
       keepalive: true,
     });
   } catch {

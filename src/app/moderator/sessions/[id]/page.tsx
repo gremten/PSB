@@ -9,6 +9,7 @@ import { calculateSessionInteractionMetrics } from "@/lib/testing/session-metric
 import { isValidModeratorToken, MODERATOR_COOKIE } from "@/lib/moderator-auth";
 import { ModeratorLogin } from "@/features/usability/moderator-login";
 import { SessionReplay } from "@/features/usability/session-replay";
+import { SessionActions } from "@/features/usability/session-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function SessionSummaryPage({ params }: { params: Promise<{
   const taskMetrics = snapshot.taskRuns.map((run) => ({ run, metric: calculateTaskMetrics(run, snapshot.events, getTask(run.taskCode)) }));
 
   return <main className={styles.page}><div className={`${styles.shell} ${styles.summary}`}>
+    <section className={styles.card}><SessionActions session={snapshot.session} /></section>
     <header className={styles.topbar}><div><p className={styles.build}>session summary · build {snapshot.session.buildId}</p><h1 className={styles.brand}>{snapshot.session.participantCode}</h1></div><div className={styles.buttonRow}><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export`}>Скачать JSON</Link><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export?format=csv`}>Скачать CSV</Link><Link className={styles.link} href="/moderator">← Dashboard</Link></div></header>
 
     <section className={styles.card}><h2>Метрики сессии</h2><div className={styles.metricGrid}><div className={styles.stat}><span>Время</span><strong>{duration(interaction.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{interaction.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{interaction.meaningfulSteps}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{interaction.eventCount}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{interaction.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{interaction.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{interaction.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{interaction.productStateChanges}</strong></div><div className={styles.stat}><span>Попытки недоступного</span><strong>{interaction.demoFeedbackCount}</strong></div><div className={styles.stat}><span>Последний экран</span><strong>{interaction.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{interaction.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{interaction.lastAction ?? "—"}</strong></div></div></section>

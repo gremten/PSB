@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at TEXT NOT NULL,
   started_at TEXT,
   ended_at TEXT,
+  last_seen_at TEXT,
+  end_reason TEXT,
   build_id TEXT NOT NULL
 );
 

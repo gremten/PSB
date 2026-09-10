@@ -11,10 +11,8 @@ export default function AccountPage() {
     <main className={`${styles.screen} ${styles.accountScreen}`} data-screen="account">
       <div className={styles.accountGradientFrame} aria-hidden="true">
         <div className={styles.accountGradientPosition}>
-          <div className={styles.accountGradientRotation}>
-            <div className={styles.accountGradientBlob}>
-              <Image src="/figma/account/background-blob.svg" alt="" fill sizes="832px" unoptimized />
-            </div>
+          <div className={styles.accountGradientBlob}>
+            <Image src="/figma/account/background-blob.svg" alt="" width={832} height={852} unoptimized />
           </div>
         </div>
       </div>
@@ -33,20 +31,22 @@ export default function AccountPage() {
               <button type="button" className={styles.accountAddCard} aria-label="Добавить карту" data-track="account.card.add" onClick={showDemoUnavailable}>
                 <Image src="/figma/account/add-card.svg" alt="" width={24} height={24} />
               </button>
-              <Link className={styles.accountCardBadge} href="/card" data-track="account.card.primary.open">
+              <Link className={styles.accountCardBadge} href="/card?card=orange" data-track="account.card.primary.open">
                 <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniatureOrange}`} aria-hidden="true" />
-                <span>Твой банк</span><span>*3124</span>
+                <span className={styles.accountCardLabel}><span>Твой банк</span><span>*3124</span></span>
               </Link>
-              <button type="button" className={styles.accountCardBadge} data-track="account.card.strong.open" onClick={showDemoUnavailable}>
+              <Link className={styles.accountCardBadge} href="/card?card=night" data-track="account.card.strong.open">
                 <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniaturePurple}`} aria-hidden="true" />
-                <span>Сильные люди</span><span>*2345</span>
-              </button>
+                <span className={styles.accountCardLabel}><span>Сильные люди</span><span>*2345</span></span>
+              </Link>
               <button type="button" className={styles.accountCardBadge} data-track="account.card.salary.open" onClick={showDemoUnavailable}>
-                <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniatureBlue}`} aria-hidden="true" />
-                <span>Зарплатная</span><span>*3451</span>
+                <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniatureOrange}`} aria-hidden="true" />
+                <span className={styles.accountCardLabel}><span>Зарплатная</span><span>*3451</span></span>
               </button>
             </div>
+          </section>
 
+          <div className={styles.accountOperationBlock}>
             <div className={styles.accountActions}>
               <button type="button" className={styles.accountAction} data-track="account.topup.open" onClick={showDemoUnavailable}>
                 <Image src="/figma/account/topup.svg" alt="" width={24} height={24} />Пополнить
@@ -55,7 +55,6 @@ export default function AccountPage() {
                 <Image src="/figma/account/send.svg" alt="" width={24} height={24} />Отправить
               </button>
             </div>
-          </section>
 
           <section className={`${styles.surface} ${styles.accountHistory}`}>
             <div className={styles.accountSectionBar}>
@@ -66,14 +65,15 @@ export default function AccountPage() {
             </div>
             <p className={styles.dateHeading}>19 марта, четверг</p>
             <div className={styles.historyList}>
-              <Transaction imageSrc="/figma/account/merchant-psb.webp" title="Банкомат ПСБ" meta="Внесение наличных" amount="+2 000 ₽" />
-              <Transaction imageSrc="/figma/account/merchant-bbq.webp" title="BARBECUE Rostov RUS" meta="Оплата товаров и услуг" amount="−1 691 ₽" />
+              <Transaction imageSrc="/figma/account/merchant-psb.webp" title="Банкомат ПСБ" meta="Внесение наличных" amount="+ 2 000 ₽" />
+              <Transaction imageSrc="/figma/account/merchant-bbq.webp" title="BARBECUE Rostov RUS" meta="Оплата товаров и услуг" amount="− 1 691 ₽" />
             </div>
             <p className={`${styles.dateHeading} ${styles.accountSecondDate}`}>18 марта, среда</p>
             <div className={styles.historyList}>
-              <Transaction imageSrc="/figma/account/merchant-five.webp" title="Пятёрочка" meta="Продукты" amount="−6 563 ₽" bonus="+165 ₽" />
+              <Transaction imageSrc="/figma/account/merchant-five.webp" title="Пятёрочка" meta="Продукты" amount="− 6 563 ₽" bonus="+ 165 ₽" />
             </div>
           </section>
+          </div>
 
           <section className={`${styles.surface} ${styles.accountSettings}`}>
             <h2 className={styles.accountSettingsTitle}>Настройки счёта</h2>

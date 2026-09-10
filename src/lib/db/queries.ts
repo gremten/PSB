@@ -3,6 +3,7 @@ import { getTask } from "@/config/test-scenarios";
 import { eventBus } from "@/lib/events";
 import { aggregateTaskMetrics, calculateTaskMetrics } from "@/lib/testing/metrics";
 import { sanitizeMetadata } from "@/lib/testing/metadata";
+import { presenceCutoff } from "@/lib/testing/session-presence";
 import type {
   CashbackVariant,
   ResearchSession,
@@ -40,7 +41,7 @@ function asEvent(row: EventRow): TrackedEvent {
 
 const sessionSelect = `
   SELECT id, participant_code participantCode, variant, created_at createdAt,
-         started_at startedAt, ended_at endedAt, build_id buildId
+         started_at startedAt, ended_at endedAt, last_seen_at lastSeenAt, end_reason endReason, build_id buildId
   FROM sessions`;
 
 const taskSelect = `
@@ -54,6 +55,7 @@ const eventSelect = `
          screen, action, target, metadata FROM events`;
 
 export async function listSessions(limit = 30): Promise<ResearchSession[]> {
+  await expireDisconnectedSessions();
   return getDatabase().all<SessionRow>(`${sessionSelect} ORDER BY created_at DESC LIMIT ?`, [limit]);
 }
 
@@ -67,6 +69,7 @@ export async function getTaskRun(id: string): Promise<TaskRun | null> {
 }
 
 export async function getSessionSnapshot(id: string, eventLimit = 500): Promise<SessionSnapshot | null> {
+  await expireDisconnectedSessions(id);
   const session = await getSession(id);
   if (!session) return null;
   const taskRuns = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id = ? ORDER BY started_at`, [id])).map(asTaskRun);
@@ -154,8 +157,8 @@ export async function createParticipantSession(participantName: string) {
   const cleanName = participantName.trim().replace(/\s+/g, " ").slice(0, 32);
   if (!cleanName) throw new Error("Укажите имя или псевдоним");
   await getDatabase().run(
-    "INSERT INTO sessions (id, participant_code, variant, created_at, started_at, build_id) VALUES (?, ?, 'disconnected', ?, ?, ?)",
-    [id, cleanName, timestamp, timestamp, buildId()],
+    "INSERT INTO sessions (id, participant_code, variant, created_at, started_at, last_seen_at, build_id) VALUES (?, ?, 'disconnected', ?, ?, ?, ?)",
+    [id, cleanName, timestamp, timestamp, timestamp, buildId()],
   );
   await insertEvent({ sessionId: id, type: "session_started", screen: "/", action: "participant.session.started" });
   return (await getSession(id))!;
@@ -218,7 +221,7 @@ export async function recordParticipantEvent(input: {
   metadata?: Record<string, unknown>;
 }) {
   if (!input.sessionId) return null;
-  const session = await getSession(input.sessionId);
+  const session = await heartbeatSession(input.sessionId);
   if (!session?.startedAt || session.endedAt) return null;
   return insertEvent({
     sessionId: session.id,
@@ -326,16 +329,46 @@ export async function resetParticipant(sessionId: string) {
   return event;
 }
 
+export async function expireDisconnectedSessions(id?: string) {
+  const db = getDatabase();
+  const idFilter = id ? " AND id = ?" : "";
+  await db.run(`UPDATE sessions SET ended_at = COALESCE(last_seen_at, started_at, created_at), end_reason = 'client_timeout'
+    WHERE ended_at IS NULL AND COALESCE(last_seen_at, started_at, created_at) < ?${idFilter}`,
+  id ? [presenceCutoff(), id] : [presenceCutoff()]);
+  await db.run(`UPDATE task_runs SET ended_at = (SELECT ended_at FROM sessions WHERE id = task_runs.session_id),
+    result = 'corrupted', corrupted_reason = 'Клиент отключился до завершения задачи'
+    WHERE ended_at IS NULL AND session_id IN (SELECT id FROM sessions WHERE ended_at IS NOT NULL AND end_reason = 'client_timeout'${idFilter})`, id ? [id] : []);
+}
+
+export async function heartbeatSession(id: string) {
+  await expireDisconnectedSessions(id);
+  await getDatabase().run("UPDATE sessions SET last_seen_at = ? WHERE id = ? AND ended_at IS NULL", [now(), id]);
+  return getSession(id);
+}
+
 export async function endSession(id: string) {
   const session = await getSession(id);
-  if (!session || session.endedAt) throw new Error("Open session not found");
-  const state = await getResearchState();
-  if (state.sessionId === id && state.currentTaskRunId) throw new Error("Finish the current task first");
+  if (!session) throw new Error("Session not found");
+  if (session.endedAt) return session;
   const timestamp = now();
-  await getDatabase().run("UPDATE sessions SET ended_at = ? WHERE id = ?", [timestamp, id]);
-  await insertEvent({ sessionId: id, type: "action", action: "session.ended" });
+  await getDatabase().batch([
+    { sql: "UPDATE sessions SET ended_at = ?, end_reason = 'moderator' WHERE id = ? AND ended_at IS NULL", params: [timestamp, id] },
+    { sql: "UPDATE task_runs SET ended_at = ?, result = 'corrupted', corrupted_reason = 'Сессия завершена модератором' WHERE session_id = ? AND ended_at IS NULL", params: [timestamp, id] },
+    { sql: "UPDATE research_control SET current_task = NULL, current_task_run_id = NULL, updated_at = ? WHERE session_id = ?", params: [timestamp, id] },
+  ]);
+  await insertEvent({ sessionId: id, type: "session_ended", action: "session.ended.moderator" });
   await publishControl();
   return (await getSession(id))!;
+}
+
+export async function deleteSession(id: string) {
+  // Atomic, explicit child-first deletion: foreign keys intentionally use RESTRICT.
+  await getDatabase().batch([
+    { sql: "DELETE FROM events WHERE session_id = ?", params: [id] },
+    { sql: "DELETE FROM task_runs WHERE session_id = ?", params: [id] },
+    { sql: "UPDATE research_control SET session_id = NULL, participant_code = NULL, current_task = NULL, current_task_run_id = NULL, updated_at = ? WHERE session_id = ?", params: [now(), id] },
+    { sql: "DELETE FROM sessions WHERE id = ?", params: [id] },
+  ]);
 }
 
 export async function getAggregateMetrics() {

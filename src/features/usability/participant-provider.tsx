@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadParticipantState, saveParticipantState } from "@/lib/testing/participant-state";
-import { track } from "@/lib/testing/tracking";
+import { PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
+import { SESSION_HEARTBEAT_MS } from "@/lib/testing/session-presence";
 import type { ParticipantProductState, ResearchSessionState } from "@/lib/testing/types";
 
 const idleResearchState: ResearchSessionState = {
@@ -23,6 +24,39 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [researchState] = useState(idleResearchState);
   const [productState, setProductState] = useState(() => loadParticipantState("disconnected"));
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("replay")) return;
+    let pending = false;
+    let disposed = false;
+    const heartbeat = async () => {
+      const id = window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY);
+      if (!id || document.hidden || pending) return;
+      pending = true;
+      try {
+        const response = await fetch(`/api/testing/sessions/${encodeURIComponent(id)}/heartbeat`, { method: "POST", keepalive: true });
+        if (response.ok) {
+          const { active } = await response.json() as { active: boolean };
+          if (!disposed && !active && window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY) === id) {
+            window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
+          }
+        }
+      } catch { /* Retry on the next heartbeat; temporary connectivity must not block the demo. */ }
+      finally { pending = false; }
+    };
+    void heartbeat();
+    const interval = window.setInterval(heartbeat, SESSION_HEARTBEAT_MS);
+    window.addEventListener(PARTICIPANT_SESSION_CHANGED, heartbeat);
+    document.addEventListener("visibilitychange", heartbeat);
+    window.addEventListener("pageshow", heartbeat);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener(PARTICIPANT_SESSION_CHANGED, heartbeat);
+      document.removeEventListener("visibilitychange", heartbeat);
+      window.removeEventListener("pageshow", heartbeat);
+    };
+  }, []);
 
   useEffect(() => {
     const handleReset = (event: Event) => setProductState((event as CustomEvent<ParticipantProductState>).detail);

@@ -14,6 +14,10 @@ export function getRuntimeDatabase(): DatabaseAdapter {
   const database = globalThis.__psbDatabase ?? new Database(databasePath);
   if (!globalThis.__psbDatabase) {
     database.exec(schema);
+    const columns = database.prepare("PRAGMA table_info(sessions)").all() as { name: string }[];
+    if (!columns.some((column) => column.name === "last_seen_at")) {
+      database.exec("ALTER TABLE sessions ADD COLUMN last_seen_at TEXT; ALTER TABLE sessions ADD COLUMN end_reason TEXT; UPDATE sessions SET last_seen_at = COALESCE((SELECT MAX(timestamp) FROM events WHERE session_id = sessions.id), started_at, created_at)");
+    }
     globalThis.__psbDatabase = database;
   }
 

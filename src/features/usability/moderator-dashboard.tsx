@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import type { AggregateTaskMetrics } from "@/lib/testing/metrics";
 import { calculateSessionInteractionMetrics } from "@/lib/testing/session-metrics";
-import type { ResearchSession, SessionSnapshot, TrackedEvent } from "@/lib/testing/types";
+import type { ResearchSession, SessionSnapshot } from "@/lib/testing/types";
+import { SessionActions } from "./session-actions";
 
 interface Props {
   initialSessions: ResearchSession[];
@@ -38,12 +39,15 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [error, setError] = useState("");
   const [clock, setClock] = useState(() => Date.now());
+  const selectionRequest = useRef(0);
+  const selectedId = snapshot?.session.id;
 
   const openSession = useCallback(async (id: string) => {
+    const requestNumber = ++selectionRequest.current;
     setError("");
     try {
       const payload = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(id)}`);
-      setSnapshot(payload.snapshot);
+      if (requestNumber === selectionRequest.current) setSnapshot(payload.snapshot);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Не удалось получить данные");
     }
@@ -55,35 +59,32 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let pending = false;
     const refresh = async () => {
+      if (pending || document.hidden) return;
+      pending = true;
       try {
         const payload = await readJson<{ sessions: ResearchSession[] }>("/api/moderator/sessions");
+        if (cancelled) return;
         setSessions(payload.sessions);
-        if (!snapshot && payload.sessions[0]) void openSession(payload.sessions[0].id);
+        if (selectedId && payload.sessions.some((session) => session.id === selectedId)) {
+          const data = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(selectedId)}`);
+          if (!cancelled) setSnapshot((current) => current?.session.id === selectedId ? data.snapshot : current);
+        } else if (payload.sessions[0]) void openSession(payload.sessions[0].id);
+        else setSnapshot(null);
       } catch {}
+      finally { pending = false; }
     };
+    void refresh();
     const interval = window.setInterval(refresh, 4000);
-    return () => window.clearInterval(interval);
-  }, [openSession, snapshot]);
-
-  useEffect(() => {
-    const sessionId = snapshot?.session.id;
-    if (!sessionId) return;
-    const source = new EventSource(`/api/events/stream?sessionId=${encodeURIComponent(sessionId)}`);
-    source.addEventListener("tracked", (message) => {
-      const event = JSON.parse((message as MessageEvent).data) as TrackedEvent;
-      setSnapshot((current) => current && current.session.id === sessionId ? {
-        ...current,
-        events: [...current.events.filter((item) => item.id !== event.id), event].sort((a, b) => a.id - b.id).slice(-2000),
-      } : current);
-    });
-    return () => source.close();
-  }, [snapshot?.session.id]);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [openSession, selectedId]);
 
   const observed = useMemo(() => snapshot ? calculateSessionInteractionMetrics(snapshot.session, snapshot.events, clock) : null, [clock, snapshot]);
 
   return <main className={styles.page}><div className={styles.shell}>
-    <header className={styles.topbar}><div><p className={styles.build}>private research prototype · только просмотр</p><h1 className={styles.brand}>PSB Moderator</h1></div><span className={styles.build}>build {process.env.NEXT_PUBLIC_BUILD_ID}</span></header>
+    <header className={styles.topbar}><div><p className={styles.build}>private research prototype</p><h1 className={styles.brand}>PSB Moderator</h1></div><span className={styles.build}>build {process.env.NEXT_PUBLIC_BUILD_ID}</span></header>
     {error && <div className={styles.error}>{error}</div>}
     <div className={styles.dashboardGrid}>
       <section className={styles.card}>
@@ -94,6 +95,13 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
       {snapshot && observed ? <>
         <section className={styles.card}>
           <div className="row-between"><div><p className={styles.build}>выбранная запись</p><h2>{snapshot.session.participantCode}</h2></div><Link className={styles.button} href={`/moderator/sessions/${snapshot.session.id}`}>Открыть replay</Link></div>
+          <SessionActions key={snapshot.session.id} session={snapshot.session} onChanged={(deleted) => {
+            if (deleted) {
+              selectionRequest.current++;
+              setSessions((current) => current.filter((session) => session.id !== snapshot.session.id));
+              setSnapshot(null);
+            } else void openSession(snapshot.session.id);
+          }} />
           <div className={styles.metricGrid}>
             <div className={styles.stat}><span>Время</span><strong>{duration(observed.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{observed.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{observed.meaningfulSteps}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{observed.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{observed.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{observed.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{observed.productStateChanges}</strong></div><div className={styles.stat}><span>Попытки недоступного</span><strong>{observed.demoFeedbackCount}</strong></div><div className={styles.stat}><span>Текущий экран</span><strong>{observed.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{observed.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{observed.lastAction ?? "—"}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{observed.eventCount}</strong></div>
           </div>
