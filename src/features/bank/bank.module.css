@@ -377,6 +377,8 @@
   width: 832.251px;
   height: 852.418px;
   max-width: none;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0 46%, rgb(0 0 0 / 92%) 58%, transparent 78%);
+  mask-image: radial-gradient(ellipse at center, #000 0 46%, rgb(0 0 0 / 92%) 58%, transparent 78%);
   animation: account-background-inset 39s linear infinite;
 }
 /* Live bg_animation component 1123:2108, frame 3 → 4 → 5 → 6 → 1 → 2 → 3.
