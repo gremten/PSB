@@ -1428,3 +1428,75 @@
     height: 60px;
   }
 }
+
+/* Telegram-style mobile push/pop transitions. The old route is a frozen DOM snapshot;
+   the committed route moves at the same time so navigation never hard-cuts. */
+:global(.participant-route-snapshot) {
+  position: absolute !important;
+  z-index: 20;
+  margin: 0 !important;
+  pointer-events: none;
+  contain: paint;
+  will-change: transform;
+}
+
+:global(.participant-route-live) {
+  z-index: 21;
+  will-change: transform;
+}
+
+:global(.participant-route-snapshot[data-route-direction="forward"]) {
+  z-index: 20;
+}
+
+:global(.participant-route-live[data-route-direction="forward"]) {
+  z-index: 21;
+  animation: participant-route-forward-in 280ms cubic-bezier(.32, .72, 0, 1) both;
+  box-shadow: -18px 0 36px rgb(0 0 0 / 28%);
+}
+
+:global(.participant-route-snapshot-active[data-route-direction="forward"]) {
+  animation: participant-route-forward-under 280ms cubic-bezier(.32, .72, 0, 1) both;
+}
+
+:global(.participant-route-live[data-route-direction="back"]) {
+  z-index: 20;
+  animation: participant-route-back-under 280ms cubic-bezier(.32, .72, 0, 1) both;
+}
+
+:global(.participant-route-snapshot[data-route-direction="back"]) {
+  z-index: 21;
+}
+
+:global(.participant-route-snapshot-active[data-route-direction="back"]) {
+  animation: participant-route-back-out 280ms cubic-bezier(.32, .72, 0, 1) both;
+  box-shadow: -18px 0 36px rgb(0 0 0 / 28%);
+}
+
+@keyframes participant-route-forward-in {
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes participant-route-forward-under {
+  from { transform: translate3d(0, 0, 0); filter: brightness(1); }
+  to { transform: translate3d(-24%, 0, 0); filter: brightness(.86); }
+}
+
+@keyframes participant-route-back-out {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(100%, 0, 0); }
+}
+
+@keyframes participant-route-back-under {
+  from { transform: translate3d(-24%, 0, 0); filter: brightness(.86); }
+  to { transform: translate3d(0, 0, 0); filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce), (min-width: 441px) {
+  :global(.participant-route-live),
+  :global(.participant-route-snapshot-active) {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+}
