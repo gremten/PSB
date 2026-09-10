@@ -372,13 +372,11 @@
 }
 .accountGradientBlob img {
   position: absolute;
-  top: -279.68px;
-  left: -242px;
-  width: 832.251px;
-  height: 852.418px;
+  top: -521.691px;
+  left: -484.012px;
+  width: 1316.274px;
+  height: 1336.441px;
   max-width: none;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 0 46%, rgb(0 0 0 / 92%) 58%, transparent 78%);
-  mask-image: radial-gradient(ellipse at center, #000 0 46%, rgb(0 0 0 / 92%) 58%, transparent 78%);
   animation: account-background-inset 39s linear infinite;
 }
 /* Live bg_animation component 1123:2108, frame 3 → 4 → 5 → 6 → 1 → 2 → 3.
@@ -400,8 +398,8 @@
   16.666667%, 50%, 83.333333% { width: 275.62px; height: 293.053px; }
 }
 @keyframes account-background-inset {
-  0%, 16.666667%, 33.333333%, 50%, 83.333333%, 100% { top: -279.68px; left: -242px; width: 832.251px; height: 852.418px; }
-  66.666667% { top: -208.04px; left: -180px; width: 619px; height: 634px; }
+  0%, 16.666667%, 33.333333%, 50%, 83.333333%, 100% { top: -521.691px; left: -484.012px; width: 1316.274px; height: 1336.441px; }
+  66.666667% { top: -388.04px; left: -360px; width: 979px; height: 994px; }
 }
 .accountForeground > .detailHeaderRow { position: sticky; top: 0; z-index: 10; isolation: isolate; padding-bottom: 12px; }
 .accountForeground > .detailHeaderRow::before,

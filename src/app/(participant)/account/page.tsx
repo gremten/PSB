@@ -13,7 +13,7 @@ export default function AccountPage() {
         <div className={styles.accountGradientPosition}>
           <div className={styles.accountGradientRotation}>
             <div className={styles.accountGradientBlob}>
-              <Image src="/figma/account/background-blob.svg" alt="" width={832} height={852} unoptimized />
+              <Image src="/figma/account/background-blob.svg" alt="" width={979} height={994} unoptimized />
             </div>
           </div>
         </div>
