@@ -20,7 +20,7 @@ This file records only the final, approved UI changes and constraints from the c
 
 - Participant pages keep exactly 24 px of scroll-end spacing after the final content block when no tabbar is present; when the tabbar is present, reserve the tabbar's full height plus the same 24 px gap. Route-local wrappers must not add a second bottom gap.
 - The bottom “Перейти к обмену” button in the home currency-exchange block uses a 16 px squircle/continuous-corner shape instead of a pill. Preserve `home.exchange.open` and its existing unavailable-demo behavior.
-- Home-screen privacy masking uses a soft granular/particle blur rather than a flat Gaussian smear. The particles drift subtly, the underlying colored merchant icons still bleed through, and the blur bloom must be allowed to extend beyond the text/icon boxes instead of being clipped by content wrappers.
+- Home-screen privacy masking uses a visibly granular particle/noise blur rather than a flat Gaussian smear. Fine bright grain remains clearly readable on-device while drifting subtly, the underlying colored merchant icons still bleed through, and the blur bloom must extend beyond the text/icon boxes instead of being clipped by content wrappers.
 
 ## Guardrails
 
