@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Glass } from "@samasante/liquid-glass";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { getElasticGlassPull, getToolbarGlassPull } from "./glass-interaction";
 import styles from "./bank.module.css";
@@ -29,6 +29,42 @@ const FIGMA_GLASS_OPTICS = {
 type PullState = { x: number; y: number; scaleX: number; scaleY: number; pressed: boolean };
 const RESTING_PULL: PullState = { x: 0, y: 0, scaleX: 1, scaleY: 1, pressed: false };
 const PRESSED_CONTENT_SCALE = 1;
+
+
+const CENSOR_BUBBLE_PARTICLES = [{"x":61.2,"y":60.2,"size":2.8,"opacity":0.49,"dx":-2.1,"dy":-2.2,"duration":2.84,"delay":-0.17,"glow":3.6,"startDx":0.73,"startDy":0.77,"endDx":-0.73,"endDy":1.21,"startOpacity":0.353,"endOpacity":0.412},{"x":79.3,"y":50.7,"size":2.8,"opacity":0.31,"dx":0.9,"dy":-2.3,"duration":3.58,"delay":-2.52,"glow":1.8,"startDx":-0.32,"startDy":0.8,"endDx":0.32,"endDy":1.26,"startOpacity":0.223,"endOpacity":0.26},{"x":94.0,"y":55.8,"size":2.2,"opacity":0.63,"dx":-0.3,"dy":-2.1,"duration":3.47,"delay":-0.04,"glow":2.1,"startDx":0.1,"startDy":0.73,"endDx":-0.1,"endDy":1.16,"startOpacity":0.454,"endOpacity":0.529},{"x":76.4,"y":59.0,"size":2.2,"opacity":0.44,"dx":0.7,"dy":-1.4,"duration":4.14,"delay":-1.58,"glow":2.3,"startDx":-0.24,"startDy":0.49,"endDx":0.24,"endDy":0.77,"startOpacity":0.317,"endOpacity":0.37},{"x":11.3,"y":70.5,"size":2.2,"opacity":0.31,"dx":-0.8,"dy":-1.5,"duration":3.65,"delay":-2.45,"glow":1.2,"startDx":0.28,"startDy":0.52,"endDx":-0.28,"endDy":0.83,"startOpacity":0.223,"endOpacity":0.26},{"x":90.4,"y":37.9,"size":2.2,"opacity":0.34,"dx":1.2,"dy":-0.5,"duration":3.02,"delay":-0.01,"glow":1.7,"startDx":-0.42,"startDy":0.17,"endDx":0.42,"endDy":0.28,"startOpacity":0.245,"endOpacity":0.286},{"x":21.5,"y":42.4,"size":3.6,"opacity":0.46,"dx":-1.5,"dy":-2.0,"duration":3.74,"delay":-1.27,"glow":4.5,"startDx":0.52,"startDy":0.7,"endDx":-0.52,"endDy":1.1,"startOpacity":0.331,"endOpacity":0.386},{"x":90.6,"y":36.7,"size":2.8,"opacity":0.55,"dx":-0.1,"dy":-1.0,"duration":3.61,"delay":-2.04,"glow":2.3,"startDx":0.03,"startDy":0.35,"endDx":-0.03,"endDy":0.55,"startOpacity":0.396,"endOpacity":0.462},{"x":53.9,"y":57.5,"size":1.4,"opacity":0.7,"dx":-2.4,"dy":-1.1,"duration":2.59,"delay":-0.69,"glow":1.1,"startDx":0.84,"startDy":0.39,"endDx":-0.84,"endDy":0.61,"startOpacity":0.504,"endOpacity":0.588},{"x":58.2,"y":22.6,"size":1.8,"opacity":0.59,"dx":-0.1,"dy":2.0,"duration":4.1,"delay":-1.2,"glow":1.2,"startDx":0.03,"startDy":-0.7,"endDx":-0.03,"endDy":-1.1,"startOpacity":0.425,"endOpacity":0.496},{"x":60.5,"y":22.0,"size":3.6,"opacity":0.35,"dx":2.1,"dy":-0.8,"duration":2.95,"delay":-2.17,"glow":3.6,"startDx":-0.73,"startDy":0.28,"endDx":0.73,"endDy":0.44,"startOpacity":0.252,"endOpacity":0.294},{"x":27.6,"y":37.4,"size":2.8,"opacity":0.64,"dx":-3.1,"dy":-0.3,"duration":2.49,"delay":-0.81,"glow":3.0,"startDx":1.08,"startDy":0.1,"endDx":-1.08,"endDy":0.17,"startOpacity":0.461,"endOpacity":0.538},{"x":77.2,"y":86,"size":2.2,"opacity":0.45,"dx":0.6,"dy":-0.4,"duration":4.11,"delay":-1.62,"glow":2.1,"startDx":-0.21,"startDy":0.14,"endDx":0.21,"endDy":0.22,"startOpacity":0.324,"endOpacity":0.378},{"x":51.5,"y":60.4,"size":1.8,"opacity":0.57,"dx":-1.0,"dy":0.1,"duration":4.17,"delay":-0.96,"glow":1.9,"startDx":0.35,"startDy":-0.03,"endDx":-0.35,"endDy":-0.06,"startOpacity":0.41,"endOpacity":0.479},{"x":69.4,"y":62.2,"size":1.4,"opacity":0.7,"dx":1.3,"dy":-2.2,"duration":4.24,"delay":-0.38,"glow":0.9,"startDx":-0.45,"startDy":0.77,"endDx":0.45,"endDy":1.21,"startOpacity":0.504,"endOpacity":0.588},{"x":80.6,"y":61.7,"size":3.6,"opacity":0.41,"dx":-1.6,"dy":-0.4,"duration":3.94,"delay":-2.57,"glow":3.2,"startDx":0.56,"startDy":0.14,"endDx":-0.56,"endDy":0.22,"startOpacity":0.295,"endOpacity":0.344},{"x":18.3,"y":33.0,"size":1.8,"opacity":0.61,"dx":-1.2,"dy":-2.3,"duration":4.11,"delay":-0.7,"glow":2.0,"startDx":0.42,"startDy":0.8,"endDx":-0.42,"endDy":1.26,"startOpacity":0.439,"endOpacity":0.512},{"x":23.8,"y":57.6,"size":1.8,"opacity":0.5,"dx":-2.0,"dy":2.2,"duration":2.61,"delay":-0.46,"glow":1.9,"startDx":0.7,"startDy":-0.77,"endDx":-0.7,"endDy":-1.21,"startOpacity":0.36,"endOpacity":0.42},{"x":6.5,"y":38.2,"size":1.8,"opacity":0.4,"dx":-1.6,"dy":0.5,"duration":2.53,"delay":-2.14,"glow":1.5,"startDx":0.56,"startDy":-0.17,"endDx":-0.56,"endDy":-0.28,"startOpacity":0.288,"endOpacity":0.336},{"x":38.7,"y":86,"size":2.8,"opacity":0.29,"dx":-1.8,"dy":1.8,"duration":4.24,"delay":-1.62,"glow":3.5,"startDx":0.63,"startDy":-0.63,"endDx":-0.63,"endDy":-0.99,"startOpacity":0.209,"endOpacity":0.244},{"x":75.5,"y":42.3,"size":2.8,"opacity":0.55,"dx":1.2,"dy":-2.2,"duration":2.68,"delay":-0.71,"glow":2.1,"startDx":-0.42,"startDy":0.77,"endDx":0.42,"endDy":1.21,"startOpacity":0.396,"endOpacity":0.462},{"x":42.4,"y":41.3,"size":2.8,"opacity":0.54,"dx":-1.4,"dy":1.0,"duration":4.02,"delay":-2.68,"glow":2.3,"startDx":0.49,"startDy":-0.35,"endDx":-0.49,"endDy":-0.55,"startOpacity":0.389,"endOpacity":0.454},{"x":37.9,"y":32.3,"size":2.2,"opacity":0.74,"dx":0.9,"dy":-0.3,"duration":4.27,"delay":-0.44,"glow":2.2,"startDx":-0.32,"startDy":0.1,"endDx":0.32,"endDy":0.17,"startOpacity":0.533,"endOpacity":0.622},{"x":87.4,"y":86,"size":1.8,"opacity":0.47,"dx":2.5,"dy":-2.2,"duration":3.52,"delay":-0.4,"glow":2.3,"startDx":-0.88,"startDy":0.77,"endDx":0.88,"endDy":1.21,"startOpacity":0.338,"endOpacity":0.395},{"x":30.7,"y":44.7,"size":1.4,"opacity":0.4,"dx":1.0,"dy":2.2,"duration":3.57,"delay":-2.96,"glow":0.8,"startDx":-0.35,"startDy":-0.77,"endDx":0.35,"endDy":-1.21,"startOpacity":0.288,"endOpacity":0.336},{"x":61.4,"y":38.0,"size":3.6,"opacity":0.63,"dx":-1.9,"dy":0.4,"duration":3.51,"delay":-1.74,"glow":4.1,"startDx":0.66,"startDy":-0.14,"endDx":-0.66,"endDy":-0.22,"startOpacity":0.454,"endOpacity":0.529},{"x":50.2,"y":51.3,"size":2.2,"opacity":0.61,"dx":-1.9,"dy":1.6,"duration":2.96,"delay":-1.05,"glow":2.3,"startDx":0.66,"startDy":-0.56,"endDx":-0.66,"endDy":-0.88,"startOpacity":0.439,"endOpacity":0.512},{"x":70.6,"y":63.5,"size":3.6,"opacity":0.46,"dx":0.8,"dy":0.2,"duration":2.91,"delay":-1.42,"glow":3.4,"startDx":-0.28,"startDy":-0.07,"endDx":0.28,"endDy":-0.11,"startOpacity":0.331,"endOpacity":0.386},{"x":38.4,"y":57.7,"size":2.8,"opacity":0.4,"dx":1.7,"dy":-1.7,"duration":3.42,"delay":-1.16,"glow":2.2,"startDx":-0.59,"startDy":0.59,"endDx":0.59,"endDy":0.94,"startOpacity":0.288,"endOpacity":0.336},{"x":89.4,"y":41.2,"size":2.8,"opacity":0.59,"dx":1.2,"dy":-0.2,"duration":3.4,"delay":-2.66,"glow":3.0,"startDx":-0.42,"startDy":0.07,"endDx":0.42,"endDy":0.11,"startOpacity":0.425,"endOpacity":0.496},{"x":94.0,"y":63.3,"size":4.6,"opacity":0.33,"dx":-2.6,"dy":1.1,"duration":2.73,"delay":-2.32,"glow":3.9,"startDx":0.91,"startDy":-0.39,"endDx":-0.91,"endDy":-0.61,"startOpacity":0.238,"endOpacity":0.277},{"x":9.1,"y":58.0,"size":1.8,"opacity":0.55,"dx":-0.4,"dy":1.9,"duration":4.08,"delay":-2.78,"glow":0.9,"startDx":0.14,"startDy":-0.66,"endDx":-0.14,"endDy":-1.04,"startOpacity":0.396,"endOpacity":0.462}] as const;
+
+export function CensorBubbles({ variant = "transaction" }: { variant?: "balance" | "account" | "transaction" }) {
+  return (
+    <span
+      className={`${styles.censorBubbles} ${variant === "balance" ? styles.censorBubblesBalance : variant === "account" ? styles.censorBubblesAccount : styles.censorBubblesTransaction}`}
+      aria-hidden="true"
+    >
+      {CENSOR_BUBBLE_PARTICLES.map((particle, index) => (
+        <span
+          className={styles.censorBubble}
+          key={index}
+          style={{
+            "--bubble-x": `${particle.x}%`,
+            "--bubble-y": `${particle.y}%`,
+            "--bubble-size": `${particle.size}px`,
+            "--bubble-opacity": particle.opacity,
+            "--bubble-opacity-start": particle.startOpacity,
+            "--bubble-opacity-end": particle.endOpacity,
+            "--bubble-dx": `${particle.dx}px`,
+            "--bubble-dy": `${particle.dy}px`,
+            "--bubble-start-dx": `${particle.startDx}px`,
+            "--bubble-start-dy": `${particle.startDy}px`,
+            "--bubble-end-dx": `${particle.endDx}px`,
+            "--bubble-end-dy": `${particle.endDy}px`,
+            "--bubble-duration": `${particle.duration}s`,
+            "--bubble-delay": `${particle.delay}s`,
+            "--bubble-glow": `${particle.glow}px`,
+          } as CSSProperties}
+        />
+      ))}
+    </span>
+  );
+}
 
 const PRESSED_GLASS_OPTICS = {
   ...FIGMA_GLASS_OPTICS,
@@ -229,7 +265,7 @@ export function DetailHeader({ title, subtitle, backHref, trailing }: { title: s
   );
 }
 
-export function Transaction({ icon, imageSrc, title, meta, amount, bonus }: { icon?: string; imageSrc?: string; title: string; meta: string; amount: string; bonus?: string }) {
+export function Transaction({ icon, imageSrc, title, meta, amount, bonus, hiddenAmount = false }: { icon?: string; imageSrc?: string; title: string; meta: string; amount: string; bonus?: string; hiddenAmount?: boolean }) {
   return (
     <div className={styles.transaction}>
       <span className={`${styles.merchantIcon} ${imageSrc ? styles.merchantImage : ""}`} aria-hidden="true">
@@ -239,7 +275,9 @@ export function Transaction({ icon, imageSrc, title, meta, amount, bonus }: { ic
         <span className={styles.transactionTitle}>{title}</span>
         <span className={styles.transactionMeta}>{meta}</span>
       </span>
-      <span className={styles.transactionAmount} data-income={amount.startsWith("+") || undefined}>{amount}{bonus && <span className={styles.transactionBonus}>{bonus}</span>}</span>
+      <span className={styles.transactionAmount} data-income={!hiddenAmount && (amount.startsWith("+") || undefined)}>
+        {hiddenAmount ? <CensorBubbles variant="transaction" /> : <>{amount}{bonus && <span className={styles.transactionBonus}>{bonus}</span>}</>}
+      </span>
     </div>
   );
 }

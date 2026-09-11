@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HorizontalScroller } from "@/components/ui";
-import { ProfileHeader, Transaction, styles } from "@/features/bank/bank-ui";
+import { CensorBubbles, ProfileHeader, Transaction, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
 
@@ -91,7 +91,7 @@ export default function HomePage() {
           <p className={styles.balanceCaption}>Всего на счетах</p>
           <div className={styles.balanceRow}>
             <div className={styles.balanceGroup}>
-              <p className={`${styles.balance} ${productState.accountsHidden ? styles.sensitiveHidden : ""}`} aria-hidden={productState.accountsHidden}>12 281 488,<span className={styles.kopecks}>65</span> ₽</p>
+              <p className={styles.balance}>{productState.accountsHidden ? <CensorBubbles variant="balance" /> : <>12 281 488,<span className={styles.kopecks}>65</span> ₽</>}</p>
               <Link className={styles.cashbackBadge} href="/cashback" data-track="home.cashback.open">
                 <span>{productState.cashbackConnected ? "1 200" : "0"}</span>
                 <Image src="/figma/home/cashback.svg" alt="" width={16} height={16} />
@@ -110,14 +110,14 @@ export default function HomePage() {
               </span>
               <span>
                 <span className={styles.accountName}>Текущий счет *2307</span>
-                <span className={`${styles.accountAmount} ${productState.accountsHidden ? styles.sensitiveHidden : ""}`} aria-hidden={productState.accountsHidden}>11 726 777,<span className={styles.kopecks}>61</span> ₽</span>
+                <span className={styles.accountAmount}>{productState.accountsHidden ? <CensorBubbles variant="account" /> : <>11 726 777,<span className={styles.kopecks}>61</span> ₽</>}</span>
               </span>
             </Link>
             <button className={styles.accountCard} data-track="home.savings.open" onClick={showDemoUnavailable}>
               <span className={styles.accountBadge}>ставка 5%</span>
               <span>
                 <span className={styles.accountName}>Накопительный *1401</span>
-                <span className={`${styles.accountAmount} ${productState.accountsHidden ? styles.sensitiveHidden : ""}`} aria-hidden={productState.accountsHidden}>554 711,<span className={styles.kopecks}>04</span> ₽</span>
+                <span className={styles.accountAmount}>{productState.accountsHidden ? <CensorBubbles variant="account" /> : <>554 711,<span className={styles.kopecks}>04</span> ₽</>}</span>
               </span>
             </button>
             <button className={`${styles.accountCard} ${styles.addProductCard}`} data-track="home.product.add" onClick={showDemoUnavailable}>
@@ -143,18 +143,18 @@ export default function HomePage() {
         <section className={`${styles.surface} ${styles.historySurface} ${productState.homeHistoryCollapsed ? styles.surfaceCollapsed : ""}`}>
           <SectionBar title="История" action="Ещё" track="home.history" collapsed={productState.homeHistoryCollapsed} onToggle={() => toggleSection("history")} />
           <div className={`${styles.collapsibleRegion} ${productState.homeHistoryCollapsed ? styles.collapsibleRegionClosed : ""}`}><div className={styles.collapsibleRegionInner}>
-          <div className={`${styles.historyContent} ${productState.accountsHidden ? styles.sensitiveHistory : ""}`}>
+          <div className={styles.historyContent}>
             <div className={styles.historyDay}>
               <p className={styles.dateHeading}>21 марта, воскресенье</p>
               <div className={styles.historyList}>
-                <Transaction imageSrc="/figma/home/merchant-reg.webp" title="REG.RU MOSKVA RUS" meta="Оплата услуг" amount="– 1 161 ₽" bonus="+ 20 ₽" />
-                <Transaction imageSrc="/figma/home/merchant-tpp.webp" title="TPP_TRANSPORT_FIGMA RUS" meta="Оплата по QR-коду" amount="– 290 ₽" />
+                <Transaction imageSrc="/figma/home/merchant-reg.webp" title="REG.RU MOSKVA RUS" meta="Оплата услуг" amount="– 1 161 ₽" bonus="+ 20 ₽" hiddenAmount={productState.accountsHidden} />
+                <Transaction imageSrc="/figma/home/merchant-tpp.webp" title="TPP_TRANSPORT_FIGMA RUS" meta="Оплата по QR-коду" amount="– 290 ₽" hiddenAmount={productState.accountsHidden} />
               </div>
             </div>
             <div className={styles.historyDay}>
               <p className={styles.dateHeading}>20 марта, суббота</p>
               <div className={styles.historyList}>
-                <Transaction imageSrc="/figma/home/merchant-five.webp" title="Пятёрочка" meta="Продукты" amount="– 290 ₽" bonus="+ 20 ₽" />
+                <Transaction imageSrc="/figma/home/merchant-five.webp" title="Пятёрочка" meta="Продукты" amount="– 290 ₽" bonus="+ 20 ₽" hiddenAmount={productState.accountsHidden} />
               </div>
             </div>
           </div></div></div>

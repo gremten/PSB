@@ -20,7 +20,7 @@ This file records only the final, approved UI changes and constraints from the c
 
 - Participant pages keep 24 px of scroll-end spacing by default. If there is no tabbar and the final content block is a terminal full-width/elevated surface such as the account settings block, remove that final gap so the surface sits flush against the viewport bottom. When the tabbar is present, reserve the tabbar's full height plus the 24 px gap. Route-local wrappers must not add a second bottom gap.
 - The bottom “Перейти к обмену” button in the home currency-exchange block uses a 16 px squircle/continuous-corner shape instead of a pill. Preserve `home.exchange.open` and its existing unavailable-demo behavior.
-- Home-screen privacy masking follows the Figma local effect style `censor`: native effect type `TEXTURE`, radius `20`, noise size `0.5`, `clipToShape: false`. The web implementation uses a 0.5 CSS-pixel procedural noise tile with a 20px effect radius, keeps the bloom unclipped, preserves underlying icon/amount color bleed, and only adds a subtle slow drift to the texture.
+- Home-screen hidden balances use a lightweight animated bubble cloud matching the banking-app reference video: small gray/white circles with varied size and opacity drift independently by a few pixels. Hidden values are replaced by the particles instead of being blurred. On history rows only the transaction amount/bonus is replaced; merchant icon, title, and metadata stay readable. Bubble bloom must not be clipped by content wrappers.
 
 ## Guardrails
 

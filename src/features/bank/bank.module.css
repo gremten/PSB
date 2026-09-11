@@ -1088,98 +1088,67 @@
   height: 24px;
 }
 
-.sensitiveHidden {
+.censorBubbles {
   position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
   overflow: visible;
-  filter: blur(20px);
-  opacity: .88;
+  vertical-align: middle;
   pointer-events: none;
-  user-select: none;
-  transition: filter 220ms ease, opacity 220ms ease;
 }
 
-.sensitiveHidden::after {
+.censorBubblesBalance {
+  width: 174px;
+  height: 30px;
+}
+
+.censorBubblesAccount {
+  width: 118px;
+  height: 26px;
+}
+
+.censorBubblesTransaction {
+  width: 94px;
+  height: 24px;
+}
+
+.censorBubble {
   position: absolute;
-  z-index: 1;
-  inset: -20px;
-  background: url("/censor-texture.png") 0 0 / 32px 32px repeat;
-  content: "";
-  mix-blend-mode: screen;
-  opacity: .82;
-  pointer-events: none;
-  mask-image: radial-gradient(ellipse at center, #000 54%, rgb(0 0 0 / 88%) 72%, transparent 100%);
-  animation: censor-texture-drift 4.8s steps(8, end) infinite;
+  top: var(--bubble-y);
+  left: var(--bubble-x);
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  border-radius: 999px;
+  background: #d8dadd;
+  box-shadow: 0 0 var(--bubble-glow) rgb(216 218 221 / 32%);
+  opacity: var(--bubble-opacity);
+  transform: translate3d(-50%, -50%, 0);
+  will-change: transform, opacity;
+  animation: censor-bubble-float var(--bubble-duration) ease-in-out var(--bubble-delay) infinite alternate;
 }
 
-@keyframes censor-texture-drift {
-  0% { background-position: 0 0; transform: translate3d(0, 0, 0); opacity: .78; }
-  35% { background-position: 1px -.5px; transform: translate3d(.5px, 0, 0); opacity: .86; }
-  70% { background-position: -.5px 1px; transform: translate3d(0, .5px, 0); opacity: .8; }
-  100% { background-position: .5px .5px; transform: translate3d(-.5px, 0, 0); opacity: .84; }
+@keyframes censor-bubble-float {
+  0% {
+    opacity: var(--bubble-opacity-start);
+    transform: translate3d(-50%, -50%, 0) translate3d(var(--bubble-start-dx), var(--bubble-start-dy), 0) scale(.88);
+  }
+  55% {
+    opacity: var(--bubble-opacity);
+    transform: translate3d(-50%, -50%, 0) translate3d(var(--bubble-dx), var(--bubble-dy), 0) scale(1.08);
+  }
+  100% {
+    opacity: var(--bubble-opacity-end);
+    transform: translate3d(-50%, -50%, 0) translate3d(var(--bubble-end-dx), var(--bubble-end-dy), 0) scale(.96);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .accountGradientPosition,
   .accountGradientRotation,
   .accountGradientBlob,
-  .accountGradientBlob img { animation: none; }
-  .sensitiveHidden::after,
-  .sensitiveHistory .merchantIcon::after,
-  .sensitiveHistory .transactionTitle::after,
-  .sensitiveHistory .transactionMeta::after,
-  .sensitiveHistory .transactionAmount::after { animation: none; }
+  .accountGradientBlob img,
+  .censorBubble { animation: none; }
   .cardSlide, .flipCardInner { transition-duration: 1ms; }
-}
-
-.sensitiveHistory .merchantIcon,
-.sensitiveHistory .transactionTitle,
-.sensitiveHistory .transactionMeta,
-.sensitiveHistory .transactionAmount {
-  position: relative;
-  overflow: visible;
-  filter: blur(20px);
-  opacity: .88;
-  user-select: none;
-  transition: filter 220ms ease, opacity 220ms ease;
-}
-
-.sensitiveHistory .merchantIcon::after,
-.sensitiveHistory .transactionTitle::after,
-.sensitiveHistory .transactionMeta::after,
-.sensitiveHistory .transactionAmount::after {
-  position: absolute;
-  z-index: 2;
-  inset: -20px;
-  background: url("/censor-texture.png") 0 0 / 32px 32px repeat;
-  content: "";
-  mix-blend-mode: screen;
-  opacity: .82;
-  pointer-events: none;
-  mask-image: radial-gradient(ellipse at center, #000 58%, rgb(0 0 0 / 88%) 76%, transparent 100%);
-  animation: censor-texture-drift 4.8s steps(8, end) infinite;
-}
-
-.sensitiveHistory .transactionMain,
-.sensitiveHistory .transactionTitle,
-.sensitiveHistory .transactionMeta,
-.sensitiveHistory .transactionAmount,
-.sensitiveHistory .merchantIcon {
-  overflow: visible;
-}
-
-.sensitiveHistory .transactionTitle,
-.sensitiveHistory .transactionMeta {
-  width: fit-content;
-  max-width: 100%;
-}
-
-.sensitiveHistory .transactionAmount::after {
-  inset: -20px;
-}
-
-.sensitiveHistory .merchantIcon::after {
-  inset: -20px;
-  border-radius: 14px;
 }
 
 .accountBadge {
