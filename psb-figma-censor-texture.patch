@@ -1,0 +1,130 @@
+--- a/src/features/bank/bank.module.css
++++ b/src/features/bank/bank.module.css
+@@ -1085,8 +1085,8 @@
+ .sensitiveHidden {
+   position: relative;
+   overflow: visible;
+-  filter: blur(4.6px) saturate(1.1) contrast(1.08);
+-  opacity: .76;
++  filter: blur(20px);
++  opacity: .88;
+   pointer-events: none;
+   user-select: none;
+   transition: filter 220ms ease, opacity 220ms ease;
+@@ -1095,38 +1095,21 @@
+ .sensitiveHidden::after {
+   position: absolute;
+   z-index: 1;
+-  inset: -9px -12px;
+-  background-image:
+-    radial-gradient(circle, rgb(255 255 255 / 92%) 0 1px, transparent 1.25px),
+-    radial-gradient(circle, rgb(255 255 255 / 68%) 0 1.15px, transparent 1.45px),
+-    radial-gradient(circle, rgb(167 177 196 / 72%) 0 .95px, transparent 1.2px),
+-    radial-gradient(circle, rgb(255 255 255 / 48%) 0 .7px, transparent 1px);
+-  background-position: 0 1px, 4px 6px, 8px 2px, 2px 9px;
+-  background-size: 7px 8px, 9px 10px, 11px 9px, 6px 11px;
++  inset: -20px;
++  background: url("/censor-texture.png") 0 0 / 32px 32px repeat;
+   content: "";
+   mix-blend-mode: screen;
+-  opacity: .9;
++  opacity: .82;
+   pointer-events: none;
+-  mask-image: radial-gradient(ellipse at center, #000 52%, rgb(0 0 0 / 86%) 70%, transparent 100%);
+-  animation: sensitive-particles 2.8s steps(6, end) infinite alternate;
+-}
+-
+-@keyframes sensitive-particles {
+-  0% {
+-    transform: translate3d(-1px, -1px, 0);
+-    background-position: 0 1px, 4px 6px, 8px 2px, 2px 9px;
+-    opacity: .78;
+-  }
+-  50% {
+-    transform: translate3d(1px, 0, 0);
+-    background-position: 2px 0, 3px 8px, 10px 3px, 1px 7px;
+-    opacity: .96;
+-  }
+-  100% {
+-    transform: translate3d(0, 1px, 0);
+-    background-position: 1px 3px, 6px 5px, 7px 0, 4px 10px;
+-    opacity: .84;
+-  }
++  mask-image: radial-gradient(ellipse at center, #000 54%, rgb(0 0 0 / 88%) 72%, transparent 100%);
++  animation: censor-texture-drift 4.8s steps(8, end) infinite;
++}
++
++@keyframes censor-texture-drift {
++  0% { background-position: 0 0; transform: translate3d(0, 0, 0); opacity: .78; }
++  35% { background-position: 1px -.5px; transform: translate3d(.5px, 0, 0); opacity: .86; }
++  70% { background-position: -.5px 1px; transform: translate3d(0, .5px, 0); opacity: .8; }
++  100% { background-position: .5px .5px; transform: translate3d(-.5px, 0, 0); opacity: .84; }
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+@@ -1148,8 +1131,8 @@
+ .sensitiveHistory .transactionAmount {
+   position: relative;
+   overflow: visible;
+-  filter: blur(4.6px) saturate(1.14) contrast(1.08);
+-  opacity: .72;
++  filter: blur(20px);
++  opacity: .88;
+   user-select: none;
+   transition: filter 220ms ease, opacity 220ms ease;
+ }
+@@ -1160,20 +1143,14 @@
+ .sensitiveHistory .transactionAmount::after {
+   position: absolute;
+   z-index: 2;
+-  inset: -8px -10px;
+-  background-image:
+-    radial-gradient(circle, rgb(255 255 255 / 94%) 0 1px, transparent 1.25px),
+-    radial-gradient(circle, rgb(255 255 255 / 70%) 0 1.1px, transparent 1.4px),
+-    radial-gradient(circle, rgb(160 171 192 / 74%) 0 .9px, transparent 1.2px),
+-    radial-gradient(circle, rgb(255 255 255 / 50%) 0 .7px, transparent 1px);
+-  background-position: 0 1px, 4px 6px, 8px 2px, 2px 9px;
+-  background-size: 7px 8px, 9px 10px, 11px 9px, 6px 11px;
++  inset: -20px;
++  background: url("/censor-texture.png") 0 0 / 32px 32px repeat;
+   content: "";
+   mix-blend-mode: screen;
+-  opacity: .9;
++  opacity: .82;
+   pointer-events: none;
+-  mask-image: radial-gradient(ellipse at center, #000 56%, rgb(0 0 0 / 86%) 74%, transparent 100%);
+-  animation: sensitive-particles 2.8s steps(6, end) infinite alternate;
++  mask-image: radial-gradient(ellipse at center, #000 58%, rgb(0 0 0 / 88%) 76%, transparent 100%);
++  animation: censor-texture-drift 4.8s steps(8, end) infinite;
+ }
+ 
+ .sensitiveHistory .transactionMain,
+@@ -1191,12 +1168,12 @@
+ }
+ 
+ .sensitiveHistory .transactionAmount::after {
+-  inset: -7px -10px;
++  inset: -20px;
+ }
+ 
+ .sensitiveHistory .merchantIcon::after {
+-  inset: -5px;
+-  border-radius: 10px;
++  inset: -20px;
++  border-radius: 14px;
+ }
+ 
+ .accountBadge {
+--- a/AGENT_READ_ME.md
++++ b/AGENT_READ_ME.md
+@@ -20,7 +20,7 @@
+ 
+ - Participant pages keep exactly 24 px of scroll-end spacing after the final content block when no tabbar is present; when the tabbar is present, reserve the tabbar's full height plus the same 24 px gap. Route-local wrappers must not add a second bottom gap.
+ - The bottom “Перейти к обмену” button in the home currency-exchange block uses a 16 px squircle/continuous-corner shape instead of a pill. Preserve `home.exchange.open` and its existing unavailable-demo behavior.
+-- Home-screen privacy masking uses a visibly granular particle/noise blur rather than a flat Gaussian smear. Fine bright grain remains clearly readable on-device while drifting subtly, the underlying colored merchant icons still bleed through, and the blur bloom must extend beyond the text/icon boxes instead of being clipped by content wrappers.
++- Home-screen privacy masking follows the Figma local effect style `censor`: native effect type `TEXTURE`, radius `20`, noise size `0.5`, `clipToShape: false`. The web implementation uses a 0.5 CSS-pixel procedural noise tile with a 20px effect radius, keeps the bloom unclipped, preserves underlying icon/amount color bleed, and only adds a subtle slow drift to the texture.
+ 
+ ## Guardrails
+ 
+
+# New binary asset: public/censor-texture.png
