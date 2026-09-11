@@ -18,7 +18,7 @@ This file records only the final, approved UI changes and constraints from the c
 - On the home screen, the accounts/cards scroller must keep side breathing room while scrolling so cards are not visually clipped by the viewport on the left or right.
 - The home accounts container itself ends with visible `20px` bottom-left and bottom-right corners immediately before the four quick-action buttons. The rounding belongs to the accounts/card container, not to a fake background layer underneath it.
 
-- Participant pages keep exactly 24 px of scroll-end spacing after the final content block when no tabbar is present; when the tabbar is present, reserve the tabbar's full height plus the same 24 px gap. Route-local wrappers must not add a second bottom gap.
+- Participant pages keep 24 px of scroll-end spacing by default. If there is no tabbar and the final content block is a terminal full-width/elevated surface such as the account settings block, remove that final gap so the surface sits flush against the viewport bottom. When the tabbar is present, reserve the tabbar's full height plus the 24 px gap. Route-local wrappers must not add a second bottom gap.
 - The bottom “Перейти к обмену” button in the home currency-exchange block uses a 16 px squircle/continuous-corner shape instead of a pill. Preserve `home.exchange.open` and its existing unavailable-demo behavior.
 - Home-screen privacy masking follows the Figma local effect style `censor`: native effect type `TEXTURE`, radius `20`, noise size `0.5`, `clipToShape: false`. The web implementation uses a 0.5 CSS-pixel procedural noise tile with a 20px effect radius, keeps the bloom unclipped, preserves underlying icon/amount color bleed, and only adds a subtle slow drift to the texture.
 

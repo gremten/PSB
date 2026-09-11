@@ -571,6 +571,12 @@
 .accountHistory .transaction:last-child { min-height: 38px; padding-bottom: 0; }
 .accountSecondDate { margin-top: 20px !important; }
 .accountSettings { border-radius: 20px; padding: 20px 20px 36px; }
+
+/* Terminal elevated surfaces on no-tabbar pages sit flush with the viewport bottom.
+   The global participant-content padding remains the default for every other page. */
+:global(.participant-content:not(:has(~ nav[aria-label="Основная навигация"]))):has(.accountPageContent > .accountSettings:last-child) {
+  padding-bottom: 0;
+}
 .accountSettingsTitle { margin: 0 0 16px; font-size: 20px; font-weight: 600; line-height: 28px; }
 .accountSettings .settingsRow { min-height: 52px; grid-template-columns: minmax(0, 1fr) 24px; border-bottom: 0; padding: 0; }
 .accountDangerRow { margin-top: 16px; border-top: 1px solid var(--border-primary); padding-top: 16px; }
