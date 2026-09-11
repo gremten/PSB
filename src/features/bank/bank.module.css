@@ -493,7 +493,7 @@
 .accountForeground .detailTitle { font-weight: 600; }
 .accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 0; }
 .accountOverview { display: flex; min-height: min(37.53dvh, 368px); flex-direction: column; gap: 24px; }
-.accountOperationBlock { display: flex; flex-direction: column; gap: 16px; }
+.accountOperationBlock { display: flex; flex-direction: column; gap: 16px; transform: translateY(-20px); }
 .accountBalanceBlock { display: flex; flex-direction: column; gap: 4px; padding: 0 20px; }
 .accountBalanceBlock .balanceCaption { margin: 0; }
 .accountLargeBalance { margin: 0; font-size: 32px; font-weight: 700; line-height: 40px; white-space: nowrap; }
@@ -1340,6 +1340,10 @@
   width: 32px;
   height: 32px;
   object-fit: cover;
+}
+
+.homeScreen .transactionAmount {
+  align-self: start;
 }
 
 .homeScreen .transactionBonus {

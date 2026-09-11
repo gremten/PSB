@@ -1,0 +1,33 @@
+--- a/src/features/bank/bank.module.css
++++ b/src/features/bank/bank.module.css
+@@ -493,7 +493,7 @@
+ .accountForeground .detailTitle { font-weight: 600; }
+ .accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 0; }
+ .accountOverview { display: flex; min-height: min(37.53dvh, 368px); flex-direction: column; gap: 24px; }
+-.accountOperationBlock { display: flex; flex-direction: column; gap: 16px; }
++.accountOperationBlock { display: flex; flex-direction: column; gap: 16px; transform: translateY(-20px); }
+ .accountBalanceBlock { display: flex; flex-direction: column; gap: 4px; padding: 0 20px; }
+ .accountBalanceBlock .balanceCaption { margin: 0; }
+ .accountLargeBalance { margin: 0; font-size: 32px; font-weight: 700; line-height: 40px; white-space: nowrap; }
+@@ -1342,6 +1342,10 @@
+   object-fit: cover;
+ }
+ 
++.homeScreen .transactionAmount {
++  align-self: start;
++}
++
+ .homeScreen .transactionBonus {
+   color: #11c44c;
+ }
+--- a/AGENT_READ_ME.md
++++ b/AGENT_READ_ME.md
+@@ -14,6 +14,8 @@
+ - The liquid-glass back button follows Telegram-style touch behavior: the glass material blooms larger on hold, rubber-bands toward the finger, stretches along the pull direction, and springs back on release. The entire lens moves/deforms; the optical crop must never slide independently. Keep the icon visually crisp at its normal visual size while the glass body expands; liquid-glass deformation must not shrink the glyph. A drag must not accidentally trigger navigation on release.
+ - The main-screen header toolbar (search + notifications) is also liquid glass. Keep its horizontal layout and `#242A33` at 75% tint. On hold, deform the real glass toolbar itself around the touched side with a smaller bounded rubber-band response and stronger pressed optics; keep both toolbar glyphs at their normal visual size and do not add a separate fake overlay or move an optical crop inside the control.
+ - On the account screen, the action-button row and History block should stay at roughly the same proportional vertical position across viewport heights. If the card list becomes tall, content growth is allowed to push them lower naturally.
++- On the account screen, the `На счету` balance block together with its card badges is positioned 20 px higher than the surrounding flow; this offset must not pull the action row or History block upward.
++- On the home History list, transaction amounts are top-aligned with the merchant title rather than vertically centered against the two-line title/meta block.
+ - In the account card group, the first row remains the add button plus the first card. Starting from the second row, fit two card badges per row where the viewport allows it.
+ - On the home screen, the accounts/cards scroller must keep side breathing room while scrolling so cards are not visually clipped by the viewport on the left or right.
+ - The home accounts container itself ends with visible `20px` bottom-left and bottom-right corners immediately before the four quick-action buttons. The rounding belongs to the accounts/card container, not to a fake background layer underneath it.
