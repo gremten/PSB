@@ -46,8 +46,9 @@ function SectionBar({ title, action, track, collapsed, onToggle }: { title: stri
 }
 
 export default function HomePage() {
-  const { productState, updateProductState } = useParticipant();
-  const [currencyMode, setCurrencyMode] = useState<"buy" | "sell">("buy");
+  const { productState, replayVisualState, updateProductState } = useParticipant();
+  const [liveCurrencyMode, setCurrencyMode] = useState<"buy" | "sell">("buy");
+  const currencyMode = replayVisualState?.currencyMode ?? liveCurrencyMode;
   const [closingPromos, setClosingPromos] = useState<string[]>([]);
   const promoTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const visiblePromos = useMemo(() => promos.filter((promo) => !productState.dismissedHomePromos.includes(promo.id)), [productState.dismissedHomePromos]);

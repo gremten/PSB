@@ -19,11 +19,12 @@ const categories = [
 
 export default function CashbackCategoriesPage() {
   const router = useRouter();
-  const { productState, updateProductState } = useParticipant();
+  const { productState, replayVisualState, updateProductState } = useParticipant();
   const selectingNextMonth = productState.cashbackConnected;
-  const [selected, setSelected] = useState<string[]>(() => selectingNextMonth
+  const [liveSelected, setSelected] = useState<string[]>(() => selectingNextMonth
     ? categories.filter((category) => productState.nextMonthCashbackCategories.includes(category.stateLabel)).map((category) => category.id)
     : []);
+  const selected = replayVisualState?.selectedCategoryIds ?? liveSelected;
   const [shake, setShake] = useState(0);
 
   const toggle = (id: string) => {

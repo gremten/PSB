@@ -6,6 +6,7 @@ import { Glass } from "@samasante/liquid-glass";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
+import { useParticipant } from "@/features/usability/participant-provider";
 import { getElasticGlassPull, getToolbarGlassPull } from "./glass-interaction";
 import styles from "./bank.module.css";
 
@@ -300,19 +301,21 @@ const faqAnswers: Record<string, string> = {
 };
 
 export function FaqList() {
-  const [open, setOpen] = useState<string | null>(null);
+  const { replayVisualState } = useParticipant();
+  const [liveOpen, setOpen] = useState<string | null>(null);
   return (
     <section className={styles.faqBlock}>
       <h2 className={styles.sectionHeading}>Частые вопросы</h2>
       <div className={styles.faqList}>
-        {Object.entries(faqAnswers).map(([question, answer], index) => (
-          <div key={question}>
-            <button className={styles.faqRow} onClick={() => setOpen(open === question ? null : question)} data-track={`cashback.faq.${index + 1}.toggle`} aria-expanded={open === question}>
-              <span>{question}</span><span className={styles.plus}>{open === question ? "−" : "+"}</span>
+        {Object.entries(faqAnswers).map(([question, answer], index) => {
+          const isOpen = replayVisualState ? replayVisualState.openFaqIndex === index + 1 : liveOpen === question;
+          return <div key={question}>
+            <button className={styles.faqRow} onClick={() => setOpen(liveOpen === question ? null : question)} data-track={`cashback.faq.${index + 1}.toggle`} aria-expanded={isOpen}>
+              <span>{question}</span><span className={styles.plus}>{isOpen ? "−" : "+"}</span>
             </button>
-            {open === question && <div className={styles.faqAnswer}>{answer}</div>}
-          </div>
-        ))}
+            {isOpen && <div className={styles.faqAnswer}>{answer}</div>}
+          </div>;
+        })}
       </div>
     </section>
   );

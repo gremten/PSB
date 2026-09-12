@@ -58,9 +58,11 @@ function CardBack({ type, onCopy, onHide, visible }: { type: CardType; onCopy: (
 
 function CardContent() {
   const params = useSearchParams();
-  const { productState, updateProductState } = useParticipant();
-  const [activeCard, setActiveCard] = useState(params.get("card") === "orange" ? 1 : 0);
-  const [flipped, setFlipped] = useState<boolean[]>([productState.cardDetailsRevealed, false]);
+  const { productState, replayVisualState, updateProductState } = useParticipant();
+  const [liveActiveCard, setActiveCard] = useState(params.get("card") === "orange" ? 1 : 0);
+  const [liveFlipped, setFlipped] = useState<boolean[]>([productState.cardDetailsRevealed, false]);
+  const activeCard = replayVisualState?.cardIndex ?? liveActiveCard;
+  const flipped = replayVisualState?.flippedCards ?? liveFlipped;
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
   const pointerStart = useRef<number | null>(null);
   const dragged = useRef(false);

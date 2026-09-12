@@ -28,8 +28,9 @@ function DisconnectedCashback() {
 }
 
 function ConnectedCashback() {
-  const { productState } = useParticipant();
-  const [period, setPeriod] = useState<"month" | "year">("month");
+  const { productState, replayVisualState } = useParticipant();
+  const [livePeriod, setPeriod] = useState<"month" | "year">("month");
+  const period = replayVisualState?.cashbackPeriod ?? livePeriod;
   const choosePeriod = (next: "month" | "year") => {
     setPeriod(next);
     track("action", { screen: "/cashback", action: `cashback.period.${next}` });

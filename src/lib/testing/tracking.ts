@@ -17,7 +17,7 @@ export async function track(eventName: string, data: TrackData = {}) {
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, sessionId, ...data }),
+      body: JSON.stringify({ eventName, sessionId, ...data, metadata: { ...data.metadata, clientTimeMs: performance.timeOrigin + performance.now() } }),
       keepalive: true,
     });
   } catch {
