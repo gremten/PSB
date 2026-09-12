@@ -42,7 +42,7 @@ These names and meanings are migration-sensitive and cannot be renamed by a visu
 | `/cashback/categories` | Participant cashback | Three-category selection for current or next month; tabbar hidden. |
 | `/payment`, `/chat`, `/more` | Deliberate empty routes | Tabbar prevents navigation and shows demo feedback. Do not add content without explicit scope. |
 | `/moderator` | Moderator | Authenticated session table, generic interaction metrics, live event list, end/delete. |
-| `/moderator/sessions/[id]` | Moderator | Authenticated metrics, export links, event log, semantic replay with timed click marks. |
+| `/moderator/sessions/[id]` | Moderator | Authenticated metrics, export links, event log, continuous action replay with timed tap marks. |
 
 API route ownership:
 
@@ -104,7 +104,7 @@ Details and tests are in `docs/session-lifecycle.md` and `src/lib/db/session-lif
 - Replay query `?replay=1` disables participant writes and presence.
 - `sanitizeMetadata()` rejects values, clipboard/card fields, contact/name/password fields, and other sensitive keys.
 - Card values are fake. They may be copied for the task but must never be added to metadata.
-- Moderator replay is semantic reconstruction against current routes with red timed tap markers. It is not a video recording and does not reconstruct every historical DOM/product-state frame.
+- Moderator replay plays recorded actions on a continuous timestamp scale, with one red tap pulse at the action time. Tap geometry is anchored to the same `data-track` target using its recorded hit position within the target, rather than scaling absolute viewport coordinates; this avoids Telegram safe-area offsets. If the historical target no longer exists, no inaccurate marker is invented. This is not a video recording and does not reconstruct every historical DOM/product-state frame.
 
 Stable event families: `screen_view`, `tap`, `action`, `navigation`, `product_state_change`, `card_selection`, `session_started`, `session_ended`, `task_started`, and `task_finished`. Existing action/target strings are analytics keys and cannot be renamed for presentation cleanup.
 

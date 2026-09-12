@@ -152,7 +152,7 @@ function HeaderToolbar() {
   const pointerOrigin = useRef({ x: 0, y: 0 });
   const dragged = useRef(false);
 
-  const beginPress = (index: 0 | 1) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const beginPress = (event: ReactPointerEvent<HTMLButtonElement>, index: 0 | 1) => {
     if (activeIndex !== index) setActiveIndex(index);
     pointerId.current = event.pointerId;
     pointerOrigin.current = { x: event.clientX, y: event.clientY };
@@ -212,7 +212,7 @@ function HeaderToolbar() {
             className={styles.toolbarButton}
             aria-label="Поиск"
             data-track="header.search.open"
-            onPointerDown={beginPress(0)}
+            onPointerDown={(event) => beginPress(event, 0)}
             onPointerMove={movePress}
             onPointerUp={endPress}
             onPointerCancel={endPress}
@@ -223,7 +223,7 @@ function HeaderToolbar() {
             className={styles.toolbarButton}
             aria-label="Уведомления"
             data-track="header.notifications.open"
-            onPointerDown={beginPress(1)}
+            onPointerDown={(event) => beginPress(event, 1)}
             onPointerMove={movePress}
             onPointerUp={endPress}
             onPointerCancel={endPress}

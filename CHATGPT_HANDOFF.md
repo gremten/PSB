@@ -1,6 +1,6 @@
 # ChatGPT handoff: safe visual work in PSB
 
-This file is the operating manual for a general ChatGPT or coding assistant working on the repository. Read it completely before editing. Then read `AGENTS.md` and `docs/ARCHITECTURE.md`. Those two files are authoritative if this summary ever differs from them.
+This file is the operating manual for a general ChatGPT or coding assistant working on the repository. Read it completely before editing. Then read `AGENTS.md`, `docs/ARCHITECTURE.md`, and `AGENT_READ_ME.md`. The latter records approved visual decisions but does not authorize architecture changes. `AGENTS.md` and `docs/ARCHITECTURE.md` are authoritative if this summary ever differs from them.
 
 ## Mission
 
@@ -12,7 +12,7 @@ A request such as “move this”, “match Figma”, “fix the color”, “re
 
 Before every task:
 
-1. Read `AGENTS.md`, `docs/ARCHITECTURE.md`, and this file.
+1. Read `AGENTS.md`, `docs/ARCHITECTURE.md`, `AGENT_READ_ME.md`, and this file.
 2. Run `git status --short`. Existing changes belong to the user; do not overwrite or reformat them.
 3. Identify one named route, component, or visual defect from the request.
 4. Inspect its current implementation before proposing a change.

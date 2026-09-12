@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import type { TrackedEvent } from "@/lib/testing/types";
+import { findReplayIndex, projectTrackedTap } from "./replay-geometry";
 
 function numberMetadata(event: TrackedEvent, key: string) {
   const value = event.metadata[key];
@@ -24,23 +25,48 @@ function replayUrl(screen: string) {
 
 export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; startedAt: string | null }) {
   const replayEvents = useMemo(() => events.filter((event) => event.screen || event.type === "tap"), [events]);
-  const [index, setIndex] = useState(Math.max(0, replayEvents.length - 1));
+  const eventTimes = useMemo(() => {
+    const first = new Date(replayEvents[0]?.timestamp ?? 0).getTime();
+    return replayEvents.reduce<number[]>((times, event) => {
+      const elapsed = Math.max(0, new Date(event.timestamp).getTime() - first);
+      times.push(Math.max(elapsed, (times.at(-1) ?? -1) + 1));
+      return times;
+    }, []);
+  }, [replayEvents]);
+  const durationMs = eventTimes.at(-1) ?? 0;
+  const [playheadMs, setPlayheadMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
+  const [tapPoint, setTapPoint] = useState<{ id: number; left: number; top: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const safeIndex = Math.min(index, Math.max(0, replayEvents.length - 1));
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const safeIndex = Math.max(0, findReplayIndex(eventTimes, playheadMs));
   const current = replayEvents[safeIndex] ?? null;
-  const screen = current?.screen ?? "/";
-  const activelyPlaying = playing && safeIndex < replayEvents.length - 1;
+  const screen = replayEvents.slice(0, safeIndex + 1).reverse().find((event) => event.screen)?.screen ?? "/";
+  const activelyPlaying = playing && playheadMs < durationMs;
+
+  const activeTap = useMemo(() => {
+    for (let index = safeIndex; index >= 0; index--) {
+      const event = replayEvents[index];
+      if (event.type !== "tap" || event.screen !== screen) continue;
+      if (activelyPlaying && playheadMs - eventTimes[index] > 950) return null;
+      if (!activelyPlaying && index !== safeIndex) return null;
+      return event;
+    }
+    return null;
+  }, [activelyPlaying, eventTimes, playheadMs, replayEvents, safeIndex, screen]);
 
   useEffect(() => {
     if (!activelyPlaying) return;
-    const currentTime = new Date(replayEvents[safeIndex].timestamp).getTime();
-    const nextTime = new Date(replayEvents[safeIndex + 1].timestamp).getTime();
-    const delay = Math.min(2400, Math.max(140, (nextTime - currentTime) / speed));
-    const timeout = setTimeout(() => setIndex((value) => value + 1), delay);
-    return () => clearTimeout(timeout);
-  }, [activelyPlaying, replayEvents, safeIndex, speed]);
+    let last = performance.now();
+    const interval = window.setInterval(() => {
+      const now = performance.now();
+      const delta = now - last;
+      last = now;
+      setPlayheadMs((elapsed) => Math.min(durationMs, elapsed + delta * speed));
+    }, 33);
+    return () => window.clearInterval(interval);
+  }, [activelyPlaying, durationMs, speed]);
 
   const syncScroll = useCallback(() => {
     const scrollY = current ? numberMetadata(current, "scrollY") ?? 0 : 0;
@@ -48,34 +74,52 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
     if (content) content.scrollTop = scrollY;
   }, [current]);
 
-  useEffect(() => { syncScroll(); }, [safeIndex, screen, syncScroll]);
+  const measureTap = useCallback(() => {
+    const iframe = iframeRef.current;
+    const viewport = viewportRef.current;
+    const document = iframe?.contentDocument;
+    if (!activeTap || !iframe || !viewport || !document || !activeTap.target) {
+      setTapPoint(null);
+      return;
+    }
+    const target = Array.from(document.querySelectorAll<HTMLElement>("[data-track]"))
+      .find((element) => element.dataset.track === activeTap.target);
+    if (!target) {
+      setTapPoint(null);
+      return;
+    }
+    const iframeRect = iframe.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    const point = projectTrackedTap(activeTap.metadata, target.getBoundingClientRect(), {
+      left: iframeRect.left - viewportRect.left,
+      top: iframeRect.top - viewportRect.top,
+    });
+    setTapPoint(point ? { id: activeTap.id, ...point } : null);
+  }, [activeTap]);
+
+  useEffect(() => {
+    syncScroll();
+    const frame = window.requestAnimationFrame(measureTap);
+    return () => window.cancelAnimationFrame(frame);
+  }, [safeIndex, screen, syncScroll, measureTap]);
 
   if (!current) return <div className={styles.empty}>Для replay пока нет событий.</div>;
 
-  const visibleTaps = replayEvents.slice(0, safeIndex + 1).filter((event) => event.type === "tap" && (event.screen ?? "/") === screen).slice(-30).flatMap((event) => {
-    const x = numberMetadata(event, "x");
-    const y = numberMetadata(event, "y");
-    const viewportWidth = numberMetadata(event, "viewportWidth");
-    const viewportHeight = numberMetadata(event, "viewportHeight");
-    if (x === null || y === null || !viewportWidth || !viewportHeight) return [];
-    return [{ event, left: x / viewportWidth * 402, top: y / viewportHeight * 874 }];
-  });
-
   return <div className={styles.replayGrid}>
     <div>
-      <div className={styles.replayViewport}>
-        <iframe ref={iframeRef} key={screen} src={replayUrl(screen)} title={`Replay экрана ${screen}`} onLoad={syncScroll} />
-        {visibleTaps.map(({ event, left, top }) => <span key={event.id} className={`${styles.replayPoint} ${event.id === current.id ? styles.replayPointCurrent : styles.replayPointPast}`} style={{ left: Math.min(402, Math.max(0, left)), top: Math.min(874, Math.max(0, top)) }}><i /></span>)}
+      <div className={styles.replayViewport} ref={viewportRef}>
+        <iframe ref={iframeRef} key={screen} src={replayUrl(screen)} title={`Replay экрана ${screen}`} onLoad={() => { syncScroll(); window.requestAnimationFrame(measureTap); }} />
+        {tapPoint && activeTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
       </div>
       <div className={styles.replayControls}>
-        <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (safeIndex >= replayEvents.length - 1) setIndex(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>
+        <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (playheadMs >= durationMs) setPlayheadMs(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>
         <select className={styles.select} value={speed} aria-label="Скорость replay" onChange={(event) => setSpeed(Number(event.target.value))}><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select>
       </div>
-      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, replayEvents.length - 1)} value={safeIndex} onChange={(event) => { setPlaying(false); setIndex(Number(event.target.value)); }} aria-label="Позиция replay" />
+      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по времени" />
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type}</p>
     </div>
     <div className={styles.replayTimeline}>
-      {replayEvents.map((event, eventIndex) => <button type="button" className={`${eventIndex === index ? styles.replayEventActive : ""} ${event.type === "tap" ? styles.replayTapEvent : ""}`} key={event.id} onClick={() => { setPlaying(false); setIndex(eventIndex); }}>
+      {replayEvents.map((event, eventIndex) => <button type="button" className={`${eventIndex === safeIndex ? styles.replayEventActive : ""} ${event.type === "tap" ? styles.replayTapEvent : ""}`} key={event.id} onClick={() => { setPlaying(false); setPlayheadMs(eventTimes[eventIndex]); }}>
         <span>{eventElapsed(event, startedAt, replayEvents[0].timestamp)}</span>
         <strong>{event.type}</strong>
         <small>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</small>

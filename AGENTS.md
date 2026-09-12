@@ -31,7 +31,7 @@ A new interactive component may be added when the requested interaction does not
 
 ### Required handoff discipline
 
-Before editing, read `docs/ARCHITECTURE.md` and `CHATGPT_HANDOFF.md`. Keep changes minimal and review `git diff` for unrelated edits. For code changes run typecheck, lint, and relevant tests. Do not claim visual fidelity without reading the exact live Figma node. Do not silently implement a known scenario gap listed in the architecture document.
+Before editing, read `docs/ARCHITECTURE.md`, `CHATGPT_HANDOFF.md`, and `AGENT_READ_ME.md` (the record of approved visual decisions, not permission to alter architecture). Keep changes minimal and review `git diff` for unrelated edits. For code changes run typecheck, lint, and relevant tests. Do not claim visual fidelity without reading the exact live Figma node. Do not silently implement a known scenario gap listed in the architecture document.
 
 ## Figma access
 
