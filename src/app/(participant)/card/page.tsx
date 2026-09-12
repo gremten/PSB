@@ -161,7 +161,6 @@ function CardContent() {
           </div>
         </div>
       </section>
-      <p className={styles.helperText}>Все реквизиты вымышлены и работают только в этой демонстрации.</p>
     </main>
   );
 }

@@ -635,7 +635,6 @@
 .copiedToast { position: absolute; top: 10px; left: 50%; z-index: 5; transform: translateX(-50%); border-radius: 999px; padding: 6px 10px; color: white; background: var(--action-primary); font-size: 12px; white-space: nowrap; }
 .cardSettings { margin-top: 22px; }
 .cardSettings .surface { border-radius: 20px; }
-.helperText { margin: 12px 20px 0; color: var(--text-secondary); font-size: 12px; line-height: 16px; text-align: center; }
 
 .flipCarousel {
   position: relative;
@@ -716,7 +715,10 @@
 .flipCarousel .copiedToast { top: 8px; bottom: auto; }
 
 /* t-card, Figma 2072:12720 / 2072:12883. Keep these adjustments local to /card. */
-.cardScreen { overflow-x: clip; }
+.cardScreen { display: flex; flex-direction: column; overflow-x: clip; }
+:global(.participant-content:not(:has(~ nav[aria-label="Основная навигация"]))):has(.cardScreen > .cardSettings:last-child) {
+  padding-bottom: 0;
+}
 .cardScreen .flipCarousel { margin-top: 28px; overflow: visible; }
 .cardScreen .copiedToast {
   top: -21px;
@@ -728,8 +730,8 @@
   background: rgb(22 26 32 / 50%);
 }
 .cardScreen .copiedToast img { width: 16px; height: 16px; }
-.cardScreen .cardSettings { margin-top: 52px; }
-.cardScreen .cardSettings .surface { padding: 20px 20px 36px; }
+.cardScreen .cardSettings { display: flex; flex: 1 0 auto; flex-direction: column; margin-top: 52px; }
+.cardScreen .cardSettings .surface { flex: 1 0 auto; padding: 20px 20px 36px; }
 .cardScreen .cardSettings .settingsRow {
   min-height: 52px;
   grid-template-columns: minmax(0, 1fr) 24px;
