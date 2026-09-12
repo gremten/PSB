@@ -111,8 +111,8 @@ function CardContent() {
   };
 
   return (
-    <main className={styles.screen} data-screen="card">
-      <DetailHeader title={`Карта «${activeCard === 0 ? "Сильные люди" : "Твой банк"}»`} subtitle="Платежный счет *6777" backHref="/account" />
+    <main className={`${styles.screen} ${styles.cardScreen}`} data-screen="card">
+      <DetailHeader title="Карта «Твой банк»" subtitle="Платежный счет *6777" backHref="/account" />
 
       <section className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; }}>
         {cards.map((card, index) => {
@@ -143,7 +143,7 @@ function CardContent() {
             </div>
           );
         })}
-        {copied && <div className={styles.copiedToast} role="status">Скопировано</div>}
+        {copied && <div className={styles.copiedToast} role="status"><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</div>}
       </section>
 
       <section className={styles.cardSettings}>

@@ -715,6 +715,44 @@
 .flipBack .flipBadge { position: absolute; right: 16px; bottom: 16px; }
 .flipCarousel .copiedToast { top: 8px; bottom: auto; }
 
+/* t-card, Figma 2072:12720 / 2072:12883. Keep these adjustments local to /card. */
+.cardScreen { overflow-x: clip; }
+.cardScreen .flipCarousel { margin-top: 28px; overflow: visible; }
+.cardScreen .copiedToast {
+  top: -21px;
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgb(22 26 32 / 50%);
+}
+.cardScreen .copiedToast img { width: 16px; height: 16px; }
+.cardScreen .cardSettings { margin-top: 52px; }
+.cardScreen .cardSettings .surface { padding: 20px 20px 36px; }
+.cardScreen .cardSettings .settingsRow {
+  min-height: 52px;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  border-bottom: 0;
+  padding: 0;
+}
+.cardScreen .cardSettings .settingsList {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.cardScreen .cardSettings .dangerRow {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+.cardScreen .cardSettings .dangerPill {
+  width: 100%;
+  min-height: 52px;
+  color: #fe1818;
+  background: #242a33;
+}
+
 .benefitBento {
   display: grid;
   grid-template-columns: 1fr 1fr;
