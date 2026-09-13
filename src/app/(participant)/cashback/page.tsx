@@ -33,7 +33,7 @@ function DisconnectedCashback() {
             <article className={styles.benefitTile}>
               <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о начислении баллов" data-track="cashback.benefit.points.open" onClick={showDemoUnavailable} />
               <div><strong className={styles.cashbackCellTitle}><span className={styles.cashbackAccent}>1 балл</span> = 1 ₽</strong><span className={styles.benefitSub}>Как и за что начисляем</span></div>
-              <div className={styles.benefitChips}><span className={styles.benefitChip}>Ежемесячно</span><span className={styles.benefitChip}>до 5000 ₽</span></div>
+              <div className={styles.benefitChips}><span className={styles.benefitChip}>Ежемесячно</span><span className={styles.benefitChip}>до 5 000 ₽</span></div>
             </article>
             <article className={styles.benefitTile}>
               <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о повышенном кэшбэке 25%" data-track="cashback.benefit.boost.open" onClick={showDemoUnavailable} />

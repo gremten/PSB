@@ -806,15 +806,15 @@
   padding: 0 20px 20px;
   background: var(--bg-surface);
 }
-.cashbackBentoRow { display: flex; height: 122px; gap: 8px; }
-.cashbackBentoRowTop > .benefitTile:first-child { flex: 134 1 0; }
-.cashbackBentoRowTop > .benefitTile:last-child { flex: 220 1 0; }
-.cashbackBentoRowBottom > .benefitTile:first-child { flex: 201 1 0; }
-.cashbackBentoRowBottom > .benefitTile:last-child { flex: 153 1 0; }
+.cashbackBentoRow { display: flex; min-height: 122px; gap: 8px; }
+.cashbackBentoRowTop > .benefitTile:first-child { flex: 0 1 134px; min-width: 112px; }
+.cashbackBentoRowTop > .benefitTile:last-child { flex: 1 0 220px; }
+.cashbackBentoRowBottom > .benefitTile:first-child { flex: 0 0 max-content; min-width: 201px; }
+.cashbackBentoRowBottom > .benefitTile:last-child { flex: 1 1 0; min-width: 128px; }
 .cashbackDisconnectedScreen .benefitTile {
   display: flex;
   min-width: 0;
-  min-height: 0;
+  min-height: 122px;
   flex-direction: column;
   justify-content: space-between;
   border-radius: 12px;
@@ -848,6 +848,10 @@
 .cashbackPartnerCount > span { position: relative; color: #fff; font-size: 12px; line-height: 16px; }
 .cashbackDisconnectedScreen .benefitChips { flex-wrap: nowrap; gap: 4px; margin-top: 0; }
 .cashbackDisconnectedScreen .benefitChip { padding: 4px 8px; background: var(--bg-surface); color: #fff; font-size: 12px; line-height: 16px; white-space: nowrap; }
+@media (max-width: 379px) {
+  .cashbackDisconnectedScreen .cashbackBentoRow { flex-direction: column; }
+  .cashbackDisconnectedScreen .cashbackBentoRow > .benefitTile { width: 100%; min-width: 0; flex: none; }
+}
 .cashbackDisconnectedActions { display: grid; gap: 8px; }
 .cashbackDisconnectedActions .textButton { min-height: 52px; }
 .cashbackDisconnectedScreen .faqRow { min-height: 52px; border-bottom: 0; padding: 0; }
