@@ -881,22 +881,54 @@
 .legendDot { display: inline-block; width: 11px; height: 11px; margin-right: 4px; border-radius: 50%; vertical-align: -1px; }
 .yearTotal { margin: 22px 0 0; font-size: 28px; font-weight: 720; }
 
-.categoryScreen { position: relative; min-height: 100%; overflow: hidden; background: radial-gradient(circle at 90% 17%, #3d2f76 0, #10101c 27%, #0a0c0f 48%); }
-.categoryHero { position: relative; height: 200px; overflow: hidden; }
-.categoryHero img { position: absolute; top: 2px; left: 50%; width: 310px; height: 310px; transform: translateX(-50%); object-fit: contain; }
+.categoryScreen { position: relative; min-height: 100%; isolation: isolate; overflow: clip; background: var(--bg-page); }
+.categoryScreen .accountGradientBlob img {
+  top: -279.68px;
+  left: -242px;
+  width: 832.251px;
+  height: 852.418px;
+  animation: category-background-inset 39s linear infinite;
+}
+@keyframes category-background-inset {
+  0%, 16.666667%, 33.333333%, 50%, 83.333333%, 100% { top: -279.68px; left: -242px; width: 832.251px; height: 852.418px; }
+  66.666667% { top: -208.08px; left: -180px; width: 618.94px; height: 634.01px; }
+}
+.categoryHero { position: relative; height: 196px; overflow: hidden; }
+.categoryHero img { position: absolute; top: -4px; left: 50%; width: 283px; height: 282px; transform: translate3d(-50%, var(--category-card-parallax, 0px), 0); object-fit: cover; }
 .categorySheet { position: relative; z-index: 2; margin-top: -4px; border-radius: 20px 20px 0 0; padding: 20px 20px 104px; background: var(--bg-surface); }
 .categoryTitle { margin: 0 0 18px; font-size: 24px; font-weight: 720; line-height: 32px; }
 .categoryList { display: flex; flex-direction: column; }
-.categoryRow { display: grid; min-height: 62px; grid-template-columns: 36px minmax(0, 1fr) 24px 24px; align-items: center; gap: 8px; border: 0; padding: 6px 0; color: white; background: transparent; text-align: left; cursor: pointer; }
+.categoryRow { display: grid; min-height: 62px; grid-template-columns: 32px minmax(0, 1fr) 24px 24px; align-items: center; gap: 12px; border: 0; padding: 12px 0; color: white; background: transparent; text-align: left; cursor: pointer; }
 .categoryIcon { width: 32px; height: 32px; overflow: hidden; border-radius: 8px; background: #fff; }
 .categoryIcon img { width: 100%; height: 100%; object-fit: cover; }
 .categoryName { display: block; font-size: 16px; line-height: 20px; }
 .categoryDescription { display: block; overflow: hidden; margin-top: 2px; color: var(--text-secondary); font-size: 12px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
-.faqIcon { width: 20px; height: 20px; }
-.checkbox { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid #4d5663; border-radius: 8px; background: var(--bg-elevated); }
+.categoryScreen .faqIcon { width: 24px; height: 24px; }
+.checkbox { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--border-primary); border-radius: 8px; background: var(--bg-elevated); }
 .checkboxSelected { border-color: var(--action-primary); background: var(--action-primary); }
 .checkbox img { width: 16px; height: 16px; }
-.categoryCta { position: absolute; right: 20px; bottom: 20px; left: 20px; z-index: 12; box-shadow: 0 -16px 28px var(--bg-surface); }
+.categoryActionBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  width: min(100%, 440px);
+  margin-inline: auto;
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom));
+  background: var(--bg-surface);
+}
+.categoryCta { position: relative; }
+@media (hover: hover) and (pointer: fine) {
+  .categoryActionBar { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .categoryScreen .accountGradientPosition,
+  .categoryScreen .accountGradientRotation,
+  .categoryScreen .accountGradientBlob,
+  .categoryScreen .accountGradientBlob img { animation: none; }
+  .categoryHero img { transform: translateX(-50%); }
+}
 .shake { animation: shake .28s linear; }
 
 .successOverlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: flex-end; background: rgb(0 0 0 / 67%); }
@@ -934,7 +966,7 @@
   .quickActions { padding-right: 12px; padding-left: 12px; }
   .quickIcon { width: 48px; height: 48px; }
   .categoryTitle { font-size: 22px; line-height: 29px; }
-  .categoryRow { grid-template-columns: 34px minmax(0, 1fr) 20px 24px; gap: 6px; }
+  .categoryRow { grid-template-columns: 32px minmax(0, 1fr) 24px 24px; gap: 8px; }
   .categoryName { font-size: 14px; }
   .categoryDescription { font-size: 11px; }
 }
