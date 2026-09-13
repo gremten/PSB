@@ -633,7 +633,7 @@
 .copyGlyph { font-size: 17px; }
 .backSide { display: flex; flex-direction: column; gap: 8px; }
 .backSide .cardField { min-height: 49px; }
-.copiedToast { position: absolute; top: 10px; left: 50%; z-index: 5; transform: translateX(-50%); border-radius: 999px; padding: 6px 10px; color: white; background: var(--action-primary); font-size: 12px; white-space: nowrap; }
+.copiedToast { z-index: 5; }
 .cardSettings { margin-top: 22px; }
 .cardSettings .surface { border-radius: 20px; }
 
@@ -727,12 +727,6 @@
 .cardScreen .settingsRow:active { scale: 1; }
 .cardScreen .copiedToast {
   top: -21px;
-  display: flex;
-  min-height: 24px;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: rgb(22 26 32 / 50%);
 }
 .cardScreen .copiedToast img { width: 16px; height: 16px; }
 .cardScreen .cardSettings { display: flex; flex: 1 0 auto; flex-direction: column; margin-top: 52px; }

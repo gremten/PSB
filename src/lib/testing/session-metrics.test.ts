@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { calculateSessionInteractionMetrics } from "./session-metrics";
+import type { ResearchSession, TrackedEvent } from "./types";
+
+const session: ResearchSession = {
+  id: "session-1", participantCode: "P-01", variant: "disconnected", createdAt: "2026-01-01T00:00:00.000Z",
+  startedAt: "2026-01-01T00:00:00.000Z", endedAt: null, buildId: "test",
+};
+function event(id: number, type: string, action: string, target: string | null, time: number): TrackedEvent {
+  return { id, sessionId: session.id, taskRunId: null, timestamp: new Date(time).toISOString(), type, screen: "/account", action, target, metadata: { clientTimeMs: time } };
+}
+
+describe("moderator missclick metric", () => {
+  it("counts unavailable attempts even when the control ID has no unavailable suffix", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const events = [event(1, "tap", "account.topup.open", "account.topup.open", time), event(2, "action", "demo.unavailable", "account.topup.open", time + 10)];
+    const metrics = calculateSessionInteractionMetrics(session, events, time + 100);
+    expect(metrics.missclickCount).toBe(1);
+    expect(metrics.demoFeedbackCount).toBe(1);
+  });
+
+  it("retains legacy unavailable taps without double-counting new paired actions", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const events = [event(1, "tap", "tab.chat.unavailable", "tab.chat.unavailable", time), event(2, "action", "demo.unavailable", "tab.chat.unavailable", time + 10), event(3, "tap", "tab.payment.unavailable", "tab.payment.unavailable", time + 1000)];
+    expect(calculateSessionInteractionMetrics(session, events, time + 1100).missclickCount).toBe(2);
+  });
+});

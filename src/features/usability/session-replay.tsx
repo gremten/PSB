@@ -3,6 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import type { TrackedEvent } from "@/lib/testing/types";
+import { isDemoMissclick } from "@/lib/testing/session-metrics";
+import { GlassToast } from "./glass-toast";
 import { findReplayIndex, projectTrackedTap } from "./replay-geometry";
 import { deriveReplayState, recordedEventTime, replayEventTimes, REPLAY_APPLIED, REPLAY_MESSAGE, REPLAY_READY, REPLAY_SCREENS } from "./replay-state";
 
@@ -44,6 +46,7 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
   const [tapPoint, setTapPoint] = useState<{ id: number; left: number; top: number } | null>(null);
+  const [dismissedToastId, setDismissedToastId] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const safeIndex = Math.max(0, findReplayIndex(eventTimes, playheadMs));
@@ -75,6 +78,13 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
   }, [replayEvents, safeIndex, screen]);
   const activeTap = replayEvents[activeTapIndex] ?? null;
   const showTap = activeTap && (activelyPlaying ? playheadMs - eventTimes[activeTapIndex] < 900 : activeTapIndex === safeIndex);
+  const replayToastEvent = useMemo(() => {
+    for (let index = safeIndex; index >= 0 && playheadMs - eventTimes[index] < 3000; index--) {
+      const event = replayEvents[index];
+      if (event.screen === screen && isDemoMissclick(event)) return event;
+    }
+    return null;
+  }, [eventTimes, playheadMs, replayEvents, safeIndex, screen]);
 
   useEffect(() => {
     if (!activelyPlaying) return;
@@ -150,7 +160,7 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
     return () => window.removeEventListener("message", receive);
   }, [postReplayState, syncScroll, measureTap]);
 
-  const selectEvent = useCallback((time: number) => { setPlaying(false); setPlayheadMs(time); }, []);
+  const selectEvent = useCallback((time: number) => { setPlaying(false); setDismissedToastId(null); setPlayheadMs(time); }, []);
 
   if (!current) return <div className={styles.empty}>Для replay пока нет событий.</div>;
 
@@ -159,6 +169,7 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
       <div className={styles.replayViewport} ref={viewportRef}>
         <iframe ref={iframeRef} src={replayUrl(replayEvents[0].screen ?? "/")} title={`Replay экрана ${screen}`} onLoad={postReplayState} />
         {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
+        {replayToastEvent && replayToastEvent.id !== dismissedToastId && <GlassToast key={replayToastEvent.id} placement="bottom" tone="orange" trackId="moderator.replay.demo_toast.dismiss" className={styles.replayToast} onDone={() => setDismissedToastId(replayToastEvent.id)}>Недоступно в демо-демонстрации</GlassToast>}
       </div>
       <div className={styles.replayControls}>
         <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (playheadMs >= durationMs) setPlayheadMs(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>

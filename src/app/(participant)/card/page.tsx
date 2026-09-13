@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
+import { GlassToast } from "@/features/usability/glass-toast";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
 import { CARD_SWIPE_TRAVEL, cardSwipeDestination } from "./card-gesture";
@@ -66,6 +67,7 @@ function CardContent() {
   const activeCard = replayVisualState?.cardIndex ?? liveActiveCard;
   const flipped = replayVisualState?.flippedCards ?? liveFlipped;
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
+  const [copyToastId, setCopyToastId] = useState(0);
   const carouselRef = useRef<HTMLElement | null>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const gesture = useRef<CardGesture | null>(null);
@@ -81,7 +83,7 @@ function CardContent() {
   const copy = async (kind: keyof typeof fakeCard) => {
     try { await navigator.clipboard.writeText(fakeCard[kind]); } catch {}
     setCopied(kind);
-    window.setTimeout(() => setCopied((current) => current === kind ? null : current), 1300);
+    setCopyToastId((current) => current + 1);
   };
 
   const selectCard = (index: number, method: "tap" | "swipe") => {
@@ -215,7 +217,7 @@ function CardContent() {
             </div>
           );
         })}
-        {copied && <div className={styles.copiedToast} role="status"><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</div>}
+        {copied && <GlassToast key={copyToastId} placement="top" trackId="card.copy.toast.dismiss" className={styles.copiedToast} onDone={() => setCopied((current) => current === copied ? null : current)}><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</GlassToast>}
       </section>
 
       <section className={styles.cardSettings}>

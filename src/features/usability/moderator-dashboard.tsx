@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import type { AggregateTaskMetrics } from "@/lib/testing/metrics";
-import { calculateSessionInteractionMetrics } from "@/lib/testing/session-metrics";
+import { calculateSessionInteractionMetrics, isDemoMissclick } from "@/lib/testing/session-metrics";
 import type { ResearchSession, SessionSnapshot } from "@/lib/testing/types";
+import { GlassToast } from "./glass-toast";
 import { SessionActions } from "./session-actions";
 
 interface Props {
@@ -39,7 +40,9 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [error, setError] = useState("");
   const [clock, setClock] = useState(() => Date.now());
+  const [liveMissclickId, setLiveMissclickId] = useState<number | null>(null);
   const selectionRequest = useRef(0);
+  const seenMissclick = useRef({ sessionId: initialSnapshot?.session.id ?? null, id: initialSnapshot?.events.filter(isDemoMissclick).at(-1)?.id ?? 0 });
   const selectedId = snapshot?.session.id;
 
   const openSession = useCallback(async (id: string) => {
@@ -47,7 +50,11 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
     setError("");
     try {
       const payload = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(id)}`);
-      if (requestNumber === selectionRequest.current) setSnapshot(payload.snapshot);
+      if (requestNumber === selectionRequest.current) {
+        seenMissclick.current = { sessionId: id, id: payload.snapshot.events.filter(isDemoMissclick).at(-1)?.id ?? 0 };
+        setLiveMissclickId(null);
+        setSnapshot(payload.snapshot);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Не удалось получить данные");
     }
@@ -70,7 +77,12 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
         setSessions(payload.sessions);
         if (selectedId && payload.sessions.some((session) => session.id === selectedId)) {
           const data = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(selectedId)}`);
-          if (!cancelled) setSnapshot((current) => current?.session.id === selectedId ? data.snapshot : current);
+          if (!cancelled) {
+            const latest = data.snapshot.events.filter(isDemoMissclick).at(-1);
+            if (seenMissclick.current.sessionId === selectedId && latest && latest.id > seenMissclick.current.id) setLiveMissclickId(latest.id);
+            seenMissclick.current = { sessionId: selectedId, id: latest?.id ?? 0 };
+            setSnapshot((current) => current?.session.id === selectedId ? data.snapshot : current);
+          }
         } else if (payload.sessions[0]) void openSession(payload.sessions[0].id);
         else setSnapshot(null);
       } catch {}
@@ -103,7 +115,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
             } else void openSession(snapshot.session.id);
           }} />
           <div className={styles.metricGrid}>
-            <div className={styles.stat}><span>Время</span><strong>{duration(observed.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{observed.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{observed.meaningfulSteps}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{observed.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{observed.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{observed.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{observed.productStateChanges}</strong></div><div className={styles.stat}><span>Попытки недоступного</span><strong>{observed.demoFeedbackCount}</strong></div><div className={styles.stat}><span>Текущий экран</span><strong>{observed.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{observed.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{observed.lastAction ?? "—"}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{observed.eventCount}</strong></div>
+            <div className={styles.stat}><span>Время</span><strong>{duration(observed.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{observed.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{observed.meaningfulSteps}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{observed.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{observed.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{observed.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{observed.productStateChanges}</strong></div><div className={styles.stat}><span>Мисклики</span><strong>{observed.missclickCount}</strong></div><div className={styles.stat}><span>Текущий экран</span><strong>{observed.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{observed.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{observed.lastAction ?? "—"}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{observed.eventCount}</strong></div>
           </div>
         </section>
         <section className={styles.card}><div className="row-between"><div><h2>Live timeline</h2><p className={styles.build}>Клики и действия появляются здесь в реальном времени.</p></div><span className={styles.build}>{snapshot.events.length} events</span></div><div className={styles.eventLog}>{snapshot.events.length ? [...snapshot.events].reverse().map((event) => <div className={styles.event} key={event.id}><span>{shortTime(event.timestamp)}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>) : <div className={styles.empty}>Ждём первое действие участника</div>}</div></section>
@@ -112,5 +124,5 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
 
       {initialMetrics.length > 0 && <section className={styles.card}><h2>Агрегаты завершённых задач</h2><div className={styles.sessionTableWrap}><table className={styles.metrics}><thead><tr><th>Task</th><th>Unaided</th><th>Aided</th><th>Failed</th><th>Median time</th><th>Median steps</th><th>Median deviation</th><th>Ease median</th></tr></thead><tbody>{initialMetrics.map((metric) => <tr key={metric.taskCode}><td>{metric.taskCode}</td><td>{Math.round(metric.unaidedCompletionRate * 100)}%</td><td>{metric.aidedCount}</td><td>{metric.failedCount}</td><td>{metric.medianCompletionTimeMs === null ? "—" : duration(metric.medianCompletionTimeMs)}</td><td>{metric.medianSteps ?? "—"}</td><td>{metric.medianDeviationFromGoldenPath ?? "—"}</td><td>{metric.easeMedian ?? "—"}</td></tr>)}</tbody></table></div></section>}
     </div>
-  </div></main>;
+  </div>{liveMissclickId !== null && <GlassToast key={liveMissclickId} placement="bottom" tone="orange" trackId="moderator.live.demo_toast.dismiss" className={styles.moderatorLiveToast} onDone={() => setLiveMissclickId((current) => current === liveMissclickId ? null : current)}>Участник открыл недоступное в демо</GlassToast>}</main>;
 }

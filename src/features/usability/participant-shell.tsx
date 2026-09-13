@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import { Tabbar } from "@/components/ui";
 import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
 import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
+import { GlassToast } from "./glass-toast";
 import { ParticipantProvider } from "./participant-provider";
 import { PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
 import { resetParticipantState } from "@/lib/testing/participant-state";
@@ -34,24 +35,16 @@ function participantRoleSnapshot() {
 }
 
 function DemoUnavailableToast() {
-  const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [toastId, setToastId] = useState<number | null>(null);
 
   useEffect(() => {
-    const show = () => {
-      setVisible(true);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => setVisible(false), 2400);
-    };
+    const show = () => setToastId((current) => (current ?? 0) + 1);
     window.addEventListener(DEMO_UNAVAILABLE_EVENT, show);
-    return () => {
-      window.removeEventListener(DEMO_UNAVAILABLE_EVENT, show);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    return () => window.removeEventListener(DEMO_UNAVAILABLE_EVENT, show);
   }, []);
 
-  if (!visible) return null;
-  return <button type="button" className="demo-toast" aria-live="polite" data-track="demo.unavailable.toast.dismiss" onClick={() => setVisible(false)}>Недоступно в демо-демонстрации</button>;
+  if (toastId === null) return null;
+  return <GlassToast key={toastId} placement="bottom" tone="orange" trackId="demo.unavailable.toast.dismiss" onDone={() => setToastId((current) => current === toastId ? null : current)}>Недоступно в демо-демонстрации</GlassToast>;
 }
 
 function ShellBody({ children }: { children: React.ReactNode }) {
