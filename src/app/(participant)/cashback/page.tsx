@@ -9,7 +9,7 @@ import { track } from "@/lib/testing/tracking";
 
 function DisconnectedCashback() {
   return (
-    <main className={`${styles.screen} ${styles.cashbackDisconnectedScreen}`}>
+    <main className={`${styles.screen} ${styles.cashbackScreen} ${styles.cashbackDisconnectedScreen}`}>
       <ProfileHeader />
       <div className={styles.pageContent}>
         <section className={styles.benefitBento} aria-label="Условия кешбэка">
@@ -56,7 +56,7 @@ function ConnectedCashback() {
     track("action", { screen: "/cashback", action: `cashback.period.${next}` });
   };
   return (
-    <main className={styles.screen}>
+    <main className={`${styles.screen} ${styles.cashbackScreen}`}>
       <ProfileHeader />
       <div className={styles.screenStack}>
         <section className={styles.cashbackConnectedHero}>

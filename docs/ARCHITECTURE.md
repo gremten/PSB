@@ -64,6 +64,8 @@ The live file `liWo1Xcsx04YGTZx3OqZNV` and live UI Kit are authoritative. The gr
 | Category selection | Exact live screen/component must be read before visual edits | Up to three choices, invalid confirmation feedback, current/next-month branch | `public/figma/categories/**` | `cashback.category.*`, `cashback.categories.*`, `cashback.next_month.*` |
 | Cashback success state | Exact live screen/component must be read before visual edits | Dismiss success state | `public/figma/success/**` | `cashback.success.*` |
 
+The shared `BankHeader` in `src/features/bank/bank-ui.tsx` owns the sticky progressive-blur substrate and exposes the existing `ProfileHeader` and `DetailHeader` variants without changing their public props or tracking. Its web layer covers the 61 px header plus an 8 px fade tail; Figma header `825:4490` includes a native status area in its 123 px blur layer, which Telegram draws outside the web header. Home and account alone draw under Telegram's fullscreen chrome using the existing safe-top variable. Both cashback states use the same header and the `#161a20` top surface from disconnected frame `2072:16263`; no route may add another 123 px header pseudo-layer.
+
 Do not reuse a node id for a different screen. If a missing exact node is needed, retrieve it from the live file and add it to this table before claiming fidelity.
 
 ## Participant product state machine

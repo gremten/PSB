@@ -237,33 +237,41 @@ function HeaderToolbar() {
   );
 }
 
-export function ProfileHeader() {
+type BankHeaderProps =
+  | { variant: "profile" }
+  | { variant: "detail"; title: string; subtitle?: string; backHref: string; trailing?: ReactNode };
+
+function BankHeader(props: BankHeaderProps) {
   return (
-    <header className={styles.profileHeader}>
-      <div className={styles.profile}>
-        <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
-        <span>Александр К.</span>
-      </div>
-      <HeaderToolbar />
+    <header className={`${styles.bankHeader} ${props.variant === "profile" ? styles.profileHeader : styles.detailHeaderRow}`}>
+      {props.variant === "profile" ? <>
+        <div className={styles.profile}>
+          <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
+          <span>Александр К.</span>
+        </div>
+        <HeaderToolbar />
+      </> : <>
+        <BackGlass>
+          <Link className={styles.backButton} href={props.backHref} aria-label="Назад" data-track="navigation.back">
+            <Image src="/figma/icons/back.svg" alt="" width={24} height={24} />
+          </Link>
+        </BackGlass>
+        <div className={styles.detailTitleWrap}>
+          <h1 className={styles.detailTitle}>{props.title}</h1>
+          {props.subtitle && <span className={styles.detailSubtitle}>{props.subtitle}</span>}
+        </div>
+        <div>{props.trailing}</div>
+      </>}
     </header>
   );
 }
 
+export function ProfileHeader() {
+  return <BankHeader variant="profile" />;
+}
+
 export function DetailHeader({ title, subtitle, backHref, trailing }: { title: string; subtitle?: string; backHref: string; trailing?: ReactNode }) {
-  return (
-    <header className={styles.detailHeaderRow}>
-      <BackGlass>
-        <Link className={styles.backButton} href={backHref} aria-label="Назад" data-track="navigation.back">
-          <Image src="/figma/icons/back.svg" alt="" width={24} height={24} />
-        </Link>
-      </BackGlass>
-      <div className={styles.detailTitleWrap}>
-        <h1 className={styles.detailTitle}>{title}</h1>
-        {subtitle && <span className={styles.detailSubtitle}>{subtitle}</span>}
-      </div>
-      <div>{trailing}</div>
-    </header>
-  );
+  return <BankHeader variant="detail" title={title} subtitle={subtitle} backHref={backHref} trailing={trailing} />;
 }
 
 export function Transaction({ icon, imageSrc, title, meta, amount, bonus, hiddenAmount = false }: { icon?: string; imageSrc?: string; title: string; meta: string; amount: string; bonus?: string; hiddenAmount?: boolean }) {
