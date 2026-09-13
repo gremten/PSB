@@ -648,19 +648,21 @@
 .cardSlide {
   position: absolute;
   top: 0;
+  left: calc(50% - 160px);
   width: 320px;
   height: 213px;
   border-radius: 20px;
   outline: none;
   transform-origin: top left;
-  will-change: left, top, transform;
-  transition: left 360ms cubic-bezier(.2, .75, .25, 1), top 360ms cubic-bezier(.2, .75, .25, 1), transform 360ms cubic-bezier(.2, .75, .25, 1), opacity 240ms ease;
+  touch-action: none;
+  will-change: transform;
+  transition: transform 480ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease;
   cursor: pointer;
 }
 .cardSlide:focus-visible { outline: 2px solid white; outline-offset: -3px; }
-.cardSlideActive { left: calc(50% - 160px); z-index: 2; transform: scale(1); opacity: 1; }
-.cardSlidePrevious { top: 20.5px; left: calc(50% - 434px); z-index: 1; transform: scale(.80625); opacity: .96; }
-.cardSlideNext { top: 20.5px; left: calc(50% + 176px); z-index: 1; transform: scale(.80625); opacity: .96; }
+.cardSlideActive { z-index: 2; transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+.cardSlidePrevious { z-index: 1; transform: translate3d(-274px, 20.5px, 0) scale(.80625); opacity: .96; }
+.cardSlideNext { z-index: 1; transform: translate3d(336px, 20.5px, 0) scale(.80625); opacity: .96; }
 .flipCardInner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 440ms cubic-bezier(.2, .72, .22, 1); }
 .flipCardInnerBack { transform: rotateY(180deg); }
 .flipFace {

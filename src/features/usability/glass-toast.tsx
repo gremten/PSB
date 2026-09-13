@@ -82,6 +82,8 @@ export function GlassToast({ children, placement, tone = "neutral", trackId, cla
   } as CSSProperties;
 
   return <button type="button" className={`${styles.toast} ${styles[placement]} ${tone === "orange" ? styles.orange : ""} ${className}`} style={style} data-dragging={dragging} data-track={trackId} aria-live="polite" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } dismiss(); }}>
-    <Glass className={styles.glass} optics={OPTICS} radius={24}><span className={styles.content}>{children}</span></Glass>
+    {placement === "top"
+      ? <Glass className={styles.glass} optics={OPTICS} radius={24}><span className={styles.content}>{children}</span></Glass>
+      : <span className={`${styles.solid} ${styles.content}`}>{children}</span>}
   </button>;
 }

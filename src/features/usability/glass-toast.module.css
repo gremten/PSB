@@ -24,6 +24,8 @@
   background: rgb(36 42 51 / 75%);
 }
 .orange .glass { background: rgb(232 102 48 / 78%); }
+.solid { background: #242a33; }
+.orange .solid { background: #bb5831; }
 .content {
   display: flex;
   min-height: 32px;

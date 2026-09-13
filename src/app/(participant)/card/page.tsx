@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { flushSync } from "react-dom";
 import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { GlassToast } from "@/features/usability/glass-toast";
@@ -18,7 +19,7 @@ const cards = [
 ] as const;
 
 type CardType = (typeof cards)[number]["type"];
-type CardGesture = { pointerId: number; startX: number; startY: number; width: number; cardIndex: number; dragging: boolean };
+type CardGesture = { pointerId: number; startX: number; startY: number; cardIndex: number; dragging: boolean };
 
 function CardFront({ type, ending, logo, mir, hidden }: { type: CardType; ending: string; logo: string; mir: string; hidden: boolean }) {
   return (
@@ -71,7 +72,6 @@ function CardContent() {
   const carouselRef = useRef<HTMLElement | null>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const gesture = useRef<CardGesture | null>(null);
-  const releaseFrame = useRef<number | null>(null);
   const dragged = useRef(false);
 
   const setCardSide = (index: number, next: boolean) => {
@@ -98,15 +98,10 @@ function CardContent() {
     delete carousel.dataset.dragging;
     // Keep the current drag position for one style calculation so the CSS snap animates from it.
     void carousel.offsetWidth;
-    slideRefs.current.forEach((slide) => {
-      slide?.style.removeProperty("left");
-      slide?.style.removeProperty("top");
-      slide?.style.removeProperty("transform");
-    });
+    slideRefs.current.forEach((slide) => slide?.style.removeProperty("transform"));
   };
 
   const moveCardsWithPointer = (deltaX: number, current: CardGesture) => {
-    const center = current.width / 2 - 160;
     const neighborIndex = current.cardIndex + (deltaX < 0 ? 1 : -1);
     const hasNeighbor = deltaX !== 0 && neighborIndex >= 0 && neighborIndex < cards.length;
     const progress = Math.min(Math.abs(deltaX) / CARD_SWIPE_TRAVEL, 1);
@@ -114,36 +109,29 @@ function CardContent() {
 
     slideRefs.current.forEach((slide, index) => {
       if (!slide) return;
-      let left = index < current.cardIndex ? center - 274 : index > current.cardIndex ? center + CARD_SWIPE_TRAVEL : center;
-      let top = index === current.cardIndex ? 0 : 20.5;
+      let offsetX = index < current.cardIndex ? -274 : index > current.cardIndex ? CARD_SWIPE_TRAVEL : 0;
+      let offsetY = index === current.cardIndex ? 0 : 20.5;
       let scale = index === current.cardIndex ? 1 : 0.80625;
 
       if (hasNeighbor && index === current.cardIndex) {
-        left += (deltaX < 0 ? -274 : CARD_SWIPE_TRAVEL) * progress;
-        top = 20.5 * progress;
+        offsetX += (deltaX < 0 ? -274 : CARD_SWIPE_TRAVEL) * progress;
+        offsetY = 20.5 * progress;
         scale = 1 - scaleDifference * progress;
       } else if (hasNeighbor && index === neighborIndex) {
-        left += (deltaX < 0 ? -CARD_SWIPE_TRAVEL : 274) * progress;
-        top = 20.5 * (1 - progress);
+        offsetX += (deltaX < 0 ? -CARD_SWIPE_TRAVEL : 274) * progress;
+        offsetY = 20.5 * (1 - progress);
         scale = 0.80625 + scaleDifference * progress;
       } else if (!hasNeighbor && index === current.cardIndex) {
-        left += Math.sign(deltaX) * Math.min(Math.abs(deltaX) * 0.2, 24);
+        offsetX += Math.sign(deltaX) * Math.min(Math.abs(deltaX) * 0.2, 24);
       }
 
-      slide.style.left = `${left}px`;
-      slide.style.top = `${top}px`;
-      slide.style.transform = `scale(${scale})`;
+      slide.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0) scale(${scale})`;
     });
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (replayVisualState || (event.pointerType === "mouse" && event.button !== 0)) return;
-    if (releaseFrame.current !== null) {
-      cancelAnimationFrame(releaseFrame.current);
-      releaseFrame.current = null;
-      resetDragVisuals();
-    }
-    gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, width: event.currentTarget.clientWidth, cardIndex: activeCard, dragging: false };
+    gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, cardIndex: activeCard, dragging: false };
     dragged.current = false;
   };
 
@@ -170,11 +158,10 @@ function CardContent() {
     if (!current.dragging) return;
     const destination = cardSwipeDestination(current.cardIndex, event.clientX - current.startX, cards.length);
     if (destination !== current.cardIndex) {
-      selectCard(destination, "swipe");
-      releaseFrame.current = requestAnimationFrame(() => { releaseFrame.current = null; resetDragVisuals(); });
-    } else {
-      resetDragVisuals();
+      // Commit the new target class while the dragged transform still owns the visual position.
+      flushSync(() => selectCard(destination, "swipe"));
     }
+    resetDragVisuals();
   };
 
   const onPointerCancel = () => {
