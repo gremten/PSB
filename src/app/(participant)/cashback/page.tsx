@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { FaqList, ProfileHeader, styles } from "@/features/bank/bank-ui";
 import { useParticipant } from "@/features/usability/participant-provider";
+import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { track } from "@/lib/testing/tracking";
 
 function DisconnectedCashback() {
@@ -15,10 +16,12 @@ function DisconnectedCashback() {
         <section className={styles.benefitBento} aria-label="Условия кешбэка">
           <div className={`${styles.cashbackBentoRow} ${styles.cashbackBentoRowTop}`}>
             <article className={styles.benefitTile}>
+              <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о кэшбэке 1,5% на любые покупки" data-track="cashback.benefit.all_purchases.open" onClick={showDemoUnavailable} />
               <strong className={styles.benefitValue}>1.5%</strong>
               <span className={styles.benefitLabel}>На <span className={styles.cashbackAccent}>любые</span> покупки</span>
             </article>
             <article className={styles.benefitTile}>
+              <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о выгоде у партнёров" data-track="cashback.benefit.partners.open" onClick={showDemoUnavailable} />
               <div><strong className={styles.cashbackCellTitle}>Выгода у партнёров</strong><span className={styles.benefitSub}>Более 100 сервисов</span></div>
               <span className={styles.cashbackPartnerLogos} aria-hidden="true">
                 {[1, 2, 3, 4].map((number) => <Image key={number} src={`/figma/cashback/partner-${number}.svg`} alt="" width={40} height={40} />)}
@@ -28,10 +31,12 @@ function DisconnectedCashback() {
           </div>
           <div className={`${styles.cashbackBentoRow} ${styles.cashbackBentoRowBottom}`}>
             <article className={styles.benefitTile}>
+              <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о начислении баллов" data-track="cashback.benefit.points.open" onClick={showDemoUnavailable} />
               <div><strong className={styles.cashbackCellTitle}><span className={styles.cashbackAccent}>1 балл</span> = 1 ₽</strong><span className={styles.benefitSub}>Как и за что начисляем</span></div>
               <div className={styles.benefitChips}><span className={styles.benefitChip}>Ежемесячно</span><span className={styles.benefitChip}>до 5000 ₽</span></div>
             </article>
             <article className={styles.benefitTile}>
+              <button type="button" className={styles.benefitTileHit} aria-label="Подробнее о повышенном кэшбэке 25%" data-track="cashback.benefit.boost.open" onClick={showDemoUnavailable} />
               <strong className={styles.cashbackCellTitle}>Повышенный кэшбэк <span className={styles.cashbackAccent}>25%</span></strong>
               <span className={styles.benefitSub}>На первые<br />3 месяца</span>
             </article>
