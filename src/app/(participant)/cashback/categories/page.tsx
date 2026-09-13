@@ -100,7 +100,7 @@ export default function CashbackCategoriesPage() {
         <div className={styles.accountGradientPosition}>
           <div className={styles.accountGradientRotation}>
             <div className={styles.accountGradientBlob}>
-              <Image src="/figma/categories/background-blob.svg" alt="" width={833} height={853} unoptimized />
+              <Image src="/figma/categories/background-blob-soft.svg" alt="" width={979} height={994} unoptimized />
             </div>
           </div>
         </div>
