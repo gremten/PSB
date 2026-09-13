@@ -39,14 +39,16 @@
   background: transparent;
 }
 
-/* The Figma blur includes the native status area; only the web header is drawn here. */
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .bankHeader {
+  min-height: calc(61px + var(--app-tg-safe-top));
+  padding-top: calc(5px + var(--app-tg-safe-top));
+}
+
+/* One substrate spans the native inset and the web header while content scrolls beneath it. */
 .bankHeader::before,
 .bankHeader::after {
   position: absolute;
-  right: 0;
-  bottom: -8px;
-  left: 0;
-  height: 69px;
+  inset: 0 0 -8px;
   z-index: -1;
   border-radius: 0 0 20px 20px;
   background: rgb(255 255 255 / 0.01%);
@@ -499,15 +501,6 @@
   0%, 16.666667%, 33.333333%, 50%, 83.333333%, 100% { top: -521.691px; left: -484.012px; width: 1316.274px; height: 1336.441px; }
   66.666667% { top: -388.04px; left: -360px; width: 979px; height: 994px; }
 }
-:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="account"])) {
-  padding-top: 0;
-}
-
-:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .accountForeground > .bankHeader,
-:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .homeScreen > .bankHeader {
-  min-height: calc(61px + var(--app-tg-safe-top));
-  padding-top: calc(5px + var(--app-tg-safe-top));
-}
 .accountForeground .detailTitle { font-weight: 600; }
 .accountPageContent { display: flex; flex-direction: column; gap: 24px; padding: 48px 0 0; }
 .accountOverview { display: flex; min-height: min(37.53dvh, 368px); flex-direction: column; gap: 24px; }
@@ -799,6 +792,9 @@
 .cashbackScreen {
   background: linear-gradient(to bottom, var(--bg-surface) 0 68px, var(--bg-page) 68px);
 }
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .cashbackScreen {
+  background: linear-gradient(to bottom, var(--bg-surface) 0 calc(68px + var(--app-tg-safe-top)), var(--bg-page) calc(68px + var(--app-tg-safe-top)));
+}
 .cashbackDisconnectedScreen .benefitBento {
   display: flex;
   flex-direction: column;
@@ -888,13 +884,6 @@
 :global(html[data-telegram-mini-app="true"] body:has([data-screen="categories"])),
 :global(html[data-telegram-mini-app="true"] .participant-stage:has([data-screen="categories"])) {
   background: var(--bg-page);
-}
-:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="categories"])) {
-  padding-top: 0;
-}
-:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .categoryScreen > .bankHeader {
-  min-height: calc(61px + var(--app-tg-safe-top));
-  padding-top: calc(5px + var(--app-tg-safe-top));
 }
 .categoryHero { position: relative; height: 196px; overflow: hidden; }
 .categoryHero img { position: absolute; top: -4px; left: 50%; width: 283px; height: 282px; transform: translate3d(-50%, var(--category-card-parallax, 0px), 0); object-fit: cover; }

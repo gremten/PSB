@@ -51,7 +51,7 @@ Never merge a historical snapshot with the current live file as if they were one
 
 ### Shared participant UI
 
-- `src/features/bank/bank-ui.tsx`: shared `BankHeader` renders the existing profile/detail wrappers, one sticky progressive-blur substrate, toolbar and back control; also contains tabbar, transactions, and cards. Treat its public component props, tracking, and behavior as read-only during screen-level visual work. Never restore a separate 123 px route-level header blur: that Figma measurement includes the native status area.
+- `src/features/bank/bank-ui.tsx`: shared `BankHeader` renders the existing profile/detail wrappers, one sticky progressive-blur substrate, toolbar and back control; also contains tabbar, transactions, and cards. Treat its public component props, tracking, and behavior as read-only during screen-level visual work. In fullscreen Telegram, every participant route uses the same unpadded stage and the shared header alone reserves `--app-tg-safe-top`; do not add route-level top padding or header blur. The Figma 123 px blur measurement includes the native status area.
 - `src/components/ui/**`: shared primitives. Do not redesign or refactor them for one screen.
 - `src/app/globals.css`: global viewport, reset, and application-shell behavior. Do not use it for a local visual fix.
 - `src/app/(participant)/layout.tsx`: participant shell ownership. Do not change it for a local screen fix.
