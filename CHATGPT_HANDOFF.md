@@ -43,7 +43,7 @@ Never merge a historical snapshot with the current live file as if they were one
 | Home | `src/app/(participant)/page.tsx` | `src/features/bank/bank.module.css`, selectors local to home | `public/figma/home/**` | Header `825:4490`, promo `2072:15897`, hidden accounts `2125:27356` |
 | Account | `src/app/(participant)/account/page.tsx` | `src/features/bank/bank.module.css`, `.account*` selectors | `public/figma/account/**` | Screen `2125:27685`, background `2125:27688`, animation component `1123:2108` |
 | Card | `src/app/(participant)/card/page.tsx` | route-specific card selectors in `src/features/bank/bank.module.css` | `public/figma/card/**` | Flip components `2224:7924`, `2224:7960`, `2224:7931`, `2224:7965` |
-| Cashback | `src/app/(participant)/cashback/page.tsx` | route-specific cashback selectors in `src/features/bank/bank.module.css` | existing shared/category assets | Disconnected `2125:27312`, connected `2125:27598` |
+| Cashback | `src/app/(participant)/cashback/page.tsx` | route-specific cashback selectors in `src/features/bank/bank.module.css` | `public/figma/cashback/partner-*.svg`, existing shared/category assets | Disconnected live frame `2072:16263`, connected `2125:27598` |
 | Category selection | `src/app/(participant)/cashback/categories/page.tsx` | route-specific category selectors in `src/features/bank/bank.module.css` | `public/figma/categories/**` | Inspect the exact live screen/component before editing |
 | Empty demo routes | `payment`, `chat`, `more` route files | no product content by design | none unless explicitly requested | These routes must remain unavailable |
 

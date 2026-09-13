@@ -48,6 +48,8 @@ export function GlassToast({ children, placement, tone = "neutral", trackId, cla
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    // A toast can overlap the card carousel; its drag must not start a card gesture.
+    event.stopPropagation();
     if (timer.current) clearTimeout(timer.current);
     suppressClick.current = false;
     pointer.current = { id: event.pointerId, y: event.clientY };
@@ -56,10 +58,12 @@ export function GlassToast({ children, placement, tone = "neutral", trackId, cla
   };
   const onPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     if (pointer.current?.id !== event.pointerId) return;
+    event.stopPropagation();
     setDragY(toastDragVisual(event.clientY - pointer.current.y, placement).offsetY);
   };
   const onPointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
     if (pointer.current?.id !== event.pointerId) return;
+    event.stopPropagation();
     const distance = event.clientY - pointer.current.y;
     pointer.current = null;
     setDragging(false);

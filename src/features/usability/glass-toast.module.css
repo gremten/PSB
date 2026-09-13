@@ -1,6 +1,10 @@
 .toast {
   position: absolute;
   z-index: 45;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
   max-width: calc(100% - 40px);
   border: 0;
   border-radius: 999px;
@@ -16,7 +20,7 @@
 }
 .toast:active { scale: 1; }
 .toast[data-dragging="true"] { transition: none; }
-.top { top: 8px; left: 50%; translate: -50% 0; }
+.top { top: 2px; left: 50%; translate: -50% 0; }
 .bottom { bottom: 112px; left: 50%; translate: -50% 0; }
 .glass {
   min-width: 100%;

@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="icon">
+<path id="Vector" d="M20 0C8.9543 0 0 8.9543 0 20C0 31.0457 8.9543 40 20 40C31.0457 40 40 31.0457 40 20C40 8.9543 31.0457 0 20 0Z" fill="#FF5226"/>
+<mask id="mask0_0_1090" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="40" height="40">
+<path id="Vector_2" d="M20 0C8.9543 0 0 8.9543 0 20C0 31.0457 8.9543 40 20 40C31.0457 40 40 31.0457 40 20C40 8.9543 31.0457 0 20 0Z" fill="#FF5226"/>
+</mask>
+<g mask="url(#mask0_0_1090)">
+<path id="Vector_3" d="M16.9028 2.70718L-5.40918 37.5205H4.81882L17.7082 17.4538L17.3935 17.3112L13.8202 31.6712L21.3855 33.0045L29.1615 23.2312L28.7402 23.0218L26.1135 34.1232L42.5975 30.9818L39.2348 25.4432L33.2935 26.8032L33.9948 27.6098L36.7615 16.0165L30.3162 11.7072L21.8762 22.3205L22.2962 22.5312L25.7628 8.62451L16.9028 2.70718Z" fill="#FFDD00"/>
+</g>
+</g>
+</svg>

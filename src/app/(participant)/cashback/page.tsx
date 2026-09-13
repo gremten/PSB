@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { FaqList, ProfileHeader, styles } from "@/features/bank/bank-ui";
@@ -8,16 +9,35 @@ import { track } from "@/lib/testing/tracking";
 
 function DisconnectedCashback() {
   return (
-    <main className={styles.screen}>
+    <main className={`${styles.screen} ${styles.cashbackDisconnectedScreen}`}>
       <ProfileHeader />
       <div className={styles.pageContent}>
         <section className={styles.benefitBento} aria-label="Условия кешбэка">
-          <article className={styles.benefitTile}><strong className={styles.benefitValue}>1.5%</strong><span className={styles.benefitLabel}>На любые покупки</span></article>
-          <article className={styles.benefitTile}><strong className={styles.benefitLabel}>Выгода у партнёров</strong><span className={styles.benefitSub}>Более 100 сервисов</span><span className={styles.partnerDots} aria-hidden="true"><span className={styles.partnerDot}>Я</span><span className={styles.partnerDot}>5</span><span className={styles.partnerDot}>WB</span></span></article>
-          <article className={`${styles.benefitTile} ${styles.benefitTileWide}`}><strong className={styles.benefitValue}>1 балл = 1 ₽</strong><span className={styles.benefitSub}>Как и за что начисляем</span><div className={styles.benefitChips}><span className={styles.benefitChip}>Ежемесячно</span><span className={styles.benefitChip}>до 5 000 ₽</span></div></article>
-          <article className={`${styles.benefitTile} ${styles.benefitTileWide}`}><strong className={styles.benefitValue}>25%</strong><span className={styles.benefitLabel}>Повышенный кешбэк</span><span className={styles.benefitSub}>На первые 3 месяца</span></article>
+          <div className={`${styles.cashbackBentoRow} ${styles.cashbackBentoRowTop}`}>
+            <article className={styles.benefitTile}>
+              <strong className={styles.benefitValue}>1.5%</strong>
+              <span className={styles.benefitLabel}>На <span className={styles.cashbackAccent}>любые</span> покупки</span>
+            </article>
+            <article className={styles.benefitTile}>
+              <div><strong className={styles.cashbackCellTitle}>Выгода у партнёров</strong><span className={styles.benefitSub}>Более 100 сервисов</span></div>
+              <span className={styles.cashbackPartnerLogos} aria-hidden="true">
+                {[1, 2, 3, 4].map((number) => <Image key={number} src={`/figma/cashback/partner-${number}.svg`} alt="" width={40} height={40} />)}
+                <span className={styles.cashbackPartnerCount}><Image src="/figma/cashback/partner-5.svg" alt="" width={40} height={40} /><span>+96</span></span>
+              </span>
+            </article>
+          </div>
+          <div className={`${styles.cashbackBentoRow} ${styles.cashbackBentoRowBottom}`}>
+            <article className={styles.benefitTile}>
+              <div><strong className={styles.cashbackCellTitle}><span className={styles.cashbackAccent}>1 балл</span> = 1 ₽</strong><span className={styles.benefitSub}>Как и за что начисляем</span></div>
+              <div className={styles.benefitChips}><span className={styles.benefitChip}>Ежемесячно</span><span className={styles.benefitChip}>до 5000 ₽</span></div>
+            </article>
+            <article className={styles.benefitTile}>
+              <strong className={styles.cashbackCellTitle}>Повышенный кэшбэк <span className={styles.cashbackAccent}>25%</span></strong>
+              <span className={styles.benefitSub}>На первые<br />3 месяца</span>
+            </article>
+          </div>
         </section>
-        <div className={styles.buttonInset}>
+        <div className={`${styles.buttonInset} ${styles.cashbackDisconnectedActions}`}>
           <Link className={`${styles.primaryButton} ${styles.fullButton}`} href="/cashback/categories" data-track="cashback.connect.start">Хочу подключить</Link>
           <button className={`${styles.textButton} ${styles.fullButton}`} data-track="cashback.terms.open">Подробнее об условиях</button>
         </div>
