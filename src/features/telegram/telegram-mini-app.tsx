@@ -95,7 +95,7 @@ export function TelegramMiniAppBridge() {
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
     if (!webApp || (!webApp.initData && webApp.platform === "unknown")) return;
-    webApp.setHeaderColor(pathname === "/account" || pathname === "/card" ? PAGE_COLOR : HEADER_COLOR);
+    webApp.setHeaderColor(pathname === "/account" || pathname === "/card" || pathname === "/cashback/categories" ? PAGE_COLOR : HEADER_COLOR);
   }, [pathname]);
 
   return null;

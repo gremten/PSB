@@ -882,6 +882,18 @@
 .yearTotal { margin: 22px 0 0; font-size: 28px; font-weight: 720; }
 
 .categoryScreen { position: relative; min-height: 100%; isolation: isolate; overflow: clip; background: var(--bg-page); }
+:global(html[data-telegram-mini-app="true"]:has([data-screen="categories"])),
+:global(html[data-telegram-mini-app="true"] body:has([data-screen="categories"])),
+:global(html[data-telegram-mini-app="true"] .participant-stage:has([data-screen="categories"])) {
+  background: var(--bg-page);
+}
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .participant-stage:has([data-screen="categories"])) {
+  padding-top: 0;
+}
+:global(html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"]) .categoryScreen > .bankHeader {
+  min-height: calc(61px + var(--app-tg-safe-top));
+  padding-top: calc(5px + var(--app-tg-safe-top));
+}
 .categoryHero { position: relative; height: 196px; overflow: hidden; }
 .categoryHero img { position: absolute; top: -4px; left: 50%; width: 283px; height: 282px; transform: translate3d(-50%, var(--category-card-parallax, 0px), 0); object-fit: cover; }
 .categorySheet { position: relative; z-index: 2; margin-top: -4px; border-radius: 20px 20px 0 0; padding: 20px 20px 104px; background: var(--bg-surface); }
@@ -904,7 +916,8 @@
   z-index: 40;
   width: min(100%, 440px);
   margin-inline: auto;
-  padding: 12px 20px max(20px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom));
+  border-radius: 32px 32px 0 0;
+  padding: 12px 20px max(46px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom));
   background: var(--bg-surface);
 }
 .categoryCta { position: relative; }
