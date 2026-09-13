@@ -412,7 +412,7 @@
   left: 50%;
   width: 402px;
   height: 874px;
-  overflow: hidden;
+  overflow: visible;
   transform: translateX(-50%);
   pointer-events: none;
 }
