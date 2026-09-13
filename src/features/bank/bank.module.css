@@ -209,6 +209,7 @@
 
 .promoScroller[data-dragging="true"],
 .accountScroller[data-dragging="true"] { cursor: grabbing; scroll-snap-type: none; }
+.accountScroller > :is(a, button):active { scale: 1; }
 
 .promoScroller::-webkit-scrollbar,
 .accountScroller::-webkit-scrollbar { display: none; }
@@ -652,13 +653,14 @@
   border-radius: 20px;
   outline: none;
   transform-origin: top left;
+  will-change: left, top, transform;
   transition: left 360ms cubic-bezier(.2, .75, .25, 1), top 360ms cubic-bezier(.2, .75, .25, 1), transform 360ms cubic-bezier(.2, .75, .25, 1), opacity 240ms ease;
   cursor: pointer;
 }
 .cardSlide:focus-visible { outline: 2px solid white; outline-offset: -3px; }
 .cardSlideActive { left: calc(50% - 160px); z-index: 2; transform: scale(1); opacity: 1; }
-.cardSlidePrevious { top: 20.5px; left: -233px; z-index: 1; transform: scale(.80625); opacity: .96; }
-.cardSlideNext { top: 20.5px; left: calc(100% - 25px); z-index: 1; transform: scale(.80625); opacity: .96; }
+.cardSlidePrevious { top: 20.5px; left: calc(50% - 434px); z-index: 1; transform: scale(.80625); opacity: .96; }
+.cardSlideNext { top: 20.5px; left: calc(50% + 176px); z-index: 1; transform: scale(.80625); opacity: .96; }
 .flipCardInner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 440ms cubic-bezier(.2, .72, .22, 1); }
 .flipCardInnerBack { transform: rotateY(180deg); }
 .flipFace {
@@ -720,6 +722,9 @@
   padding-bottom: 0;
 }
 .cardScreen .flipCarousel { margin-top: 28px; overflow: visible; }
+.cardScreen .flipCarousel[data-dragging="true"] .cardSlide { transition: none; }
+.cardScreen .flipCarousel :is(button, [role="button"]):active,
+.cardScreen .settingsRow:active { scale: 1; }
 .cardScreen .copiedToast {
   top: -21px;
   display: flex;

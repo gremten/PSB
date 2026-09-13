@@ -7,6 +7,7 @@ import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
+import { CARD_SWIPE_TRAVEL, cardSwipeDestination } from "./card-gesture";
 
 export const fakeCard = { number: "4588 2344 4563 3124", expiry: "07/28", cvv: "456" };
 
@@ -16,6 +17,7 @@ const cards = [
 ] as const;
 
 type CardType = (typeof cards)[number]["type"];
+type CardGesture = { pointerId: number; startX: number; startY: number; width: number; cardIndex: number; dragging: boolean };
 
 function CardFront({ type, ending, logo, mir, hidden }: { type: CardType; ending: string; logo: string; mir: string; hidden: boolean }) {
   return (
@@ -64,7 +66,10 @@ function CardContent() {
   const activeCard = replayVisualState?.cardIndex ?? liveActiveCard;
   const flipped = replayVisualState?.flippedCards ?? liveFlipped;
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
-  const pointerStart = useRef<number | null>(null);
+  const carouselRef = useRef<HTMLElement | null>(null);
+  const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const gesture = useRef<CardGesture | null>(null);
+  const releaseFrame = useRef<number | null>(null);
   const dragged = useRef(false);
 
   const setCardSide = (index: number, next: boolean) => {
@@ -85,41 +90,108 @@ function CardContent() {
     void track("card_selection", { screen: "/card", action: `card.${cards[index].type}.select.${method}`, target: cards[index].id, metadata: { index } });
   };
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    pointerStart.current = event.clientX;
+  const resetDragVisuals = () => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    delete carousel.dataset.dragging;
+    // Keep the current drag position for one style calculation so the CSS snap animates from it.
+    void carousel.offsetWidth;
+    slideRefs.current.forEach((slide) => {
+      slide?.style.removeProperty("left");
+      slide?.style.removeProperty("top");
+      slide?.style.removeProperty("transform");
+    });
+  };
+
+  const moveCardsWithPointer = (deltaX: number, current: CardGesture) => {
+    const center = current.width / 2 - 160;
+    const neighborIndex = current.cardIndex + (deltaX < 0 ? 1 : -1);
+    const hasNeighbor = deltaX !== 0 && neighborIndex >= 0 && neighborIndex < cards.length;
+    const progress = Math.min(Math.abs(deltaX) / CARD_SWIPE_TRAVEL, 1);
+    const scaleDifference = 1 - 0.80625;
+
+    slideRefs.current.forEach((slide, index) => {
+      if (!slide) return;
+      let left = index < current.cardIndex ? center - 274 : index > current.cardIndex ? center + CARD_SWIPE_TRAVEL : center;
+      let top = index === current.cardIndex ? 0 : 20.5;
+      let scale = index === current.cardIndex ? 1 : 0.80625;
+
+      if (hasNeighbor && index === current.cardIndex) {
+        left += (deltaX < 0 ? -274 : CARD_SWIPE_TRAVEL) * progress;
+        top = 20.5 * progress;
+        scale = 1 - scaleDifference * progress;
+      } else if (hasNeighbor && index === neighborIndex) {
+        left += (deltaX < 0 ? -CARD_SWIPE_TRAVEL : 274) * progress;
+        top = 20.5 * (1 - progress);
+        scale = 0.80625 + scaleDifference * progress;
+      } else if (!hasNeighbor && index === current.cardIndex) {
+        left += Math.sign(deltaX) * Math.min(Math.abs(deltaX) * 0.2, 24);
+      }
+
+      slide.style.left = `${left}px`;
+      slide.style.top = `${top}px`;
+      slide.style.transform = `scale(${scale})`;
+    });
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (replayVisualState || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (releaseFrame.current !== null) {
+      cancelAnimationFrame(releaseFrame.current);
+      releaseFrame.current = null;
+      resetDragVisuals();
+    }
+    gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, width: event.currentTarget.clientWidth, cardIndex: activeCard, dragging: false };
     dragged.current = false;
   };
 
-  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointerStart.current === null) return;
-    const delta = event.clientX - pointerStart.current;
-    pointerStart.current = null;
-    if (Math.abs(delta) < 40) return;
-    dragged.current = true;
-    const next = delta < 0 ? Math.min(cards.length - 1, activeCard + 1) : Math.max(0, activeCard - 1);
-    if (next !== activeCard) selectCard(next, "swipe");
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - current.startX;
+    const deltaY = event.clientY - current.startY;
+    if (!current.dragging) {
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) { gesture.current = null; return; }
+      current.dragging = true;
+      dragged.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.dataset.dragging = "true";
+    }
+    moveCardsWithPointer(deltaX, current);
   };
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointerStart.current === null || dragged.current) return;
-    const delta = event.clientX - pointerStart.current;
-    if (Math.abs(delta) < 40) return;
-    pointerStart.current = null;
-    dragged.current = true;
-    const next = delta < 0 ? Math.min(cards.length - 1, activeCard + 1) : Math.max(0, activeCard - 1);
-    if (next !== activeCard) selectCard(next, "swipe");
+  const onPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    gesture.current = null;
+    if (!current.dragging) return;
+    const destination = cardSwipeDestination(current.cardIndex, event.clientX - current.startX, cards.length);
+    if (destination !== current.cardIndex) {
+      selectCard(destination, "swipe");
+      releaseFrame.current = requestAnimationFrame(() => { releaseFrame.current = null; resetDragVisuals(); });
+    } else {
+      resetDragVisuals();
+    }
+  };
+
+  const onPointerCancel = () => {
+    const wasDragging = gesture.current?.dragging;
+    gesture.current = null;
+    if (wasDragging) resetDragVisuals();
   };
 
   return (
     <main className={`${styles.screen} ${styles.cardScreen}`} data-screen="card">
       <DetailHeader title="Карта «Твой банк»" subtitle="Платежный счет *6777" backHref="/account" />
 
-      <section className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => { pointerStart.current = null; }}>
+      <section ref={carouselRef} className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onClickCapture={(event) => { if (dragged.current && event.detail > 0) { event.preventDefault(); event.stopPropagation(); dragged.current = false; } }}>
         {cards.map((card, index) => {
           const positionClass = index === activeCard ? styles.cardSlideActive : index < activeCard ? styles.cardSlidePrevious : styles.cardSlideNext;
           return (
             <div
               key={card.id}
+              ref={(element) => { slideRefs.current[index] = element; }}
               className={`${styles.cardSlide} ${positionClass}`}
               role="button"
               tabIndex={index === activeCard ? 0 : -1}
