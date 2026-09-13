@@ -20,6 +20,18 @@ describe("action replay state", () => {
     expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 1, flippedCards: [false, false] });
   });
 
+  it("closes both card backs on a new carousel selection, including when seeking backward", () => {
+    const events = [
+      event(1, "product_state_change", "card.orange.details.reveal", "/card"),
+      { ...event(2, "card_selection", "card.night.select.swipe", "/card", "night"), metadata: { index: 0, closedDetails: true } },
+      event(3, "product_state_change", "card.night.details.reveal", "/card"),
+    ];
+    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true], productState: { cardDetailsRevealed: true } });
+    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 0, flippedCards: [false, false], productState: { cardDetailsRevealed: false } });
+    expect(deriveReplayState(events, 2)).toMatchObject({ flippedCards: [true, false] });
+    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true] });
+  });
+
   it("restores category selection and the connected/next-month branches", () => {
     const events = [
       event(1, "screen_view", "screen.cashback.categories.view", "/cashback/categories"),

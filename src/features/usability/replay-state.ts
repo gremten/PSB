@@ -69,6 +69,11 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
     if (event.type === "card_selection") {
       const selected = event.metadata.index;
       cardIndex = selected === 1 || action.includes("orange") ? 1 : 0;
+      if (event.metadata.closedDetails === true) {
+        flippedCards[0] = false;
+        flippedCards[1] = false;
+        productState.cardDetailsRevealed = false;
+      }
     }
     if (event.type === "action") {
       if (action === "cashback.period.month") cashbackPeriod = "month";

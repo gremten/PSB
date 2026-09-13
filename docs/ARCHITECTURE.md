@@ -58,7 +58,7 @@ The live file `liWo1Xcsx04YGTZx3OqZNV` and live UI Kit are authoritative. The gr
 |---|---|---|---|---|
 | Home route + `ProfileHeader` + `Tabbar` | Header `825:4490`; toolbar `1488:4615`; promo `2072:15897`; hidden-account reference `2125:27356` | Promo dismissal, horizontal scrolling, account hiding, block collapse, currency segment, tab demo guards; header toolbar uses optical glass | `public/figma/home/**` | `home.*`, `header.*`, `tab.*`, `cashback.tab.open` |
 | Account route + `DetailHeader`, `Transaction`, `SettingsRow` | Screen `2125:27685`; back control `1488:4222`; background instance `2125:27688`; live variant set `1123:2108` | Card navigation only; unavailable controls emit demo feedback; 39 s six-state background loop; shared back control has bounded gel-pull interaction with no new analytics event | `public/figma/account/**` | `account.*`, `navigation.back` |
-| Card route + card-flip pieces | Flip components `2224:7924`, `2224:7960`, `2224:7931`, `2224:7965` | Cards follow a horizontal drag and switch after a 64 px gesture; shorter drags snap back. Card-surface touch gestures stay within the carousel rather than scrolling the viewport; only transforms animate on release. Tap/keyboard flips, fake detail copy and hide details remain unchanged. | `public/figma/card/**` | `card.*`, `navigation.back` |
+| Card route + card-flip pieces | Flip components `2224:7924`, `2224:7960`, `2224:7931`, `2224:7965` | Sticky detail header; cards follow a horizontal drag and switch after a 64 px gesture; shorter drags snap back. Switching cards closes revealed details and returns both to their fronts. Card-surface touch gestures stay within the carousel rather than scrolling the viewport; only transforms animate on release. Tap/keyboard flip and fake detail copy remain unchanged. | `public/figma/card/**` | `card.*`, `navigation.back` |
 | Cashback disconnected | Screen `2125:27312` | Benefit reading, start category connection, FAQ | shared icon/category assets | `cashback.connect.*`, `cashback.faq.*` |
 | Cashback connected | Screen `2125:27598` | Current/annual segment, next-month state and category entry | shared category assets | `cashback.period.*`, `cashback.next_month.*` |
 | Category selection | Exact live screen/component must be read before visual edits | Up to three choices, invalid confirmation feedback, current/next-month branch | `public/figma/categories/**` | `cashback.category.*`, `cashback.categories.*`, `cashback.next_month.*` |
@@ -74,7 +74,7 @@ Canonical type: `ParticipantProductState` in `src/lib/testing/types.ts`. Persist
 - `selectedCashbackCategories`: confirmed current-month categories.
 - `nextMonthCashbackCategories`: draft or confirmed next-month values.
 - `nextMonthCashbackSelectionStatus`: `locked → available → draft → confirmed`.
-- `cardDetailsRevealed`: persisted card disclosure state.
+- `cardDetailsRevealed`: persisted card disclosure state. A card selection closes any revealed card, clears this flag, and records `card_selection.metadata.closedDetails`; replay applies the flag only to new events so earlier recordings retain their historical behavior.
 - `cashbackSuccessVisible`: connection success overlay/sheet visibility.
 - `accountsHidden`: sensitive home values hidden.
 - `dismissedHomePromos`: dismissed promo ids; account content moves into released space.

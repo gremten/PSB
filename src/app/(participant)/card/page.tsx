@@ -87,9 +87,16 @@ function CardContent() {
   };
 
   const selectCard = (index: number, method: "tap" | "swipe") => {
+    const revealedIndex = liveFlipped.findIndex(Boolean);
+    const closedDetails = revealedIndex !== -1 || productState.cardDetailsRevealed;
+    setFlipped([false, false]);
+    if (closedDetails) {
+      const cardToHide = cards[revealedIndex === -1 ? activeCard : revealedIndex];
+      updateProductState({ cardDetailsRevealed: false }, `card.${cardToHide.type}.details.hide`, { reason: "card_switch" });
+    }
     setActiveCard(index);
     setCopied(null);
-    void track("card_selection", { screen: "/card", action: `card.${cards[index].type}.select.${method}`, target: cards[index].id, metadata: { index } });
+    void track("card_selection", { screen: "/card", action: `card.${cards[index].type}.select.${method}`, target: cards[index].id, metadata: { index, closedDetails } });
   };
 
   const resetDragVisuals = () => {
