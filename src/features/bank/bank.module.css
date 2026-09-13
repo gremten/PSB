@@ -908,7 +908,7 @@
 .checkboxSelected { border-color: var(--action-primary); background: var(--action-primary); }
 .checkbox img { width: 16px; height: 16px; }
 .categoryActionBar {
-  position: fixed;
+  position: absolute;
   right: 0;
   bottom: 0;
   left: 0;
