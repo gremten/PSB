@@ -43,10 +43,13 @@
 .bankHeader::before,
 .bankHeader::after {
   position: absolute;
-  inset: 0 0 -8px;
+  right: 0;
+  bottom: -8px;
+  left: 0;
+  height: 69px;
   z-index: -1;
   border-radius: 0 0 20px 20px;
-  background: var(--header-substrate, rgb(255 255 255 / 0.01%));
+  background: rgb(255 255 255 / 0.01%);
   backdrop-filter: blur(2px);
   pointer-events: none;
   content: "";
@@ -794,7 +797,6 @@
 
 /* Disconnected cashback, live Figma t-cashback 2072:16263 at 402 px. */
 .cashbackScreen {
-  --header-substrate: linear-gradient(to bottom, var(--bg-surface) 0 calc(100% - 8px), transparent 100%);
   background: linear-gradient(to bottom, var(--bg-surface) 0 68px, var(--bg-page) 68px);
 }
 .cashbackDisconnectedScreen .benefitBento {
