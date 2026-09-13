@@ -36,7 +36,7 @@ export default function CashbackCategoriesPage() {
     let frame = 0;
     const update = () => {
       frame = 0;
-      hero.style.setProperty("--category-card-parallax", `${Math.min(20, scroller.scrollTop * 0.12)}px`);
+      hero.style.setProperty("--category-card-parallax", `${Math.min(32, scroller.scrollTop * 0.2)}px`);
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
