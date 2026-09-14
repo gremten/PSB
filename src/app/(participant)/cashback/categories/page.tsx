@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { nextMonthConfirmationHref } from "../next-month-view";
+import { nextMonthConfirmationHref, resolveNextMonthSelection } from "../next-month-view";
 import { DetailHeader, styles } from "@/features/bank/bank-ui";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
@@ -21,7 +21,8 @@ const categories = [
 export default function CashbackCategoriesPage() {
   const router = useRouter();
   const { productState, replayVisualState, updateProductState } = useParticipant();
-  const selectingNextMonth = productState.cashbackConnected;
+  const [connectedOnEntry] = useState(() => productState.cashbackConnected);
+  const selectingNextMonth = resolveNextMonthSelection(connectedOnEntry, productState.cashbackConnected, replayVisualState !== null);
   const [liveSelected, setSelected] = useState<string[]>(() => selectingNextMonth
     ? categories.filter((category) => productState.nextMonthCashbackCategories.includes(category.stateLabel)).map((category) => category.id)
     : []);
@@ -78,7 +79,7 @@ export default function CashbackCategoriesPage() {
       return;
     }
     const selectedLabels = categories.filter((category) => selected.includes(category.id)).map((category) => category.stateLabel);
-    updateProductState(productState.cashbackConnected ? {
+    updateProductState(selectingNextMonth ? {
       nextMonthCashbackCategories: selectedLabels,
       nextMonthCashbackSelectionStatus: "confirmed",
     } : {
@@ -86,10 +87,10 @@ export default function CashbackCategoriesPage() {
       selectedCashbackCategories: selectedLabels,
       nextMonthCashbackSelectionStatus: "available",
       cashbackSuccessVisible: true,
-    }, productState.cashbackConnected ? "cashback.next_month.categories.confirmed" : "cashback.categories.confirmed", {
-      period: productState.cashbackConnected ? "next_month" : "current_month",
+    }, selectingNextMonth ? "cashback.next_month.categories.confirmed" : "cashback.categories.confirmed", {
+      period: selectingNextMonth ? "next_month" : "current_month",
       selectedCount: selectedLabels.length,
-      status: productState.cashbackConnected ? "confirmed" : "connected",
+      status: selectingNextMonth ? "confirmed" : "connected",
     });
     router.push(selectingNextMonth ? nextMonthConfirmationHref : "/");
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNextMonthPresentation, nextMonthConfirmationHref, shouldShowNextMonthSuccess } from "./next-month-view";
+import { getNextMonthPresentation, nextMonthConfirmationHref, resolveNextMonthSelection, shouldShowNextMonthSuccess } from "./next-month-view";
 
 describe("next-month cashback presentation", () => {
   it("summarizes the confirmed categories in their saved order with existing artwork", () => {
@@ -16,5 +16,11 @@ describe("next-month cashback presentation", () => {
     expect(shouldShowNextMonthSuccess("?next-month-success=1", true)).toBe(true);
     expect(shouldShowNextMonthSuccess("?next-month-success=1", false)).toBe(false);
     expect(shouldShowNextMonthSuccess("?replay=1", true)).toBe(false);
+  });
+
+  it("keeps the live selection on its entry month while connection state updates before navigation", () => {
+    expect(resolveNextMonthSelection(false, true, false)).toBe(false);
+    expect(resolveNextMonthSelection(true, true, false)).toBe(true);
+    expect(resolveNextMonthSelection(false, true, true)).toBe(true);
   });
 });

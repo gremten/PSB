@@ -903,6 +903,15 @@
 .cashbackConnectedScreen .faqRow { min-height: 52px; border-bottom: 0; padding: 0; }
 
 .categoryScreen { position: relative; min-height: 100%; isolation: isolate; overflow: clip; background: var(--bg-page); }
+.categoryScreen .accountGradientPosition { animation-name: category-background-position; }
+@keyframes category-background-position {
+  0%, 100% { top: 121.37px; left: 176px; width: 292.805px; height: 296.032px; }
+  16.666667% { top: -78px; left: 20px; width: 393.666px; height: 398.005px; }
+  33.333333% { top: 32px; left: -145px; width: 292.8px; height: 296.028px; }
+  50% { top: 160px; left: -115px; width: 393.666px; height: 398.005px; }
+  66.666667% { top: 180px; left: 99px; width: 205px; height: 217.967px; }
+  83.333333% { top: 160px; left: 150px; width: 393.672px; height: 398.011px; }
+}
 :global(html[data-telegram-mini-app="true"]:has([data-screen="categories"])),
 :global(html[data-telegram-mini-app="true"] body:has([data-screen="categories"])),
 :global(html[data-telegram-mini-app="true"] .participant-stage:has([data-screen="categories"])) {

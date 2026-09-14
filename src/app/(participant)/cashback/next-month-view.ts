@@ -10,6 +10,10 @@ const categoryPresentation: Record<string, { image: string; summary: string; bac
 
 export const nextMonthConfirmationHref = "/cashback?next-month-success=1";
 
+export function resolveNextMonthSelection(connectedOnEntry: boolean, connectedNow: boolean, replaying: boolean) {
+  return replaying ? connectedNow : connectedOnEntry;
+}
+
 export function shouldShowNextMonthSuccess(search: string, confirmed: boolean) {
   return confirmed && new URLSearchParams(search).get("next-month-success") === "1";
 }
