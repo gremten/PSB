@@ -929,12 +929,46 @@
 }
 .shake { animation: shake .28s linear; }
 
-.successOverlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: flex-end; background: rgb(0 0 0 / 67%); }
-.successSheet { width: 100%; min-height: 448px; border-radius: 24px 24px 0 0; padding: 8px 20px 62px; background: var(--bg-elevated); text-align: center; }
-.grabber { width: 36px; height: 4px; margin: 0 auto 28px; border-radius: 6px; background: white; }
-.successImage { width: 164px; height: 164px; object-fit: contain; }
-.successTitle { margin: 8px 0 8px; font-size: 24px; font-weight: 720; line-height: 32px; }
-.successText { margin: 0 0 32px; font-size: 16px; line-height: 20px; }
+.successOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(0 0 0 / 60%);
+  animation: successOverlayIn 200ms ease-out both;
+}
+.successOverlayClosing { opacity: 0; animation: successOverlayOut 200ms ease-in both; }
+.successSheet {
+  display: flex;
+  width: 100%;
+  height: min(448px, 100%);
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  border-radius: 24px 24px 0 0;
+  padding: 0 20px max(46px, env(safe-area-inset-bottom), var(--app-tg-safe-bottom));
+  background: var(--bg-elevated);
+  text-align: center;
+  transform: translateY(var(--success-drag, 0px));
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+  animation: successSheetIn 200ms ease-out backwards;
+}
+.successSheetDragging { transition: none; }
+.successSheetClosing { opacity: 0; transform: translateY(max(var(--success-drag, 0px), 160px)); animation: none; }
+.grabberHit { display: flex; width: 100%; min-height: 44px; flex: none; justify-content: center; padding-top: 8px; touch-action: none; cursor: grab; }
+.grabberHit:active { cursor: grabbing; }
+.grabber { width: 36px; height: 4px; border-radius: 6px; background: white; }
+.successImage { width: 164px; height: 164px; flex: none; object-fit: contain; }
+.successTitle { margin: 8px 0; font-size: 24px; font-weight: 720; line-height: 32px; }
+.successText { margin: 0; font-size: 16px; line-height: 20px; }
+.successCloseButton { flex: none; margin-top: auto; }
+@keyframes successOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes successOverlayOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes successSheetIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .successOverlay, .successOverlayClosing, .successSheet { animation-duration: 1ms; transition-duration: 1ms; }
+}
 
 .formSurface { margin: 0 20px; }
 .form { display: grid; gap: 14px; }

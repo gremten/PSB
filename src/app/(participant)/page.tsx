@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { HorizontalScroller } from "@/components/ui";
 import { CensorBubbles, ProfileHeader, Transaction, styles } from "@/features/bank/bank-ui";
+import { shouldDismissSuccessSheet } from "@/features/bank/success-sheet-gesture";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
 
@@ -42,6 +44,51 @@ function SectionBar({ title, action, track, collapsed, onToggle }: { title: stri
       </button>
       <button className={styles.sectionPill} data-track={`${track}.action`} onClick={showDemoUnavailable}>{action}</button>
     </div>
+  );
+}
+
+function CashbackSuccessSheet({ onDismiss }: { onDismiss: () => void }) {
+  const [viewport, setViewport] = useState<HTMLElement | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const startY = useRef<number | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setViewport(document.querySelector<HTMLElement>(".participant-phone")));
+    return () => {
+      cancelAnimationFrame(frame);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  const dismiss = () => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(onDismiss, 200);
+  };
+
+  const finishDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (startY.current === null) return;
+    const distance = Math.max(0, event.clientY - startY.current);
+    startY.current = null;
+    setDragging(false);
+    if (shouldDismissSuccessSheet(distance)) dismiss();
+    else setDragOffset(0);
+  };
+
+  if (!viewport) return null;
+  return createPortal(
+    <div className={`${styles.successOverlay} ${closing ? styles.successOverlayClosing : ""}`} role="presentation">
+      <section className={`${styles.successSheet} ${dragging ? styles.successSheetDragging : ""} ${closing ? styles.successSheetClosing : ""}`} role="dialog" aria-modal="true" aria-labelledby="cashback-success-title" style={{ "--success-drag": `${dragOffset}px` } as React.CSSProperties}>
+        <div className={styles.grabberHit} aria-label="Потяните вниз, чтобы закрыть" data-track="cashback.success.drag" onPointerDown={(event) => { startY.current = event.clientY; setDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (startY.current !== null) setDragOffset(Math.max(0, event.clientY - startY.current)); }} onPointerUp={finishDrag} onPointerCancel={() => { startY.current = null; setDragging(false); setDragOffset(0); }}><span className={styles.grabber} /></div>
+        <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
+        <h2 id="cashback-success-title" className={styles.successTitle}>Кешбек подключен!</h2>
+        <p className={styles.successText}>Категории на апрель<br />активируются в течение 15 минут.</p>
+        <button className={`${styles.primaryButton} ${styles.fullButton} ${styles.successCloseButton}`} data-track="cashback.success.close" onClick={dismiss}>Хорошо!</button>
+      </section>
+    </div>, viewport,
   );
 }
 
@@ -186,17 +233,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {productState.cashbackSuccessVisible && (
-        <div className={styles.successOverlay} role="presentation">
-          <section className={styles.successSheet} role="dialog" aria-modal="true" aria-labelledby="cashback-success-title">
-            <div className={styles.grabber} />
-            <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
-            <h2 id="cashback-success-title" className={styles.successTitle}>Кешбек подключен!</h2>
-            <p className={styles.successText}>Категории на апрель<br />активируются в течение 15 минут.</p>
-            <button className={`${styles.primaryButton} ${styles.fullButton}`} data-track="cashback.success.close" onClick={() => updateProductState({ cashbackSuccessVisible: false }, "cashback.success.dismissed")}>Хорошо!</button>
-          </section>
-        </div>
-      )}
+      {productState.cashbackSuccessVisible && <CashbackSuccessSheet onDismiss={() => updateProductState({ cashbackSuccessVisible: false }, "cashback.success.dismissed")} />}
     </main>
   );
 }
