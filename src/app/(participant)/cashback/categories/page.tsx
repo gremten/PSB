@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { nextMonthConfirmationHref } from "../next-month-view";
 import { DetailHeader, styles } from "@/features/bank/bank-ui";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
@@ -90,7 +91,7 @@ export default function CashbackCategoriesPage() {
       selectedCount: selectedLabels.length,
       status: productState.cashbackConnected ? "confirmed" : "connected",
     });
-    router.push("/");
+    router.push(selectingNextMonth ? nextMonthConfirmationHref : "/");
   };
 
   return (
@@ -110,7 +111,7 @@ export default function CashbackCategoriesPage() {
         <Image src="/figma/categories/hero-card.png" alt="" width={283} height={282} priority />
       </div>
       <section className={styles.categorySheet}>
-        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на&nbsp;апрель?</h1>
+        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на&nbsp;{selectingNextMonth ? "май" : "апрель"}?</h1>
         <div className={styles.categoryList}>
           {categories.map((category) => {
             const active = selected.includes(category.id);
@@ -128,7 +129,7 @@ export default function CashbackCategoriesPage() {
     </main>
     <div className={styles.categoryActionBar}>
       <button key={shake} className={`${styles.primaryButton} ${styles.fullButton} ${styles.categoryCta} ${shake ? styles.shake : ""}`} onClick={confirm} data-track="cashback.categories.confirm">
-        {selected.length === 3 ? "Подключить" : `Выбрано ${selected.length} из\u00a03`}
+        {selected.length === 3 ? selectingNextMonth ? "Выбрать" : "Подключить" : `Выбрано ${selected.length} из\u00a03`}
       </button>
     </div>
     </>

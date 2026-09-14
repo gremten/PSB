@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { FaqList, ProfileHeader, styles } from "@/features/bank/bank-ui";
+import { shouldDismissSuccessSheet } from "@/features/bank/success-sheet-gesture";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { track } from "@/lib/testing/tracking";
+import { getNextMonthPresentation, shouldShowNextMonthSuccess } from "./next-month-view";
 
 const yearlyPoints = [
   { month: "Май", fullMonth: "май", points: 3240 },
@@ -70,11 +74,65 @@ function DisconnectedCashback() {
   );
 }
 
+function NextMonthSuccessSheet({ onDismiss }: { onDismiss: () => void }) {
+  const [viewport, setViewport] = useState<HTMLElement | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const startY = useRef<number | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setViewport(document.querySelector<HTMLElement>(".participant-phone")));
+    return () => {
+      cancelAnimationFrame(frame);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  const dismiss = () => {
+    if (closing) return;
+    setClosing(true);
+    track("action", { screen: "/cashback", action: "cashback.next_month.success.dismissed" });
+    closeTimer.current = setTimeout(onDismiss, 200);
+  };
+
+  const finishDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (startY.current === null) return;
+    const distance = Math.max(0, event.clientY - startY.current);
+    startY.current = null;
+    setDragging(false);
+    if (shouldDismissSuccessSheet(distance)) dismiss();
+    else setDragOffset(0);
+  };
+
+  if (!viewport) return null;
+  return createPortal(
+    <div className={`${styles.successOverlay} ${closing ? styles.successOverlayClosing : ""}`} role="presentation">
+      <section className={`${styles.successSheet} ${dragging ? styles.successSheetDragging : ""} ${closing ? styles.successSheetClosing : ""}`} role="dialog" aria-modal="true" aria-labelledby="next-month-success-title" style={{ "--success-drag": `${dragOffset}px` } as CSSProperties}>
+        <div className={styles.grabberHit} aria-label="Потяните вниз, чтобы закрыть" data-track="cashback.next_month.success.drag" onPointerDown={(event) => { startY.current = event.clientY; setDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (startY.current !== null) setDragOffset(Math.max(0, event.clientY - startY.current)); }} onPointerUp={finishDrag} onPointerCancel={() => { startY.current = null; setDragging(false); setDragOffset(0); }}><span className={styles.grabber} /></div>
+        <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
+        <h2 id="next-month-success-title" className={styles.successTitle}>Категории на&nbsp;май выбраны!</h2>
+        <p className={styles.successText}>В&nbsp;следующем месяце они будут учитываться при оплате покупок.</p>
+        <button className={`${styles.primaryButton} ${styles.fullButton} ${styles.successCloseButton}`} data-track="cashback.next_month.success.close" onClick={dismiss}>Хорошо!</button>
+      </section>
+    </div>, viewport,
+  );
+}
+
 function ConnectedCashback() {
   const { productState, replayVisualState } = useParticipant();
+  const router = useRouter();
   const [livePeriod, setPeriod] = useState<"month" | "year">("month");
   const period = replayVisualState?.cashbackPeriod ?? livePeriod;
+  const nextMonthConfirmed = productState.nextMonthCashbackSelectionStatus === "confirmed";
+  const [nextMonthSuccessOpen, setNextMonthSuccessOpen] = useState(false);
+  const selectedNextMonth = getNextMonthPresentation(productState.nextMonthCashbackCategories);
   const yearChartRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setNextMonthSuccessOpen(shouldShowNextMonthSuccess(window.location.search, nextMonthConfirmed)));
+    return () => cancelAnimationFrame(frame);
+  }, [nextMonthConfirmed]);
   useEffect(() => {
     if (period !== "year") return;
     const viewport = yearChartRef.current;
@@ -117,22 +175,33 @@ function ConnectedCashback() {
         <section className={styles.cashbackConnectedHero}>
           <p className={styles.points}>1 245 баллов</p>
           <p className={styles.pointsSub}>Кэшбек приходит с&nbsp;5 до&nbsp;20 числа</p>
-          <div className={styles.nextCategories}>
-            <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
-            <div className={styles.nextCategoriesCopy}>
-              <span className={styles.nextCategoriesTitle}>Категории на&nbsp;май</span>
-              <span className={styles.nextCategoriesText}>
-                {productState.nextMonthCashbackSelectionStatus === "confirmed"
-                  ? productState.nextMonthCashbackCategories.map((category) => category.replace(/^На /, "На\u00a0")).join(", ")
-                  : productState.nextMonthCashbackSelectionStatus === "draft"
+          {nextMonthConfirmed ? (
+            <Link className={`${styles.nextCategories} ${styles.nextCategoriesConfirmed}`} href="/cashback/categories" data-track="cashback.next_month.categories.open" aria-label="Изменить категории на следующий месяц">
+              <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
+              <span className={styles.nextCategoriesConfirmedContent}>
+                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;следующий месяц</span>
+                <span className={styles.nextCategoriesDetails}>
+                  <span className={styles.nextCategoriesIcons} aria-hidden="true">
+                    {selectedNextMonth.map(({ label, image }) => image && <Image key={label} src={image} alt="" width={32} height={32} />)}
+                  </span>
+                  <span className={styles.nextCategoriesSummary}>{selectedNextMonth.map(({ summary }) => summary).join(", ")}</span>
+                </span>
+              </span>
+            </Link>
+          ) : (
+            <div className={styles.nextCategories}>
+              <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
+              <div className={styles.nextCategoriesCopy}>
+                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;следующий месяц</span>
+                <span className={styles.nextCategoriesText}>
+                  {productState.nextMonthCashbackSelectionStatus === "draft"
                     ? `Выбрано ${productState.nextMonthCashbackCategories.length} из\u00a03 — подтвердите выбор`
                     : "Вы уже можете выбрать категории на\u00a0следующий месяц"}
-              </span>
+                </span>
+              </div>
+              <Link className={styles.chooseButton} href="/cashback/categories" data-track="cashback.next_month.categories.open">Выбрать</Link>
             </div>
-            <Link className={styles.chooseButton} href="/cashback/categories" data-track="cashback.next_month.categories.open">
-              {productState.nextMonthCashbackSelectionStatus === "confirmed" ? "Изменить" : "Выбрать"}
-            </Link>
-          </div>
+          )}
         </section>
 
         <section className={styles.chartBlock}>
@@ -169,6 +238,7 @@ function ConnectedCashback() {
         </div>
         <FaqList />
       </div>
+      {nextMonthSuccessOpen && <NextMonthSuccessSheet onDismiss={() => { setNextMonthSuccessOpen(false); router.replace("/cashback", { scroll: false }); }} />}
     </main>
   );
 }
