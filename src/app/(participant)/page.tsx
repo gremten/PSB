@@ -81,7 +81,7 @@ function CashbackSuccessSheet({ onDismiss }: { onDismiss: () => void }) {
   if (!viewport) return null;
   return createPortal(
     <div className={`${styles.successOverlay} ${closing ? styles.successOverlayClosing : ""}`} role="presentation">
-      <section className={`${styles.successSheet} ${dragging ? styles.successSheetDragging : ""} ${closing ? styles.successSheetClosing : ""}`} role="dialog" aria-modal="true" aria-labelledby="cashback-success-title" style={{ "--success-drag": `${dragOffset}px` } as React.CSSProperties}>
+      <section className={`${styles.successSheet} ${styles.cashbackSuccessSheet} ${dragging ? styles.successSheetDragging : ""} ${closing ? styles.successSheetClosing : ""}`} role="dialog" aria-modal="true" aria-labelledby="cashback-success-title" style={{ "--success-drag": `${dragOffset}px` } as React.CSSProperties}>
         <div className={styles.grabberHit} aria-label="Потяните вниз, чтобы закрыть" data-track="cashback.success.drag" onPointerDown={(event) => { startY.current = event.clientY; setDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (startY.current !== null) setDragOffset(Math.max(0, event.clientY - startY.current)); }} onPointerUp={finishDrag} onPointerCancel={() => { startY.current = null; setDragging(false); setDragOffset(0); }}><span className={styles.grabber} /></div>
         <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
         <h2 id="cashback-success-title" className={styles.successTitle}>Кешбек подключен!</h2>

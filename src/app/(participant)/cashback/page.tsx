@@ -176,7 +176,7 @@ function ConnectedCashback() {
           <p className={styles.points}>1 245 баллов</p>
           <p className={styles.pointsSub}>Кэшбек приходит с&nbsp;5 до&nbsp;20 числа</p>
           {nextMonthConfirmed ? (
-            <Link className={`${styles.nextCategories} ${styles.nextCategoriesConfirmed}`} href="/cashback/categories" data-track="cashback.next_month.categories.open" aria-label="Изменить категории на октябрь">
+            <div className={`${styles.nextCategories} ${styles.nextCategoriesConfirmed}`}>
               <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
               <span className={styles.nextCategoriesConfirmedContent}>
                 <span className={styles.nextCategoriesTitle}>Категории на&nbsp;октябрь</span>
@@ -187,7 +187,7 @@ function ConnectedCashback() {
                   <span className={styles.nextCategoriesSummary}>{selectedNextMonth.map(({ summary }) => summary).join(", ")}</span>
                 </span>
               </span>
-            </Link>
+            </div>
           ) : (
             <div className={styles.nextCategories}>
               <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />

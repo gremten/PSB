@@ -990,6 +990,7 @@
   transition: transform 200ms ease-out, opacity 200ms ease-out;
   animation: successSheetIn 200ms ease-out backwards;
 }
+.cashbackSuccessSheet .successTitle { margin-top: 24px; }
 .successSheetDragging { transition: none; }
 .successSheetClosing { opacity: 0; transform: translateY(max(var(--success-drag, 0px), 160px)); animation: none; }
 .grabberHit { display: flex; width: 100%; min-height: 44px; flex: none; justify-content: center; padding-top: 8px; touch-action: none; cursor: grab; }
