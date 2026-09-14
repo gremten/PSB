@@ -890,7 +890,7 @@
 .yearChart { height: 208px; margin: 32px -20px 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .yearChart::-webkit-scrollbar { display: none; }
 .yearChart:focus-visible { outline: 2px solid var(--text-secondary); outline-offset: -2px; }
-.yearChartColumns { position: relative; display: flex; align-items: flex-end; gap: 20px; width: max-content; height: 208px; padding-right: 20px; }
+.yearChartColumns { position: relative; display: flex; align-items: flex-end; gap: 20px; width: max-content; height: 208px; padding-right: 30px; }
 .yearChartColumn { display: flex; flex: 0 0 52px; flex-direction: column; align-items: center; justify-content: flex-end; height: 208px; transform: scale(var(--year-column-scale, 1)); transform-origin: center bottom; }
 .yearChartValue { margin-bottom: 8px; color: var(--text-secondary); font-size: 12px; line-height: 16px; white-space: nowrap; }
 .yearChartBar { display: block; width: 36px; height: var(--bar-height); min-height: 3px; border-radius: 6px; background: #242a33; animation: yearBarGrow 300ms ease-in both; }
@@ -922,12 +922,16 @@
 .categorySheet { position: relative; z-index: 2; margin-top: -4px; border-radius: 20px 20px 0 0; padding: 20px 20px 104px; background: var(--bg-surface); }
 .categoryTitle { margin: 0 0 18px; font-size: 24px; font-weight: 720; line-height: 32px; }
 .categoryList { display: flex; flex-direction: column; }
-.categoryRow { display: grid; min-height: 62px; grid-template-columns: 32px minmax(0, 1fr) 24px 24px; align-items: center; gap: 12px; border: 0; padding: 12px 0; color: white; background: transparent; text-align: left; cursor: pointer; }
+.categoryRowWrap { position: relative; --category-row-gap: 12px; }
+.categoryRow { display: grid; width: 100%; min-height: 62px; grid-template-columns: 32px minmax(0, 1fr) 24px 24px; align-items: center; gap: var(--category-row-gap); border: 0; padding: 12px 0; color: white; background: transparent; text-align: left; cursor: pointer; }
 .categoryRow:active { scale: 1; }
-.categoryRow .faqIcon,
 .categoryRow .checkbox { scale: 1; transition: scale 180ms cubic-bezier(.2, .75, .25, 1); }
-.categoryRow .faqIcon:active,
-.categoryRow .checkbox:active { scale: .975; }
+.categoryRow:active .checkbox { scale: .975; }
+.categoryFaqPlaceholder { width: 24px; height: 24px; }
+.categoryFaqButton { position: absolute; top: 50%; right: calc(14px + var(--category-row-gap)); display: grid; width: 44px; height: 44px; place-items: center; transform: translateY(-50%); border: 0; padding: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
+.categoryFaqButton:active { scale: 1; }
+.categoryFaqButton .faqIcon { scale: 1; transition: scale 180ms cubic-bezier(.2, .75, .25, 1); }
+.categoryFaqButton:active .faqIcon { scale: .975; }
 .categoryIcon { width: 32px; height: 32px; overflow: hidden; border-radius: 8px; background: #fff; }
 .categoryIcon img { width: 100%; height: 100%; object-fit: cover; }
 .categoryName { display: block; font-size: 16px; line-height: 20px; }
@@ -1030,7 +1034,7 @@
   .quickActions { padding-right: 12px; padding-left: 12px; }
   .quickIcon { width: 48px; height: 48px; }
   .categoryTitle { font-size: 22px; line-height: 29px; }
-  .categoryRow { grid-template-columns: 32px minmax(0, 1fr) 24px 24px; gap: 8px; }
+  .categoryRowWrap { --category-row-gap: 8px; }
   .categoryName { font-size: 14px; }
   .categoryDescription { font-size: 11px; }
 }

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { nextMonthConfirmationHref, resolveNextMonthSelection } from "../next-month-view";
 import { DetailHeader, styles } from "@/features/bank/bank-ui";
+import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
 
@@ -117,12 +118,17 @@ export default function CashbackCategoriesPage() {
           {categories.map((category) => {
             const active = selected.includes(category.id);
             return (
-              <button key={category.id} className={styles.categoryRow} onClick={() => toggle(category.id)} data-track={`cashback.category.${category.id}.toggle`} aria-pressed={active}>
-                <span className={styles.categoryIcon}><Image src={category.image} alt="" width={32} height={32} /></span>
-                <span><span className={styles.categoryName}>{category.title}</span><span className={styles.categoryDescription}>{category.description}</span></span>
-                <Image className={styles.faqIcon} src="/figma/icons/faq.svg" alt="" width={24} height={24} />
-                <span className={`${styles.checkbox} ${active ? styles.checkboxSelected : ""}`}>{active && <Image src="/figma/icons/check.svg" alt="" width={16} height={16} />}</span>
-              </button>
+              <div key={category.id} className={styles.categoryRowWrap}>
+                <button type="button" className={styles.categoryRow} onClick={() => toggle(category.id)} data-track={`cashback.category.${category.id}.toggle`} aria-pressed={active}>
+                  <span className={styles.categoryIcon}><Image src={category.image} alt="" width={32} height={32} /></span>
+                  <span><span className={styles.categoryName}>{category.title}</span><span className={styles.categoryDescription}>{category.description}</span></span>
+                  <span className={styles.categoryFaqPlaceholder} aria-hidden="true" />
+                  <span className={`${styles.checkbox} ${active ? styles.checkboxSelected : ""}`}>{active && <Image src="/figma/icons/check.svg" alt="" width={16} height={16} />}</span>
+                </button>
+                <button type="button" className={styles.categoryFaqButton} onClick={showDemoUnavailable} data-track={`cashback.category.${category.id}.faq.open`} aria-label={`Подробнее о категории ${category.title}`}>
+                  <Image className={styles.faqIcon} src="/figma/icons/faq.svg" alt="" width={24} height={24} />
+                </button>
+              </div>
             );
           })}
         </div>
