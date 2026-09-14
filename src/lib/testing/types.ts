@@ -36,7 +36,8 @@ export interface ResearchSession {
   startedAt: string | null;
   endedAt: string | null;
   lastSeenAt?: string | null;
-  endReason?: "moderator" | "client_timeout" | null;
+  endReason?: "moderator" | "client_timeout" | "all_scenarios_completed" | "participant_exit" | null;
+  assignedScenario?: string | null;
   buildId: string;
 }
 

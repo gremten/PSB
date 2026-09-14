@@ -26,7 +26,7 @@ UI modules may call the published helpers. They must not query the database dire
 | `psb-participant-session-v1` | `tracking.ts` | UUID of a named participant session. Skip removes it and creates no DB record. |
 | `psb-participant-product-state-v1` | `participant-state.ts` | Local fake banking/product state. It is reset for a new participant. |
 | `psb_moderator` | `moderator-auth.ts` | HttpOnly moderator token derived from `MODERATOR_SECRET`. |
-| D1/SQLite `sessions`, `task_runs`, `events` | `schema.ts` + migrations | Durable research data. |
+| D1/SQLite `sessions`, `task_runs`, `events` | `schema.ts` + migrations | Durable research data. `sessions.assigned_scenario` is a moderator-assigned, per-session pending task; active/completed runs remain in `task_runs`. |
 | D1/SQLite `research_control` | `schema.ts` | Existing legacy task-control record; do not connect it to participant product state or remove it without permission. |
 
 These names and meanings are migration-sensitive and cannot be renamed by a visual task.
@@ -46,8 +46,9 @@ These names and meanings are migration-sensitive and cannot be renamed by a visu
 
 API route ownership:
 
-- Participant writes: `POST /api/testing/sessions`, `POST /api/testing/sessions/[id]/heartbeat`, `POST /api/events`.
+- Participant writes: `POST /api/testing/sessions`, `POST /api/testing/sessions/[id]/heartbeat`, `GET/POST/DELETE /api/testing/sessions/[id]/scenario`, `POST /api/events`. The scenario GET exposes only status/codes to the UUID-bearing participant; POST starts the moderator-assigned flow; DELETE exits to unrecorded demo.
 - Moderator authenticated reads/mutations: `/api/moderator/**`.
+  `PATCH /api/moderator/sessions/[id]` with `assign_scenario` assigns one of the three approved flows without starting its recording.
 - Existing `/api/testing/state` and stream routes expose legacy research-control state. Do not expand or repurpose them without an architecture request.
 
 ## Figma screen and component registry
@@ -97,7 +98,11 @@ See `docs/cashback-product-state.md` for event names and migration behavior.
 
 ## Research session lifecycle
 
-A participant who enters a pseudonym creates and starts one independent session. Skip creates no session. A visible client sends a heartbeat every 15 seconds. After 90 seconds without presence, the session ends at its last presence time. Replay sends neither heartbeat nor events. The moderator may view/export, explicitly end, or explicitly delete a session; the moderator does not create participant sessions.
+A participant who enters a pseudonym creates one **pending**, unrecorded session. The moderator chooses a scenario for that session; the participant sees its text prompt and presses `Старт`. Only then does `started_at` become non-null, a `task_run` begin, and events acquire that run ID. Between flows, the participant returns to a waiting gate and no product interaction is recorded. `Тест без сессии` before any run deletes the empty pending record; after a completed run it archives the partial recording with `participant_exit`. Skip at the original name gate creates no session. The gate is a new additive component owned by `ParticipantShell`, with no Figma node (user-supplied text-only brief), local `scenario-gate.module.css`, stable `participant.scenario.start/skip` IDs, and no new banking state or assets.
+
+There are exactly three interactive flows: `CARD_COPY` (home account → account card badge → card flip → copy any fake card field → copied toast disappears), `CASHBACK_CONNECT` (home badge/tab → disconnected offer → three current categories → confirm → dismiss home success sheet), and `CASHBACK_NEXT` (home badge/tab → next-month banner on the Cashback page → three October categories → confirm → dismiss Cashback success sheet). Both `Хорошо!` and the existing successful sheet swipe count as valid dismissal. The next-month flow is assignable only after first cashback connection. The moderator can choose card/connection in either order, shows a check mark on completed flows, and never creates a participant session. After all three runs finish, the session ends with `all_scenarios_completed` but recordings are retained.
+
+A visible client sends a heartbeat every 15 seconds. After 90 seconds without presence, even a pending session ends at its last presence time. Replay sends neither heartbeat nor events. The moderator may still view/export, explicitly end, or explicitly delete a session.
 
 Details and tests are in `docs/session-lifecycle.md` and `src/lib/db/session-lifecycle.test.ts`.
 
@@ -111,15 +116,15 @@ Details and tests are in `docs/session-lifecycle.md` and `src/lib/db/session-lif
 - Card values are fake. They may be copied for the task but must never be added to metadata.
 - Moderator replay derives a read-only visual state from recorded semantic events and sends it to the `?replay=1` participant iframe over a same-origin parent/child message bridge. It restores supported product and local UI states (card selection/flip, home visibility/promos/sections/currency, cashback connection/categories/period/FAQ) at each timeline position, including backward seeking, without writing participant storage, sessions, or events. Screen transitions use client-side route replacement inside the same iframe, avoiding a full reload. The iframe acknowledges its rendered state before tap geometry is remeasured.
 - Playback preserves event order but caps idle gaps at 800 ms and gives consecutive events at least 120 ms; original wall-clock timestamps remain visible in the timeline. New events also carry a non-sensitive client timestamp to prevent network arrival order from displacing taps. The timeline list is memoized and tap geometry is measured on action/state boundaries, not on every playback tick.
-- Each red tap pulse is anchored to the same `data-track` target using its recorded hit position within the target, rather than scaling absolute viewport coordinates; this avoids Telegram safe-area offsets. If the historical target never appears, no inaccurate marker is invented. Replay is not a screen video or a complete historical DOM reconstruction; unrecorded animations, scroll between events, and arbitrary input cannot be reproduced.
+- Each tap pulse is anchored to the same `data-track` target using its recorded hit position within the target, rather than scaling absolute viewport coordinates; this avoids Telegram safe-area offsets. Interactive-flow taps carry a server-classified `scenarioVerdict`: green for a relevant step or recovery from a wrong section, red for an unrelated control. Scrolls are not taps or errors. Wrong navigation remains recorded even after a return. If the historical target never appears, no inaccurate marker is invented. Replay is not a screen video or a complete historical DOM reconstruction; unrecorded animations, scroll between events, and arbitrary input cannot be reproduced.
 - Unavailable participant controls retain their existing semantic `tap` event and additionally emit `action: demo.unavailable` with only the control's stable `data-track` target. This records a missclick without input values. Moderator `missclickCount` counts those actions; legacy taps whose IDs contain `unavailable` remain supported without double counting a paired action. Replay presents the orange unavailable toast for up to three seconds of its compressed timeline.
-- Participant demo feedback and the card-copy confirmation use the additive `GlassToast` component (`src/features/usability/glass-toast.tsx`). Only the upper card-copy toast uses the existing `@samasante/liquid-glass` material; lower demo-feedback toasts use a solid orange surface. Owner surfaces: participant shell, `/card`, moderator live dashboard, and moderator replay; reference for the card-copy badge is Figma node `2072:14794`, while demo feedback has no claimed exact live Figma node. All auto-dismiss after three seconds idle, animate in/out over 200 ms, and follow a swipe toward their nearest viewport edge with proportional scaling. The toast hit area is at least 44 px high, and its pointer gesture stops before the card carousel. Dismiss controls use `demo.unavailable.toast.dismiss`, `card.copy.toast.dismiss`, `moderator.live.demo_toast.dismiss`, and `moderator.replay.demo_toast.dismiss`. The live dashboard shows a toast only for newly observed missclick events in the selected session. No new banking state is introduced.
+- Participant demo feedback and the card-copy confirmation use the additive `GlassToast` component (`src/features/usability/glass-toast.tsx`). Only the upper card-copy toast uses the existing `@samasante/liquid-glass` material; lower demo-feedback toasts use a solid orange surface. Owner surfaces: participant shell, `/card`, moderator live dashboard, and moderator replay; reference for the card-copy badge is Figma node `2072:14794`, while demo feedback has no claimed exact live Figma node. All auto-dismiss after three seconds idle, animate in/out over 200 ms, and follow a swipe toward their nearest viewport edge with proportional scaling. The toast hit area is at least 44 px high, and its pointer gesture stops before the card carousel. Dismiss controls use `demo.unavailable.toast.dismiss`, `card.copy.toast.dismiss`, `moderator.live.demo_toast.dismiss`, and `moderator.replay.demo_toast.dismiss`. The upper copy toast is 4 px lower than the prior implementation; lower demo toasts are unchanged. Its `card.copy.toast.closed` event finalizes the card flow without recording clipboard contents. The live dashboard shows a toast only for newly observed missclick events in the selected session. No new banking state is introduced.
 
 Stable event families: `screen_view`, `tap`, `action`, `navigation`, `product_state_change`, `card_selection`, `session_started`, `session_ended`, `task_started`, and `task_finished`. Existing action/target strings are analytics keys and cannot be renamed for presentation cleanup.
 
 ## Scenario map and current readiness
 
-The source protocol is `docs/psb-usability-protocol.md`; executable task metadata is `src/config/test-scenarios.ts`.
+The source protocol is `docs/psb-usability-protocol.md`; executable task metadata is `src/config/test-scenarios.ts`. The A/B rows below remain historical protocol references, not moderator-assignable interactive flows. Only `CARD_COPY`, `CASHBACK_CONNECT`, and `CASHBACK_NEXT` are assignable in the current three-flow test.
 
 | Scenario | Expected path/state | Current architectural support |
 |---|---|---|
@@ -136,7 +141,7 @@ Known intentional gaps are contracts, not invitations for silent implementation:
 
 1. Payment-form validation for A1/B1 is absent because Payments must remain unavailable until the user changes that instruction.
 2. `goldenStepCount` values remain `null`; do not fabricate them without an approved golden-path definition.
-3. Generic session metrics and event replay work. Task start/finish/ease-score controls are not exposed in the current moderator UI, so task aggregates may remain empty.
+3. The three interactive flows use automatic task start/finish and expose completion, correct/error/recovery tap counts, timing, and per-flow replay seek points. Legacy A/B ease-score controls remain unexposed; do not fabricate moderator assistance or ease ratings.
 4. Replay is not audiovisual recording.
 5. Visual fidelity is still screen-specific work. Architecture completeness does not imply that every screen already matches Figma.
 

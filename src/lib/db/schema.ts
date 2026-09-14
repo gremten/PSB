@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ended_at TEXT,
   last_seen_at TEXT,
   end_reason TEXT,
+  assigned_scenario TEXT,
   build_id TEXT NOT NULL
 );
 
@@ -55,6 +56,8 @@ CREATE TABLE IF NOT EXISTS research_control (
 INSERT OR IGNORE INTO research_control (id, updated_at) VALUES (1, datetime('now'));
 
 CREATE INDEX IF NOT EXISTS idx_task_runs_session ON task_runs(session_id, started_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_runs_active_interactive_session ON task_runs(session_id)
+  WHERE ended_at IS NULL AND task_code IN ('CARD_COPY', 'CASHBACK_CONNECT', 'CASHBACK_NEXT');
 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id, id);
 CREATE INDEX IF NOT EXISTS idx_events_task_run ON events(task_run_id, id);
 `;

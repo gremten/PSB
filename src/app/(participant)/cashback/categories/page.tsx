@@ -135,8 +135,8 @@ export default function CashbackCategoriesPage() {
       </section>
     </main>
     <div className={styles.categoryActionBar}>
-      <button key={shake} className={`${styles.primaryButton} ${styles.fullButton} ${styles.categoryCta} ${shake ? styles.shake : ""}`} onClick={confirm} data-track="cashback.categories.confirm">
-        {selected.length === 3 ? selectingNextMonth ? "Выбрать" : "Подключить" : `Выбрано ${selected.length} из\u00a03`}
+      <button key={shake} className={`${styles.primaryButton} ${styles.fullButton} ${styles.categoryCta} ${shake ? styles.shake : ""}`} onClick={confirm} data-track="cashback.categories.confirm" data-selected-count={selected.length}>
+        {selected.length === 3 ? "Подключить" : `Выбрано ${selected.length} из\u00a03`}
       </button>
     </div>
     </>

@@ -10,6 +10,18 @@ export interface UsabilityTask {
   goldenStepCount: number | null;
 }
 
+export const interactiveScenarios = [
+  { code: "CARD_COPY", title: "Просмотр и копирование данных карты", prompt: "Найдите данные любой карты вашего текущего счёта и скопируйте нужное поле.", startRoute: "/", goldenStepCount: 4, metricMode: "taps" },
+  { code: "CASHBACK_CONNECT", title: "Первое подключение кешбэка", prompt: "Подключите кешбэк и выберите три категории на этот месяц.", startRoute: "/", goldenStepCount: 7, metricMode: "taps" },
+  { code: "CASHBACK_NEXT", title: "Категории на следующий месяц", prompt: "Выберите три категории кешбэка на октябрь.", startRoute: "/", goldenStepCount: 7, metricMode: "taps" },
+] as const;
+
+export type InteractiveScenarioCode = (typeof interactiveScenarios)[number]["code"];
+
+export function getInteractiveScenario(code: string) {
+  return interactiveScenarios.find((scenario) => scenario.code === code) ?? null;
+}
+
 export const usabilityTasks: UsabilityTask[] = [
   {
     code: "A1",
@@ -99,5 +111,5 @@ export function tasksForVariant(variant: CashbackVariant) {
 }
 
 export function getTask(taskCode: string) {
-  return usabilityTasks.find((task) => task.code === taskCode) ?? null;
+  return usabilityTasks.find((task) => task.code === taskCode) ?? getInteractiveScenario(taskCode);
 }

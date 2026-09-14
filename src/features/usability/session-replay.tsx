@@ -2,7 +2,8 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
-import type { TrackedEvent } from "@/lib/testing/types";
+import { getTask } from "@/config/test-scenarios";
+import type { TaskRun, TrackedEvent } from "@/lib/testing/types";
 import { isDemoMissclick } from "@/lib/testing/session-metrics";
 import { GlassToast } from "./glass-toast";
 import { findReplayIndex, projectTrackedTap } from "./replay-geometry";
@@ -29,7 +30,7 @@ const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, 
   events: TrackedEvent[]; times: number[]; startedAt: string | null; activeIndex: number; select: (time: number) => void;
 }) {
   return <div className={styles.replayTimeline}>
-    {events.map((event, index) => <button type="button" className={`${index === activeIndex ? styles.replayEventActive : ""} ${event.type === "tap" ? styles.replayTapEvent : ""}`} key={event.id} onClick={() => select(times[index])}>
+    {events.map((event, index) => <button type="button" className={`${index === activeIndex ? styles.replayEventActive : ""} ${event.type === "tap" ? event.metadata.scenarioVerdict === "correct" || event.metadata.scenarioVerdict === "recovery" ? styles.replayTapCorrect : styles.replayTapEvent : ""}`} key={event.id} onClick={() => select(times[index])}>
       <span>{eventElapsed(event, startedAt, events[0].timestamp)}</span>
       <strong>{event.type}</strong>
       <small>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</small>
@@ -37,7 +38,7 @@ const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, 
   </div>;
 });
 
-export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; startedAt: string | null }) {
+export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
   const replayEvents = useMemo(() => events.filter((event) => event.screen || event.type === "tap")
     .sort((a, b) => recordedEventTime(a) - recordedEventTime(b) || a.id - b.id), [events]);
   const eventTimes = useMemo(() => replayEventTimes(replayEvents), [replayEvents]);
@@ -168,13 +169,17 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
     <div>
       <div className={styles.replayViewport} ref={viewportRef}>
         <iframe ref={iframeRef} src={replayUrl(replayEvents[0].screen ?? "/")} title={`Replay экрана ${screen}`} onLoad={postReplayState} />
-        {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
+        {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused} ${activeTap.metadata.scenarioVerdict === "correct" || activeTap.metadata.scenarioVerdict === "recovery" ? styles.replayPointCorrect : ""}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
         {replayToastEvent && replayToastEvent.id !== dismissedToastId && <GlassToast key={replayToastEvent.id} placement="bottom" tone="orange" trackId="moderator.replay.demo_toast.dismiss" className={styles.replayToast} onDone={() => setDismissedToastId(replayToastEvent.id)}>Недоступно в&nbsp;демо-демонстрации</GlassToast>}
       </div>
       <div className={styles.replayControls}>
         <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (playheadMs >= durationMs) setPlayheadMs(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>
         <select className={styles.select} value={speed} aria-label="Скорость replay" onChange={(event) => setSpeed(Number(event.target.value))}><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select>
       </div>
+      {taskRuns.length > 0 && <select className={styles.select} defaultValue="" aria-label="Перейти к сценарию в записи" onChange={(event) => {
+        const index = replayEvents.findIndex((item) => item.taskRunId === event.target.value);
+        if (index >= 0) selectEvent(eventTimes[index]);
+      }}><option value="" disabled>Перейти к сценарию</option>{taskRuns.map((run) => <option key={run.id} value={run.id}>{getTask(run.taskCode)?.title ?? run.taskCode}</option>)}</select>}
       <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по\u00a0времени" />
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
     </div>

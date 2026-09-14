@@ -217,7 +217,7 @@ function CardContent() {
             </div>
           );
         })}
-        {copied && <GlassToast key={copyToastId} placement="top" trackId="card.copy.toast.dismiss" className={styles.copiedToast} onDone={() => setCopied((current) => current === copied ? null : current)}><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</GlassToast>}
+        {copied && <GlassToast key={copyToastId} placement="top" trackId="card.copy.toast.dismiss" className={styles.copiedToast} onDone={() => { void track("action", { screen: "/card", action: "card.copy.toast.closed" }); setCopied((current) => current === copied ? null : current); }}><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</GlassToast>}
       </section>
 
       <section className={styles.cardSettings}>

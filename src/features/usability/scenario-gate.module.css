@@ -1,0 +1,5 @@
+.actions { display: grid; gap: 10px; }
+.actions button { min-height: 48px; border-radius: 16px; font-weight: 700; cursor: pointer; }
+.actions button:disabled { opacity: .45; cursor: not-allowed; }
+.start { border: 0; color: var(--text-on-color); background: var(--action-primary); }
+.skip { border: 0; color: var(--text-secondary); background: transparent; }

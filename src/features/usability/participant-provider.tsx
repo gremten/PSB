@@ -61,19 +61,12 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("replay")) return;
     let pending = false;
-    let disposed = false;
     const heartbeat = async () => {
       const id = window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY);
       if (!id || document.hidden || pending) return;
       pending = true;
       try {
-        const response = await fetch(`/api/testing/sessions/${encodeURIComponent(id)}/heartbeat`, { method: "POST", keepalive: true });
-        if (response.ok) {
-          const { active } = await response.json() as { active: boolean };
-          if (!disposed && !active && window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY) === id) {
-            window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-          }
-        }
+        await fetch(`/api/testing/sessions/${encodeURIComponent(id)}/heartbeat`, { method: "POST", keepalive: true });
       } catch { /* Retry on the next heartbeat; temporary connectivity must not block the demo. */ }
       finally { pending = false; }
     };
@@ -83,7 +76,6 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
     document.addEventListener("visibilitychange", heartbeat);
     window.addEventListener("pageshow", heartbeat);
     return () => {
-      disposed = true;
       window.clearInterval(interval);
       window.removeEventListener(PARTICIPANT_SESSION_CHANGED, heartbeat);
       document.removeEventListener("visibilitychange", heartbeat);
@@ -121,6 +113,7 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
           targetY: Math.round(rect.top),
           targetWidth: Math.round(rect.width),
           targetHeight: Math.round(rect.height),
+          ...(element.dataset.selectedCount !== undefined ? { selectedCount: Number(element.dataset.selectedCount) } : {}),
         },
       });
     };

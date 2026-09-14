@@ -67,7 +67,7 @@ Never merge a historical snapshot with the current live file as if they were one
 - API routes: `src/app/api/**`.
 - Scenario registry: `src/config/test-scenarios.ts`.
 
-These are protected during ordinary visual work. The moderator reads, exports, replays, ends, and deletes sessions. It does not create participant sessions. Participant sessions and product state must remain separate.
+These are protected during ordinary visual work. The moderator reads, exports, replays, ends, deletes, and assigns one of three interactive scenarios to a participant-created pending session. It does not create participant sessions. Participant sessions and product state must remain separate. See the scenario lifecycle in `docs/ARCHITECTURE.md` before touching gates, tracking, task runs, or replay.
 
 ## What may be changed without architecture permission
 
@@ -113,6 +113,7 @@ If the requested result truly requires one of these changes, stop and ask the us
 - Cashback current-month and next-month states remain separate. Next-month progression is `locked → available → draft → confirmed`; confirmation requires exactly three categories.
 - Replay mode (`?replay=1`) does not emit participant events or heartbeat writes.
 - Tracking is best-effort and must never block a participant action.
+- Entering a pseudonym creates an unrecorded pending session. Only `Старт` after moderator assignment starts a task run and recording. Card copy finishes when its upper toast disappears; first and next-month cashback finish on a valid sheet dismissal. The third flow is unavailable until first cashback connection; all three completions end the session. Preserve server-classified `scenarioVerdict` on taps, the red/green replay colors, and the recovery classification for returning from a wrong section. Scroll is not an error.
 - Never record payment values, card/clipboard data, passwords, contact data, or participant names in event metadata.
 
 If a layout edit changes an interactive element, verify that its existing handler, keyboard semantics, disabled state, and tracking ID are still attached.

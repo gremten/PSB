@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteSession, endSession, getAggregateMetrics, getSessionSnapshot } from "@/lib/db/queries";
+import { assignParticipantScenario, deleteSession, endSession, getAggregateMetrics, getSessionSnapshot } from "@/lib/db/queries";
 import { apiError, requireModeratorResponse } from "@/lib/moderator-api";
 
 export const runtime = "nodejs";
@@ -18,9 +18,12 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
-    if (body?.action !== "end") return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     const { id } = await context.params;
-    return NextResponse.json({ session: await endSession(id) });
+    if (body?.action === "end") return NextResponse.json({ session: await endSession(id) });
+    if (body?.action === "assign_scenario" && typeof body.scenarioCode === "string") {
+      return NextResponse.json({ status: await assignParticipantScenario(id, body.scenarioCode) });
+    }
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) { return apiError(error); }
 }
 

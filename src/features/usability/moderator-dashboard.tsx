@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
+import { interactiveScenarios } from "@/config/test-scenarios";
 import type { AggregateTaskMetrics } from "@/lib/testing/metrics";
 import { calculateSessionInteractionMetrics, isDemoMissclick } from "@/lib/testing/session-metrics";
 import type { ResearchSession, SessionSnapshot } from "@/lib/testing/types";
@@ -94,6 +95,21 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   }, [openSession, selectedId]);
 
   const observed = useMemo(() => snapshot ? calculateSessionInteractionMetrics(snapshot.session, snapshot.events, clock) : null, [clock, snapshot]);
+  const activeRun = snapshot?.taskRuns.find((run) => !run.endedAt);
+  const completedCodes = new Set(snapshot?.taskRuns.filter((run) => run.result === "unaided" || run.result === "aided").map((run) => run.taskCode) ?? []);
+
+  const assignScenario = async (code: string) => {
+    if (!snapshot) return;
+    setError("");
+    try {
+      const response = await fetch(`/api/moderator/sessions/${encodeURIComponent(snapshot.session.id)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign_scenario", scenarioCode: code }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Не удалось назначить сценарий");
+      await openSession(snapshot.session.id);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось назначить сценарий"); }
+  };
 
   return <main className={styles.page}><div className={styles.shell}>
     <header className={styles.topbar}><div><p className={styles.build}>private research prototype</p><h1 className={styles.brand}>PSB Moderator</h1></div><span className={styles.build}>build {process.env.NEXT_PUBLIC_BUILD_ID}</span></header>
@@ -101,7 +117,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
     <div className={styles.dashboardGrid}>
       <section className={styles.card}>
         <div className="row-between"><div><h2>Участники и&nbsp;записи</h2><p className={styles.build}>Сессия появляется после ввода псевдонима участником.</p></div><span className={styles.liveBadge}>LIVE</span></div>
-        {sessions.length ? <div className={styles.sessionTableWrap}><table className={styles.sessionTable}><thead><tr><th>Участник</th><th>Создана</th><th>Статус</th><th>Данные</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id} className={snapshot?.session.id === session.id ? styles.selectedRow : undefined}><td><button type="button" onClick={() => void openSession(session.id)}>{session.participantCode}</button></td><td>{shortDate(session.createdAt)}</td><td>{session.endedAt ? "завершена" : "идёт"}</td><td><Link className={styles.link} href={`/moderator/sessions/${session.id}`}>Метрики + replay</Link></td></tr>)}</tbody></table></div> : <div className={styles.empty}>Записей пока нет. Откройте участнику главную ссылку теста.</div>}
+        {sessions.length ? <div className={styles.sessionTableWrap}><table className={styles.sessionTable}><thead><tr><th>Участник</th><th>Создана</th><th>Статус</th><th>Данные</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id} className={snapshot?.session.id === session.id ? styles.selectedRow : undefined}><td><button type="button" onClick={() => void openSession(session.id)}>{session.participantCode}</button></td><td>{shortDate(session.createdAt)}</td><td>{session.endedAt ? "завершена" : session.assignedScenario ? "ждёт старта" : session.startedAt ? "идёт тест" : "ждёт сценарий"}</td><td><Link className={styles.link} href={`/moderator/sessions/${session.id}`}>Метрики + replay</Link></td></tr>)}</tbody></table></div> : <div className={styles.empty}>Записей пока нет. Откройте участнику главную ссылку теста.</div>}
       </section>
 
       {snapshot && observed ? <>
@@ -114,11 +130,21 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
               setSnapshot(null);
             } else void openSession(snapshot.session.id);
           }} />
+          <div className={styles.scenarioPicker} aria-label="Сценарии тестирования">
+            {interactiveScenarios.map((scenario) => {
+              const done = completedCodes.has(scenario.code);
+              const blocked = scenario.code === "CASHBACK_NEXT" && !completedCodes.has("CASHBACK_CONNECT");
+              return <button key={scenario.code} type="button" className={`${styles.scenarioButton} ${done ? styles.scenarioDone : ""} ${snapshot.session.assignedScenario === scenario.code ? styles.scenarioAssigned : ""}`} data-track={`moderator.scenario.${scenario.code.toLowerCase()}.assign`} disabled={Boolean(snapshot.session.endedAt || activeRun || done || blocked)} onClick={() => void assignScenario(scenario.code)}>
+                <span>{scenario.title}</span><strong>{done ? "✓" : activeRun?.taskCode === scenario.code ? "Идёт" : snapshot.session.assignedScenario === scenario.code ? "Назначен" : blocked ? "После подключения" : "Назначить"}</strong>
+              </button>;
+            })}
+          </div>
           <div className={styles.metricGrid}>
             <div className={styles.stat}><span>Время</span><strong>{duration(observed.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{observed.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{observed.meaningfulSteps}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{observed.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{observed.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{observed.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{observed.productStateChanges}</strong></div><div className={styles.stat}><span>Мисклики</span><strong>{observed.missclickCount}</strong></div><div className={styles.stat}><span>Текущий экран</span><strong>{observed.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{observed.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{observed.lastAction ?? "—"}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{observed.eventCount}</strong></div>
           </div>
+          <div className={styles.metricGrid}><div className={styles.stat}><span>Верные клики</span><strong>{observed.correctTapCount}</strong></div><div className={styles.stat}><span>Ошибки в сценариях</span><strong>{observed.scenarioErrorCount}</strong></div><div className={styles.stat}><span>Возвраты</span><strong>{observed.recoveryCount}</strong></div></div>
         </section>
-        <section className={styles.card}><div className="row-between"><div><h2>Live timeline</h2><p className={styles.build}>Клики и&nbsp;действия появляются здесь в&nbsp;реальном времени.</p></div><span className={styles.build}>{snapshot.events.length} events</span></div><div className={styles.eventLog}>{snapshot.events.length ? [...snapshot.events].reverse().map((event) => <div className={styles.event} key={event.id}><span>{shortTime(event.timestamp)}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>) : <div className={styles.empty}>Ждём первое действие участника</div>}</div></section>
+        <section className={styles.card}><div className="row-between"><div><h2>Live timeline</h2><p className={styles.build}>Клики и&nbsp;действия появляются здесь в&nbsp;реальном времени.</p></div><span className={styles.build}>{snapshot.events.length} events</span></div><div className={styles.eventLog}>{snapshot.events.length ? [...snapshot.events].reverse().map((event) => <div className={`${styles.event} ${event.metadata.scenarioVerdict === "error" ? styles.liveError : event.metadata.scenarioVerdict === "correct" || event.metadata.scenarioVerdict === "recovery" ? styles.liveCorrect : ""}`} key={event.id}><span>{shortTime(event.timestamp)}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>) : <div className={styles.empty}>Ждём первое действие участника</div>}</div></section>
         <section className={styles.card}><h2>Последовательность экранов и&nbsp;действий</h2>{observed.sequence.length ? <ol className={styles.sequence}>{observed.sequence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ol> : <div className={styles.empty}>Последовательность пока пуста</div>}</section>
       </> : <section className={styles.card}><div className={styles.empty}>Выберите запись участника, чтобы увидеть метрики и&nbsp;клики.</div></section>}
 

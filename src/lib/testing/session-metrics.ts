@@ -13,6 +13,9 @@ export interface SessionInteractionMetrics {
   productStateChanges: number;
   demoFeedbackCount: number;
   missclickCount: number;
+  scenarioErrorCount: number;
+  correctTapCount: number;
+  recoveryCount: number;
   firstMeaningfulAction: string | null;
   lastAction: string | null;
   lastScreen: string;
@@ -44,6 +47,21 @@ export function calculateSessionInteractionMetrics(session: ResearchSession, eve
   const startedAt = session.startedAt ? new Date(session.startedAt).getTime() : new Date(session.createdAt).getTime();
   const lastObservedAt = session.endedAt ? new Date(session.endedAt).getTime() : last ? Math.max(new Date(last.timestamp).getTime(), nowMs) : nowMs;
   const missclickCount = countDemoMissclicks(events);
+  const scenarioErrorCount = events.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error").length;
+  const correctTapCount = events.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "correct").length;
+  const recoveryCount = events.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "recovery").length;
+  const erroneousTaps = events.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error");
+  const duplicateDemoCount = events.filter((event) => event.type === "action" && event.action === "demo.unavailable" && erroneousTaps.some((tap) => {
+    const actionTime = Number(event.metadata.clientTimeMs) || new Date(event.timestamp).getTime();
+    const tapTime = Number(tap.metadata.clientTimeMs) || new Date(tap.timestamp).getTime();
+    return tap.screen === event.screen && tap.target === event.target && Math.abs(tapTime - actionTime) < 500;
+  })).length;
+  const duplicateLegacyCount = erroneousTaps.filter((tap) => isDemoMissclick(tap) && !events.some((event) => {
+    if (event.type !== "action" || event.action !== "demo.unavailable") return false;
+    const actionTime = Number(event.metadata.clientTimeMs) || new Date(event.timestamp).getTime();
+    const tapTime = Number(tap.metadata.clientTimeMs) || new Date(tap.timestamp).getTime();
+    return tap.screen === event.screen && tap.target === event.target && Math.abs(tapTime - actionTime) < 500;
+  })).length;
   return {
     durationMs: Math.max(0, lastObservedAt - startedAt),
     eventCount: events.length,
@@ -54,7 +72,10 @@ export function calculateSessionInteractionMetrics(session: ResearchSession, eve
     navigationCount: events.filter((event) => event.type === "navigation").length,
     productStateChanges: events.filter((event) => event.type === "product_state_change").length,
     demoFeedbackCount: missclickCount,
-    missclickCount,
+    missclickCount: missclickCount + scenarioErrorCount - duplicateDemoCount - duplicateLegacyCount,
+    scenarioErrorCount,
+    correctTapCount,
+    recoveryCount,
     firstMeaningfulAction: meaningful[0]?.action ?? meaningful[0]?.target ?? null,
     lastAction: last?.action ?? last?.target ?? last?.type ?? null,
     lastScreen: [...screens].at(-1) ?? "/",

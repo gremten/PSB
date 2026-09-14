@@ -18,6 +18,9 @@ export function getRuntimeDatabase(): DatabaseAdapter {
     if (!columns.some((column) => column.name === "last_seen_at")) {
       database.exec("ALTER TABLE sessions ADD COLUMN last_seen_at TEXT; ALTER TABLE sessions ADD COLUMN end_reason TEXT; UPDATE sessions SET last_seen_at = COALESCE((SELECT MAX(timestamp) FROM events WHERE session_id = sessions.id), started_at, created_at)");
     }
+    if (!columns.some((column) => column.name === "assigned_scenario")) {
+      database.exec("ALTER TABLE sessions ADD COLUMN assigned_scenario TEXT; CREATE UNIQUE INDEX IF NOT EXISTS idx_task_runs_active_interactive_session ON task_runs(session_id) WHERE ended_at IS NULL AND task_code IN ('CARD_COPY', 'CASHBACK_CONNECT', 'CASHBACK_NEXT')");
+    }
     globalThis.__psbDatabase = database;
   }
 
@@ -30,7 +33,7 @@ export function getRuntimeDatabase(): DatabaseAdapter {
     },
     async run(sql: string, params: unknown[] = []) {
       const result = database.prepare(sql).run(...params);
-      return { lastRowId: Number(result.lastInsertRowid) };
+      return { lastRowId: Number(result.lastInsertRowid), changes: result.changes };
     },
     async batch(queries: Query[]): Promise<void> {
       database.transaction(() => {

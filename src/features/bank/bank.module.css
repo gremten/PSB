@@ -739,7 +739,7 @@
 .cardScreen .flipCarousel :is(button, [role="button"]):active,
 .cardScreen .settingsRow:active { scale: 1; }
 .cardScreen .copiedToast {
-  top: -27px;
+  top: -23px;
 }
 .cardScreen .copiedToast img { width: 16px; height: 16px; }
 .cardScreen .cardSettings { display: flex; flex: 1 0 auto; flex-direction: column; margin-top: 52px; }

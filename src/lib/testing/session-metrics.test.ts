@@ -24,4 +24,16 @@ describe("moderator missclick metric", () => {
     const events = [event(1, "tap", "tab.chat.unavailable", "tab.chat.unavailable", time), event(2, "action", "demo.unavailable", "tab.chat.unavailable", time + 10), event(3, "tap", "tab.payment.unavailable", "tab.payment.unavailable", time + 1000)];
     expect(calculateSessionInteractionMetrics(session, events, time + 1100).missclickCount).toBe(2);
   });
+
+  it("counts a scenario error and its demo toast as one missclick", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const wrong = event(1, "tap", "account.topup.open", "account.topup.open", time);
+    wrong.metadata.scenarioVerdict = "error";
+    const recovery = event(3, "tap", "navigation.back", "navigation.back", time + 500);
+    recovery.metadata.scenarioVerdict = "recovery";
+    const metrics = calculateSessionInteractionMetrics(session, [wrong, event(2, "action", "demo.unavailable", "account.topup.open", time + 10), recovery], time + 700);
+    expect(metrics.missclickCount).toBe(1);
+    expect(metrics.scenarioErrorCount).toBe(1);
+    expect(metrics.recoveryCount).toBe(1);
+  });
 });

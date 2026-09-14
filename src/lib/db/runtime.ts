@@ -3,7 +3,7 @@ import type { DatabaseAdapter, Query } from "./types";
 
 interface D1Result<T> {
   results?: T[];
-  meta?: { last_row_id?: number };
+  meta?: { last_row_id?: number; changes?: number };
 }
 
 interface D1PreparedStatement {
@@ -32,7 +32,7 @@ export function getRuntimeDatabase(): DatabaseAdapter {
     },
     async run(sql: string, params: unknown[] = []) {
       const result = await statement(sql, params).run();
-      return { lastRowId: result.meta?.last_row_id };
+      return { lastRowId: result.meta?.last_row_id, changes: result.meta?.changes };
     },
     async batch(queries: Query[]): Promise<void> {
       await database.batch(queries.map(({ sql, params }) => statement(sql, params)));

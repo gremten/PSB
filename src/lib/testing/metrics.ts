@@ -8,6 +8,9 @@ export interface TaskMetrics {
   result: TaskRun["result"];
   completionTimeMs: number | null;
   meaningfulSteps: number;
+  correctTaps: number;
+  wrongTaps: number;
+  recoveryTaps: number;
   goldenPathSteps: number | null;
   deviationFromGoldenPath: number | null;
   easeScore: number | null;
@@ -18,10 +21,11 @@ export interface TaskMetrics {
 export function calculateTaskMetrics(
   run: TaskRun,
   events: TrackedEvent[],
-  task: UsabilityTask | null,
+  task: UsabilityTask | { goldenStepCount: number | null; metricMode?: string } | null,
 ): TaskMetrics {
   const relevant = events.filter((event) => event.taskRunId === run.id);
   const meaningful = relevant.filter((event) => meaningfulTypes.has(event.type));
+  const steps = task && "metricMode" in task && task.metricMode === "taps" ? relevant.filter((event) => event.type === "tap") : meaningful;
   const golden = task?.goldenStepCount ?? null;
   return {
     taskCode: run.taskCode,
@@ -30,9 +34,12 @@ export function calculateTaskMetrics(
       run.endedAt === null
         ? null
         : Math.max(0, new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()),
-    meaningfulSteps: meaningful.length,
+    meaningfulSteps: steps.length,
+    correctTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "correct").length,
+    wrongTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error").length,
+    recoveryTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "recovery").length,
     goldenPathSteps: golden,
-    deviationFromGoldenPath: golden === null ? null : meaningful.length - golden,
+    deviationFromGoldenPath: golden === null ? null : steps.length - golden,
     easeScore: run.easeScore,
     firstMeaningfulAction: meaningful[0]?.action ?? meaningful[0]?.target ?? null,
     sequence: relevant
