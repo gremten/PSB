@@ -61,21 +61,24 @@ function ConnectedCashback() {
     track("action", { screen: "/cashback", action: `cashback.period.${next}` });
   };
   return (
-    <main className={`${styles.screen} ${styles.cashbackScreen}`}>
+    <main className={`${styles.screen} ${styles.cashbackScreen} ${styles.cashbackConnectedScreen}`}>
       <ProfileHeader />
-      <div className={styles.screenStack}>
+      <div className={`${styles.screenStack} ${styles.cashbackConnectedStack}`}>
         <section className={styles.cashbackConnectedHero}>
           <p className={styles.points}>1 245 баллов</p>
           <p className={styles.pointsSub}>Кэшбек приходит с 5 до 20 числа</p>
           <div className={styles.nextCategories}>
-            <span className={styles.nextCategoriesTitle}>Категории на май</span>
-            <span className={styles.nextCategoriesText}>
-              {productState.nextMonthCashbackSelectionStatus === "confirmed"
-                ? productState.nextMonthCashbackCategories.join(", ")
-                : productState.nextMonthCashbackSelectionStatus === "draft"
-                  ? `Выбрано ${productState.nextMonthCashbackCategories.length} из 3 — подтвердите выбор`
-                  : "Вы уже можете выбрать категории на следующий месяц"}
-            </span>
+            <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
+            <div className={styles.nextCategoriesCopy}>
+              <span className={styles.nextCategoriesTitle}>Категории на май</span>
+              <span className={styles.nextCategoriesText}>
+                {productState.nextMonthCashbackSelectionStatus === "confirmed"
+                  ? productState.nextMonthCashbackCategories.join(", ")
+                  : productState.nextMonthCashbackSelectionStatus === "draft"
+                    ? `Выбрано ${productState.nextMonthCashbackCategories.length} из 3 — подтвердите выбор`
+                    : "Вы уже можете выбрать категории на следующий месяц"}
+              </span>
+            </div>
             <Link className={styles.chooseButton} href="/cashback/categories" data-track="cashback.next_month.categories.open">
               {productState.nextMonthCashbackSelectionStatus === "confirmed" ? "Изменить" : "Выбрать"}
             </Link>
@@ -98,7 +101,7 @@ function ConnectedCashback() {
             </>
           ) : <p className={styles.yearTotal}>18 760 баллов</p>}
         </section>
-        <div className={styles.buttonInset}>
+        <div className={`${styles.buttonInset} ${styles.cashbackConnectedActions}`}>
           <button className={`${styles.primaryButton} ${styles.fullButton}`} data-track="cashback.exchange.open">Обменять на рубли</button>
           <button className={`${styles.textButton} ${styles.fullButton}`} data-track="cashback.terms.open">Подробнее об условиях</button>
         </div>
