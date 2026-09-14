@@ -12,12 +12,12 @@ const yearlyPoints = [
   { month: "Ноя", fullMonth: "ноябрь", points: 4678 },
   { month: "Дек", fullMonth: "декабрь", points: 5123 },
   { month: "Янв", fullMonth: "январь", points: 0 },
-  { month: "Фев", fullMonth: "февраль", points: 4156 },
-  { month: "Мар", fullMonth: "март", points: 4588 },
-  { month: "Апр", fullMonth: "апрель", points: 4859 },
+  { month: "Фев", fullMonth: "февраль", points: 4290 },
+  { month: "Мар", fullMonth: "март", points: 4710 },
+  { month: "Апр", fullMonth: "апрель", points: 3680 },
 ] as const;
 const maxYearlyPoints = Math.max(...yearlyPoints.map(({ points }) => points));
-const currentMonthPoints = yearlyPoints[yearlyPoints.length - 1].points;
+const currentMonthPoints = 4859;
 const formatPoints = new Intl.NumberFormat("ru-RU");
 
 function DisconnectedCashback() {
@@ -117,7 +117,7 @@ function ConnectedCashback() {
                 {yearlyPoints.map(({ month, points }, index) => (
                   <div className={styles.yearChartColumn} key={month}>
                     <span className={styles.yearChartValue}>{formatPoints.format(points)}</span>
-                    <span className={`${styles.yearChartBar} ${index === yearlyPoints.length - 1 ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${Math.max(3, Math.round(points / maxYearlyPoints * 124))}px` } as CSSProperties} />
+                    <span className={`${styles.yearChartBar} ${index === yearlyPoints.length - 1 ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${Math.max(3, Math.round(points / maxYearlyPoints * 135))}px` } as CSSProperties} />
                     <span className={styles.yearChartMonth}>{month}</span>
                   </div>
                 ))}
