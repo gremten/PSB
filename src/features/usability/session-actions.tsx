@@ -10,7 +10,7 @@ export function SessionActions({ session, onChanged }: { session: ResearchSessio
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const mutate = async (action: "end" | "delete") => {
-    if (action === "delete" && !window.confirm(`Удалить запись «${session.participantCode}» и все её события и метрики? Это действие нельзя отменить.`)) return;
+    if (action === "delete" && !window.confirm(`Удалить запись «${session.participantCode}» и\u00a0все её события и\u00a0метрики? Это действие нельзя отменить.`)) return;
     setBusy(true);
     setError("");
     try {
@@ -29,7 +29,7 @@ export function SessionActions({ session, onChanged }: { session: ResearchSessio
   return <div className={styles.sessionActions}>
     <p className={styles.build}>{session.endedAt
       ? `Завершена: ${session.endReason === "client_timeout" ? "клиент отключился" : "модератором"}`
-      : "Запись идёт · автозавершение через 90 секунд без связи с клиентом"}</p>
+      : "Запись идёт · автозавершение через 90 секунд без\u00a0связи с\u00a0клиентом"}</p>
     <div className={styles.buttonRow}>
       {!session.endedAt && <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={busy} onClick={() => void mutate("end")}>Завершить сессию</button>}
       <button type="button" className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => void mutate("delete")}>Удалить запись</button>

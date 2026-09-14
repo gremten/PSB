@@ -8,13 +8,13 @@ import { useParticipant } from "@/features/usability/participant-provider";
 import { track } from "@/lib/testing/tracking";
 
 const categories = [
-  { id: "all", title: "1.5% На все покупки", stateLabel: "На все покупки", description: "Любые покупки с дебетовой карты", image: "/figma/categories/asset-06.webp" },
-  { id: "flights", title: "2% Авиабилеты", stateLabel: "Авиабилеты", description: "Только на авиасейлс", image: "/figma/categories/asset-04.webp" },
-  { id: "scooters", title: "2% Самокаты", stateLabel: "Самокаты", description: "Яндекс, Whoosh и Юрент", image: "/figma/categories/asset-05.webp" },
-  { id: "taxi", title: "3% На такси", stateLabel: "Такси", description: "Яндекс GO и Ситимобил", image: "/figma/categories/asset-01.webp" },
+  { id: "all", title: "1.5% На\u00a0все покупки", stateLabel: "На все покупки", description: "Любые покупки с\u00a0дебетовой карты", image: "/figma/categories/asset-06.webp" },
+  { id: "flights", title: "2% Авиабилеты", stateLabel: "Авиабилеты", description: "Только на\u00a0авиасейлс", image: "/figma/categories/asset-04.webp" },
+  { id: "scooters", title: "2% Самокаты", stateLabel: "Самокаты", description: "Яндекс, Whoosh и\u00a0Юрент", image: "/figma/categories/asset-05.webp" },
+  { id: "taxi", title: "3% На\u00a0такси", stateLabel: "Такси", description: "Яндекс GO и\u00a0Ситимобил", image: "/figma/categories/asset-01.webp" },
   { id: "delivery", title: "7% Деливери", stateLabel: "Деливери", description: "Все виды доставок", image: "/figma/categories/asset-03.webp" },
-  { id: "fuel", title: "3% На бензин", stateLabel: "Бензин", description: "Лукойл, ТНК, Газпром", image: "/figma/categories/asset-12.webp" },
-  { id: "family", title: "2% На укрепление семьи", stateLabel: "Укрепление семьи", description: "Розовый кролик", image: "/figma/categories/asset-08.webp" },
+  { id: "fuel", title: "3% На\u00a0бензин", stateLabel: "Бензин", description: "Лукойл, ТНК, Газпром", image: "/figma/categories/asset-12.webp" },
+  { id: "family", title: "2% На\u00a0укрепление семьи", stateLabel: "Укрепление семьи", description: "Розовый кролик", image: "/figma/categories/asset-08.webp" },
 ] as const;
 
 export default function CashbackCategoriesPage() {
@@ -110,7 +110,7 @@ export default function CashbackCategoriesPage() {
         <Image src="/figma/categories/hero-card.png" alt="" width={283} height={282} priority />
       </div>
       <section className={styles.categorySheet}>
-        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на апрель?</h1>
+        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на&nbsp;апрель?</h1>
         <div className={styles.categoryList}>
           {categories.map((category) => {
             const active = selected.includes(category.id);
@@ -128,7 +128,7 @@ export default function CashbackCategoriesPage() {
     </main>
     <div className={styles.categoryActionBar}>
       <button key={shake} className={`${styles.primaryButton} ${styles.fullButton} ${styles.categoryCta} ${shake ? styles.shake : ""}`} onClick={confirm} data-track="cashback.categories.confirm">
-        {selected.length === 3 ? "Подключить" : `Выбрано ${selected.length} из 3`}
+        {selected.length === 3 ? "Подключить" : `Выбрано ${selected.length} из\u00a03`}
       </button>
     </div>
     </>

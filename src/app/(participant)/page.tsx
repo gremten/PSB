@@ -31,8 +31,8 @@ const currencyRates = {
 } as const;
 
 const promos = [
-  { id: "cards", title: "Новые возможности", text: <>Попробуйте новые карты<br />с хорошими условиями</>, backdrop: "/figma/home/banner-new-bg.svg", artwork: "/figma/home/banner-new.webp", artworkClass: styles.promoArtworkCards, artworkSize: 256 },
-  { id: "strong", title: "Время сильных", text: <>Получайте больше выгоды,<br />инвестируя в заводы</>, backdrop: "/figma/home/banner-strong-bg.svg", artwork: "/figma/home/banner-strong.webp", artworkClass: styles.promoArtworkStrong, artworkSize: 208 },
+  { id: "cards", title: "Новые возможности", text: <>Попробуйте новые карты<br />с&nbsp;хорошими условиями</>, backdrop: "/figma/home/banner-new-bg.svg", artwork: "/figma/home/banner-new.webp", artworkClass: styles.promoArtworkCards, artworkSize: 256 },
+  { id: "strong", title: "Время сильных", text: <>Получайте больше выгоды,<br />инвестируя в&nbsp;заводы</>, backdrop: "/figma/home/banner-strong-bg.svg", artwork: "/figma/home/banner-strong.webp", artworkClass: styles.promoArtworkStrong, artworkSize: 208 },
 ] as const;
 
 function SectionBar({ title, action, track, collapsed, onToggle }: { title: string; action: string; track: string; collapsed: boolean; onToggle: () => void }) {
@@ -85,7 +85,7 @@ function CashbackSuccessSheet({ onDismiss }: { onDismiss: () => void }) {
         <div className={styles.grabberHit} aria-label="Потяните вниз, чтобы закрыть" data-track="cashback.success.drag" onPointerDown={(event) => { startY.current = event.clientY; setDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (startY.current !== null) setDragOffset(Math.max(0, event.clientY - startY.current)); }} onPointerUp={finishDrag} onPointerCancel={() => { startY.current = null; setDragging(false); setDragOffset(0); }}><span className={styles.grabber} /></div>
         <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
         <h2 id="cashback-success-title" className={styles.successTitle}>Кешбек подключен!</h2>
-        <p className={styles.successText}>Категории на апрель<br />активируются в течение 15 минут.</p>
+        <p className={styles.successText}>Категории на&nbsp;апрель<br />активируются в&nbsp;течение 15 минут.</p>
         <button className={`${styles.primaryButton} ${styles.fullButton} ${styles.successCloseButton}`} data-track="cashback.success.close" onClick={dismiss}>Хорошо!</button>
       </section>
     </div>, viewport,
@@ -136,7 +136,7 @@ export default function HomePage() {
         </div>
 
         <section className={styles.balanceArea} aria-label="Счета">
-          <p className={styles.balanceCaption}>Всего на счетах</p>
+          <p className={styles.balanceCaption}>Всего на&nbsp;счетах</p>
           <div className={styles.balanceRow}>
             <div className={styles.balanceGroup}>
               <p className={styles.balance}>{productState.accountsHidden ? <CensorBubbles variant="balance" /> : <>12 281 488,<span className={styles.kopecks}>65</span> ₽</>}</p>
@@ -150,7 +150,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          <HorizontalScroller className={styles.accountScroller} ariaLabel="Счета и продукты">
+          <HorizontalScroller className={styles.accountScroller} ariaLabel="Счета и\u00a0продукты">
             <Link className={styles.accountCard} href="/account" data-track="home.account.open">
               <span className={styles.accountBadge}>
                 <Image src="/figma/home/bankcard.svg" alt="" width={16} height={16} />
@@ -224,7 +224,7 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <button className={`${styles.secondaryButton} ${styles.fullButton} ${styles.exchangeButton}`} data-track="home.exchange.open" onClick={showDemoUnavailable}>Перейти к обмену</button>
+            <button className={`${styles.secondaryButton} ${styles.fullButton} ${styles.exchangeButton}`} data-track="home.exchange.open" onClick={showDemoUnavailable}>Перейти к&nbsp;обмену</button>
           </div></div></div>
         </section>
 

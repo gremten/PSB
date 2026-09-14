@@ -169,13 +169,13 @@ export function SessionReplay({ events, startedAt }: { events: TrackedEvent[]; s
       <div className={styles.replayViewport} ref={viewportRef}>
         <iframe ref={iframeRef} src={replayUrl(replayEvents[0].screen ?? "/")} title={`Replay экрана ${screen}`} onLoad={postReplayState} />
         {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
-        {replayToastEvent && replayToastEvent.id !== dismissedToastId && <GlassToast key={replayToastEvent.id} placement="bottom" tone="orange" trackId="moderator.replay.demo_toast.dismiss" className={styles.replayToast} onDone={() => setDismissedToastId(replayToastEvent.id)}>Недоступно в демо-демонстрации</GlassToast>}
+        {replayToastEvent && replayToastEvent.id !== dismissedToastId && <GlassToast key={replayToastEvent.id} placement="bottom" tone="orange" trackId="moderator.replay.demo_toast.dismiss" className={styles.replayToast} onDone={() => setDismissedToastId(replayToastEvent.id)}>Недоступно в&nbsp;демо-демонстрации</GlassToast>}
       </div>
       <div className={styles.replayControls}>
         <button className={styles.button} type="button" onClick={() => { if (activelyPlaying) setPlaying(false); else { if (playheadMs >= durationMs) setPlayheadMs(0); setPlaying(true); } }}>{activelyPlaying ? "Пауза" : "Воспроизвести"}</button>
         <select className={styles.select} value={speed} aria-label="Скорость replay" onChange={(event) => setSpeed(Number(event.target.value))}><option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option></select>
       </div>
-      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по времени" />
+      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по\u00a0времени" />
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
     </div>
     <ReplayTimeline events={replayEvents} times={eventTimes} startedAt={startedAt} activeIndex={safeIndex} select={selectEvent} />
