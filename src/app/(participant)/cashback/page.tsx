@@ -9,20 +9,18 @@ import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { track } from "@/lib/testing/tracking";
 
 const yearlyPoints = [
-  { month: "Ноя", fullMonth: "ноябрь", points: 4678 },
-  { month: "Дек", fullMonth: "декабрь", points: 5123 },
-  { month: "Янв", fullMonth: "январь", points: 0 },
-  { month: "Фев", fullMonth: "февраль", points: 4290 },
-  { month: "Мар", fullMonth: "март", points: 4710 },
-  { month: "Апр", fullMonth: "апрель", points: 3680 },
   { month: "Май", fullMonth: "май", points: 3240 },
   { month: "Июн", fullMonth: "июнь", points: 4725 },
   { month: "Июл", fullMonth: "июль", points: 1980 },
   { month: "Авг", fullMonth: "август", points: 4950 },
   { month: "Сен", fullMonth: "сентябрь", points: 2765 },
   { month: "Окт", fullMonth: "октябрь", points: 4380 },
-  { month: "Ноя", fullMonth: "ноябрь", points: 3510 },
-  { month: "Дек", fullMonth: "декабрь", points: 4860 },
+  { month: "Ноя", fullMonth: "ноябрь", points: 4678 },
+  { month: "Дек", fullMonth: "декабрь", points: 5123 },
+  { month: "Янв", fullMonth: "январь", points: 0 },
+  { month: "Фев", fullMonth: "февраль", points: 4290 },
+  { month: "Мар", fullMonth: "март", points: 4710 },
+  { month: "Апр", fullMonth: "апрель", points: 3680 },
 ] as const;
 const maxYearlyPoints = Math.max(...yearlyPoints.map(({ points }) => points));
 const currentMonthPoints = 4859;
@@ -96,7 +94,7 @@ function ConnectedCashback() {
     const scheduleScales = () => {
       if (!frame) frame = window.requestAnimationFrame(updateScales);
     };
-    viewport.scrollLeft = 30;
+    viewport.scrollLeft = viewport.scrollWidth - viewport.clientWidth;
     scheduleScales();
     viewport.addEventListener("scroll", scheduleScales, { passive: true });
     window.addEventListener("resize", scheduleScales);
