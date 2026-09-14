@@ -9,13 +9,16 @@ import { showDemoUnavailable } from "@/features/usability/demo-feedback";
 import { track } from "@/lib/testing/tracking";
 
 const yearlyPoints = [
-  { month: "Ноя", height: 123, label: "4 678" },
-  { month: "Дек", height: 113, label: "5 123" },
-  { month: "Янв", height: 3, label: "0" },
-  { month: "Фев", height: 113, label: "4 156" },
-  { month: "Мар", height: 124, label: "4 588" },
-  { month: "Апр", height: 99, label: "4 859" },
+  { month: "Ноя", fullMonth: "ноябрь", points: 4678 },
+  { month: "Дек", fullMonth: "декабрь", points: 5123 },
+  { month: "Янв", fullMonth: "январь", points: 0 },
+  { month: "Фев", fullMonth: "февраль", points: 4156 },
+  { month: "Мар", fullMonth: "март", points: 4588 },
+  { month: "Апр", fullMonth: "апрель", points: 4859 },
 ] as const;
+const maxYearlyPoints = Math.max(...yearlyPoints.map(({ points }) => points));
+const currentMonthPoints = yearlyPoints[yearlyPoints.length - 1].points;
+const formatPoints = new Intl.NumberFormat("ru-RU");
 
 function DisconnectedCashback() {
   return (
@@ -96,7 +99,7 @@ function ConnectedCashback() {
 
         <section className={styles.chartBlock}>
           <div className={styles.chartTop}>
-            <div><span className={styles.chartLabel}>В&nbsp;этом месяце</span><strong className={styles.chartValue}>4 859</strong></div>
+            <div><span className={styles.chartLabel}>В&nbsp;этом месяце</span><strong className={styles.chartValue}>{formatPoints.format(currentMonthPoints)}</strong></div>
             <div className={styles.miniSegments} aria-label="Период">
               <button className={`${styles.miniSegment} ${period === "month" ? styles.miniSegmentActive : ""}`} onClick={() => choosePeriod("month")} data-track="cashback.period.month">Месяц</button>
               <button className={`${styles.miniSegment} ${period === "year" ? styles.miniSegmentActive : ""}`} onClick={() => choosePeriod("year")} data-track="cashback.period.year">Весь год</button>
@@ -109,12 +112,12 @@ function ConnectedCashback() {
               <div className={styles.chartLegend}><span><i className={styles.legendDot} style={{ background: "#e76e39" }} />1,5% на&nbsp;все</span><span><i className={styles.legendDot} style={{ background: "#7bd7e5" }} />2% Авиабилеты</span><span><i className={styles.legendDot} style={{ background: "#8778b6" }} />3% Транспорт</span></div>
             </>
           ) : (
-            <div className={styles.yearChart} role="img" aria-label="Баллы по месяцам: ноябрь 4 678, декабрь 5 123, январь 0, февраль 4 156, март 4 588, апрель 4 859">
+            <div className={styles.yearChart} role="img" aria-label={`Баллы по месяцам: ${yearlyPoints.map(({ fullMonth, points }) => `${fullMonth} ${formatPoints.format(points)}`).join(", ")}`}>
               <div className={styles.yearChartColumns}>
-                {yearlyPoints.map(({ month, height, label }) => (
+                {yearlyPoints.map(({ month, points }, index) => (
                   <div className={styles.yearChartColumn} key={month}>
-                    <span className={styles.yearChartValue}>{label}</span>
-                    <span className={`${styles.yearChartBar} ${month === "Апр" ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${height}px` } as CSSProperties} />
+                    <span className={styles.yearChartValue}>{formatPoints.format(points)}</span>
+                    <span className={`${styles.yearChartBar} ${index === yearlyPoints.length - 1 ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${Math.max(3, Math.round(points / maxYearlyPoints * 124))}px` } as CSSProperties} />
                     <span className={styles.yearChartMonth}>{month}</span>
                   </div>
                 ))}
