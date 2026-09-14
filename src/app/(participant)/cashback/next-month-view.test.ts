@@ -4,10 +4,11 @@ import { getNextMonthPresentation, nextMonthConfirmationHref, shouldShowNextMont
 describe("next-month cashback presentation", () => {
   it("summarizes the confirmed categories in their saved order with existing artwork", () => {
     expect(getNextMonthPresentation(["Деливери", "Бензин", "Укрепление семьи"])).toEqual([
-      { label: "Деливери", image: "/figma/cashback/next-month-delivery.png", summary: "7% Деливери" },
-      { label: "Бензин", image: "/figma/cashback/next-month-fuel.png", summary: "3% на бензин" },
-      { label: "Укрепление семьи", image: "/figma/cashback/next-month-family.png", summary: "2% на укрепление семьи" },
+      { label: "Деливери", image: "/figma/cashback/next-month-delivery.png", summary: "7% Деливери", background: undefined },
+      { label: "Бензин", image: "/figma/cashback/next-month-fuel.png", summary: "3% на бензин", background: undefined },
+      { label: "Укрепление семьи", image: "/figma/cashback/next-month-family.png", summary: "2% на укрепление семьи", background: undefined },
     ]);
+    expect(getNextMonthPresentation(["Авиабилеты"])[0].background).toBe("#ffcfa3");
   });
 
   it("shows the confirmation sheet only for a confirmed next-month choice", () => {

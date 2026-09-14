@@ -182,7 +182,7 @@ function ConnectedCashback() {
                 <span className={styles.nextCategoriesTitle}>Категории на&nbsp;октябрь</span>
                 <span className={styles.nextCategoriesDetails}>
                   <span className={styles.nextCategoriesIcons} aria-hidden="true">
-                    {selectedNextMonth.map(({ label, image }) => image && <Image key={label} src={image} alt="" width={32} height={32} />)}
+                    {selectedNextMonth.map(({ label, image, background }) => image && <span className={styles.nextCategoriesIconTile} key={label} style={{ backgroundColor: background }}><Image src={image} alt="" width={32} height={32} /></span>)}
                   </span>
                   <span className={styles.nextCategoriesSummary}>{selectedNextMonth.map(({ summary }) => summary).join(", ")}</span>
                 </span>

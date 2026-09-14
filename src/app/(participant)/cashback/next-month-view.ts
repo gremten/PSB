@@ -1,8 +1,8 @@
-const categoryPresentation: Record<string, { image: string; summary: string }> = {
-  "На все покупки": { image: "/figma/categories/asset-06.webp", summary: "1,5% на все покупки" },
-  Авиабилеты: { image: "/figma/categories/asset-04.webp", summary: "2% авиабилеты" },
-  Самокаты: { image: "/figma/categories/asset-05.webp", summary: "2% самокаты" },
-  Такси: { image: "/figma/categories/asset-01.webp", summary: "3% на такси" },
+const categoryPresentation: Record<string, { image: string; summary: string; background?: string }> = {
+  "На все покупки": { image: "/figma/categories/asset-06.webp", summary: "1,5% на все покупки", background: "#973810" },
+  Авиабилеты: { image: "/figma/categories/asset-04.webp", summary: "2% авиабилеты", background: "#ffcfa3" },
+  Самокаты: { image: "/figma/categories/asset-05.webp", summary: "2% самокаты", background: "#471c60" },
+  Такси: { image: "/figma/categories/asset-01.webp", summary: "3% на такси", background: "#fececd" },
   Деливери: { image: "/figma/cashback/next-month-delivery.png", summary: "7% Деливери" },
   Бензин: { image: "/figma/cashback/next-month-fuel.png", summary: "3% на бензин" },
   "Укрепление семьи": { image: "/figma/cashback/next-month-family.png", summary: "2% на укрепление семьи" },
@@ -19,5 +19,6 @@ export function getNextMonthPresentation(labels: string[]) {
     label,
     image: categoryPresentation[label]?.image,
     summary: categoryPresentation[label]?.summary ?? label,
+    background: categoryPresentation[label]?.background,
   }));
 }
