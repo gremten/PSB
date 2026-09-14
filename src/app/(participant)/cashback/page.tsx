@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { FaqList, ProfileHeader, styles } from "@/features/bank/bank-ui";
 import { useParticipant } from "@/features/usability/participant-provider";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
@@ -15,6 +15,14 @@ const yearlyPoints = [
   { month: "Фев", fullMonth: "февраль", points: 4290 },
   { month: "Мар", fullMonth: "март", points: 4710 },
   { month: "Апр", fullMonth: "апрель", points: 3680 },
+  { month: "Май", fullMonth: "май", points: 3240 },
+  { month: "Июн", fullMonth: "июнь", points: 4725 },
+  { month: "Июл", fullMonth: "июль", points: 1980 },
+  { month: "Авг", fullMonth: "август", points: 4950 },
+  { month: "Сен", fullMonth: "сентябрь", points: 2765 },
+  { month: "Окт", fullMonth: "октябрь", points: 4380 },
+  { month: "Ноя", fullMonth: "ноябрь", points: 3510 },
+  { month: "Дек", fullMonth: "декабрь", points: 4860 },
 ] as const;
 const maxYearlyPoints = Math.max(...yearlyPoints.map(({ points }) => points));
 const currentMonthPoints = 4859;
@@ -68,6 +76,38 @@ function ConnectedCashback() {
   const { productState, replayVisualState } = useParticipant();
   const [livePeriod, setPeriod] = useState<"month" | "year">("month");
   const period = replayVisualState?.cashbackPeriod ?? livePeriod;
+  const yearChartRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (period !== "year") return;
+    const viewport = yearChartRef.current;
+    if (!viewport) return;
+    const columns = Array.from(viewport.querySelectorAll<HTMLElement>("[data-year-column]"));
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0;
+    const updateScales = () => {
+      frame = 0;
+      for (const column of columns) {
+        const left = column.offsetLeft - viewport.scrollLeft;
+        const visible = Math.max(0, Math.min(left + column.offsetWidth, viewport.clientWidth) - Math.max(left, 0));
+        const fraction = visible / column.offsetWidth;
+        column.style.setProperty("--year-column-scale", String(reducedMotion.matches ? 1 : 0.88 + fraction * 0.12));
+      }
+    };
+    const scheduleScales = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateScales);
+    };
+    viewport.scrollLeft = 30;
+    scheduleScales();
+    viewport.addEventListener("scroll", scheduleScales, { passive: true });
+    window.addEventListener("resize", scheduleScales);
+    reducedMotion.addEventListener("change", scheduleScales);
+    return () => {
+      viewport.removeEventListener("scroll", scheduleScales);
+      window.removeEventListener("resize", scheduleScales);
+      reducedMotion.removeEventListener("change", scheduleScales);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [period]);
   const choosePeriod = (next: "month" | "year") => {
     setPeriod(next);
     track("action", { screen: "/cashback", action: `cashback.period.${next}` });
@@ -112,12 +152,12 @@ function ConnectedCashback() {
               <div className={styles.chartLegend}><span><i className={styles.legendDot} style={{ background: "#e76e39" }} />1,5% на&nbsp;все</span><span><i className={styles.legendDot} style={{ background: "#7bd7e5" }} />2% Авиабилеты</span><span><i className={styles.legendDot} style={{ background: "#8778b6" }} />3% Транспорт</span></div>
             </>
           ) : (
-            <div className={styles.yearChart} role="img" aria-label={`Баллы по месяцам: ${yearlyPoints.map(({ fullMonth, points }) => `${fullMonth} ${formatPoints.format(points)}`).join(", ")}`}>
+            <div ref={yearChartRef} className={styles.yearChart} role="region" tabIndex={0} data-track="cashback.year_chart.scroll" aria-label={`Баллы по месяцам. Прокручиваемый график: ${yearlyPoints.map(({ fullMonth, points }) => `${fullMonth} ${formatPoints.format(points)}`).join(", ")}`}>
               <div className={styles.yearChartColumns}>
                 {yearlyPoints.map(({ month, points }, index) => (
-                  <div className={styles.yearChartColumn} key={month}>
+                  <div className={styles.yearChartColumn} key={`${month}-${index}`} data-year-column>
                     <span className={styles.yearChartValue}>{formatPoints.format(points)}</span>
-                    <span className={`${styles.yearChartBar} ${index === yearlyPoints.length - 1 ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${Math.max(3, Math.round(points / maxYearlyPoints * 135))}px` } as CSSProperties} />
+                    <span className={`${styles.yearChartBar} ${month === "Апр" ? styles.yearChartBarCurrent : ""}`} style={{ "--bar-height": `${Math.max(3, Math.round(points / maxYearlyPoints * 135))}px` } as CSSProperties} />
                     <span className={styles.yearChartMonth}>{month}</span>
                   </div>
                 ))}

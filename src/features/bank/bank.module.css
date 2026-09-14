@@ -880,15 +880,17 @@
 .cashbackConnectedScreen .chartNumbers { display: grid; grid-template-columns: 73fr 167fr 118fr; column-gap: 2px; margin-top: 4px; font-size: 12px; line-height: 16px; }
 .cashbackConnectedScreen .chartLegend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
 .cashbackConnectedScreen .legendDot { display: inline-block; width: 12px; height: 12px; margin-right: 4px; border-radius: 50%; vertical-align: -1px; }
-.yearChart { height: 208px; margin: 32px -20px 0; overflow: hidden; }
-.yearChartColumns { position: relative; left: calc(100% - 432px); display: flex; align-items: flex-end; gap: 20px; width: 412px; height: 208px; }
-.yearChartColumn { display: flex; flex: 0 0 52px; flex-direction: column; align-items: center; justify-content: flex-end; height: 208px; }
+.yearChart { height: 208px; margin: 32px -20px 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.yearChart::-webkit-scrollbar { display: none; }
+.yearChart:focus-visible { outline: 2px solid var(--text-secondary); outline-offset: -2px; }
+.yearChartColumns { position: relative; display: flex; align-items: flex-end; gap: 20px; width: max-content; height: 208px; padding-right: 20px; }
+.yearChartColumn { display: flex; flex: 0 0 52px; flex-direction: column; align-items: center; justify-content: flex-end; height: 208px; transform: scale(var(--year-column-scale, 1)); transform-origin: center bottom; }
 .yearChartValue { margin-bottom: 8px; color: var(--text-secondary); font-size: 12px; line-height: 16px; white-space: nowrap; }
 .yearChartBar { display: block; width: 36px; height: var(--bar-height); min-height: 3px; border-radius: 6px; background: #242a33; animation: yearBarGrow 300ms ease-in both; }
 .yearChartBarCurrent { background: linear-gradient(180deg, #e86630 0%, rgb(130 57 27 / 28%) 100%); }
 .yearChartMonth { margin-top: 8px; color: var(--text-secondary); font-size: 12px; line-height: 16px; }
 @keyframes yearBarGrow { from { height: 3px; } to { height: var(--bar-height); } }
-@media (prefers-reduced-motion: reduce) { .yearChartBar { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .yearChartBar { animation: none; } .yearChartColumn { transform: none; } }
 .cashbackConnectedActions { display: grid; gap: 8px; }
 .cashbackConnectedActions .textButton { min-height: 52px; }
 .cashbackConnectedScreen .faqRow { min-height: 52px; border-bottom: 0; padding: 0; }
