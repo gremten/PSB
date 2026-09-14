@@ -112,7 +112,7 @@ function NextMonthSuccessSheet({ onDismiss }: { onDismiss: () => void }) {
       <section className={`${styles.successSheet} ${dragging ? styles.successSheetDragging : ""} ${closing ? styles.successSheetClosing : ""}`} role="dialog" aria-modal="true" aria-labelledby="next-month-success-title" style={{ "--success-drag": `${dragOffset}px` } as CSSProperties}>
         <div className={styles.grabberHit} aria-label="Потяните вниз, чтобы закрыть" data-track="cashback.next_month.success.drag" onPointerDown={(event) => { startY.current = event.clientY; setDragging(true); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (startY.current !== null) setDragOffset(Math.max(0, event.clientY - startY.current)); }} onPointerUp={finishDrag} onPointerCancel={() => { startY.current = null; setDragging(false); setDragOffset(0); }}><span className={styles.grabber} /></div>
         <Image className={styles.successImage} src="/figma/success/asset-14.webp" alt="" width={164} height={164} priority />
-        <h2 id="next-month-success-title" className={styles.successTitle}>Категории на&nbsp;май выбраны!</h2>
+        <h2 id="next-month-success-title" className={styles.successTitle}>Категории на&nbsp;октябрь выбраны!</h2>
         <p className={styles.successText}>В&nbsp;следующем месяце они будут учитываться при оплате покупок.</p>
         <button className={`${styles.primaryButton} ${styles.fullButton} ${styles.successCloseButton}`} data-track="cashback.next_month.success.close" onClick={dismiss}>Хорошо!</button>
       </section>
@@ -176,10 +176,10 @@ function ConnectedCashback() {
           <p className={styles.points}>1 245 баллов</p>
           <p className={styles.pointsSub}>Кэшбек приходит с&nbsp;5 до&nbsp;20 числа</p>
           {nextMonthConfirmed ? (
-            <Link className={`${styles.nextCategories} ${styles.nextCategoriesConfirmed}`} href="/cashback/categories" data-track="cashback.next_month.categories.open" aria-label="Изменить категории на следующий месяц">
+            <Link className={`${styles.nextCategories} ${styles.nextCategoriesConfirmed}`} href="/cashback/categories" data-track="cashback.next_month.categories.open" aria-label="Изменить категории на октябрь">
               <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
               <span className={styles.nextCategoriesConfirmedContent}>
-                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;следующий месяц</span>
+                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;октябрь</span>
                 <span className={styles.nextCategoriesDetails}>
                   <span className={styles.nextCategoriesIcons} aria-hidden="true">
                     {selectedNextMonth.map(({ label, image }) => image && <Image key={label} src={image} alt="" width={32} height={32} />)}
@@ -192,7 +192,7 @@ function ConnectedCashback() {
             <div className={styles.nextCategories}>
               <Image className={styles.nextCategoriesBackdrop} src="/figma/home/banner-new-bg.svg" alt="" width={655} height={510} />
               <div className={styles.nextCategoriesCopy}>
-                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;следующий месяц</span>
+                <span className={styles.nextCategoriesTitle}>Категории на&nbsp;октябрь</span>
                 <span className={styles.nextCategoriesText}>
                   {productState.nextMonthCashbackSelectionStatus === "draft"
                     ? `Выбрано ${productState.nextMonthCashbackCategories.length} из\u00a03 — подтвердите выбор`

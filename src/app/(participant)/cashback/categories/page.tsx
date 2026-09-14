@@ -111,7 +111,7 @@ export default function CashbackCategoriesPage() {
         <Image src="/figma/categories/hero-card.png" alt="" width={283} height={282} priority />
       </div>
       <section className={styles.categorySheet}>
-        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на&nbsp;{selectingNextMonth ? "май" : "апрель"}?</h1>
+        <h1 className={styles.categoryTitle}>Какие категории<br />подключить на&nbsp;{selectingNextMonth ? "октябрь" : "апрель"}?</h1>
         <div className={styles.categoryList}>
           {categories.map((category) => {
             const active = selected.includes(category.id);
