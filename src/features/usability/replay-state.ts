@@ -13,8 +13,8 @@ const categoryLabels: Record<string, string> = {
 
 export interface ReplayVisualState {
   productState: ParticipantProductState;
-  cardIndex: 0 | 1;
-  flippedCards: [boolean, boolean];
+  cardIndex: 0 | 1 | 2;
+  flippedCards: [boolean, boolean, boolean];
   currencyMode: "buy" | "sell";
   cashbackPeriod: "month" | "year";
   selectedCategoryIds: string[];
@@ -40,8 +40,8 @@ export function replayEventTimes(events: TrackedEvent[]) {
 
 export function deriveReplayState(events: TrackedEvent[], throughIndex: number): ReplayVisualState {
   const productState = getInitialParticipantState("disconnected");
-  const flippedCards: [boolean, boolean] = [false, false];
-  let cardIndex: 0 | 1 = 0;
+  const flippedCards: [boolean, boolean, boolean] = [false, false, false];
+  let cardIndex: 0 | 1 | 2 = 0;
   let currencyMode: "buy" | "sell" = "buy";
   let cashbackPeriod: "month" | "year" = "month";
   let selectedCategoryIds: string[] = [];
@@ -58,6 +58,7 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
     if (event.type === "tap") {
       if (action === "account.card.primary.open") cardIndex = 1;
       if (action === "account.card.strong.open") cardIndex = 0;
+      if (action === "account.card.salary.open") cardIndex = 2;
       if (action === "home.currency.buy") currencyMode = "buy";
       if (action === "home.currency.sell") currencyMode = "sell";
       const faq = /^cashback\.faq\.(\d+)\.toggle$/.exec(action);
@@ -68,10 +69,11 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
     }
     if (event.type === "card_selection") {
       const selected = event.metadata.index;
-      cardIndex = selected === 1 || action.includes("orange") ? 1 : 0;
+      cardIndex = selected === 2 || action.includes("salary") ? 2 : selected === 1 || action.includes("orange") ? 1 : 0;
       if (event.metadata.closedDetails === true) {
         flippedCards[0] = false;
         flippedCards[1] = false;
+        flippedCards[2] = false;
         productState.cardDetailsRevealed = false;
       }
     }
@@ -93,9 +95,9 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
     if (action === "home.history.expanded") productState.homeHistoryCollapsed = false;
     if (action === "home.currency.collapsed") productState.homeCurrencyCollapsed = true;
     if (action === "home.currency.expanded") productState.homeCurrencyCollapsed = false;
-    const cardSide = /^card\.(night|orange)\.details\.(reveal|hide)$/.exec(action);
+    const cardSide = /^card\.(night|orange|salary)\.details\.(reveal|hide)$/.exec(action);
     if (cardSide) {
-      flippedCards[cardSide[1] === "orange" ? 1 : 0] = cardSide[2] === "reveal";
+      flippedCards[cardSide[1] === "salary" ? 2 : cardSide[1] === "orange" ? 1 : 0] = cardSide[2] === "reveal";
       productState.cardDetailsRevealed = cardSide[2] === "reveal";
     }
     if (action === "cashback.next_month.selection.changed") {

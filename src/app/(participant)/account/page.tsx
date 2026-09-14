@@ -41,10 +41,10 @@ export default function AccountPage() {
                 <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniaturePurple}`} aria-hidden="true" />
                 <span className={styles.accountCardLabel}><span>Сильные люди</span><span>*2345</span></span>
               </Link>
-              <button type="button" className={styles.accountCardBadge} data-track="account.card.salary.open" onClick={showDemoUnavailable}>
-                <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniatureOrange}`} aria-hidden="true" />
+              <Link className={styles.accountCardBadge} href="/card?card=salary" data-track="account.card.salary.open">
+                <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniaturePurple}`} aria-hidden="true" />
                 <span className={styles.accountCardLabel}><span>Зарплатная</span><span>*3451</span></span>
-              </button>
+              </Link>
             </div>
           </section>
 

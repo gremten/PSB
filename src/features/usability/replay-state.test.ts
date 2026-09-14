@@ -15,21 +15,33 @@ describe("action replay state", () => {
       event(4, "card_selection", "card.night.select.swipe", "/card", "night"),
       event(5, "product_state_change", "card.night.details.reveal", "/card"),
     ];
-    expect(deriveReplayState(events, 2)).toMatchObject({ cardIndex: 1, flippedCards: [false, true] });
-    expect(deriveReplayState(events, 4)).toMatchObject({ cardIndex: 0, flippedCards: [true, true] });
-    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 1, flippedCards: [false, false] });
+    expect(deriveReplayState(events, 2)).toMatchObject({ cardIndex: 1, flippedCards: [false, true, false] });
+    expect(deriveReplayState(events, 4)).toMatchObject({ cardIndex: 0, flippedCards: [true, true, false] });
+    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 1, flippedCards: [false, false, false] });
   });
 
-  it("closes both card backs on a new carousel selection, including when seeking backward", () => {
+  it("closes all card backs on a new carousel selection, including when seeking backward", () => {
     const events = [
       event(1, "product_state_change", "card.orange.details.reveal", "/card"),
       { ...event(2, "card_selection", "card.night.select.swipe", "/card", "night"), metadata: { index: 0, closedDetails: true } },
       event(3, "product_state_change", "card.night.details.reveal", "/card"),
     ];
-    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true], productState: { cardDetailsRevealed: true } });
-    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 0, flippedCards: [false, false], productState: { cardDetailsRevealed: false } });
-    expect(deriveReplayState(events, 2)).toMatchObject({ flippedCards: [true, false] });
-    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true] });
+    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true, false], productState: { cardDetailsRevealed: true } });
+    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 0, flippedCards: [false, false, false], productState: { cardDetailsRevealed: false } });
+    expect(deriveReplayState(events, 2)).toMatchObject({ flippedCards: [true, false, false] });
+    expect(deriveReplayState(events, 0)).toMatchObject({ flippedCards: [false, true, false] });
+  });
+
+  it("opens the salary card from its account badge and replays its flip and switch", () => {
+    const events = [
+      event(1, "tap", "account.card.salary.open", "/account"),
+      event(2, "screen_view", "screen.card.view", "/card"),
+      event(3, "product_state_change", "card.salary.details.reveal", "/card"),
+      { ...event(4, "card_selection", "card.orange.select.swipe", "/card", "orange"), metadata: { index: 1, closedDetails: true } },
+    ];
+    expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 2, flippedCards: [false, false, false] });
+    expect(deriveReplayState(events, 2)).toMatchObject({ cardIndex: 2, flippedCards: [false, false, true] });
+    expect(deriveReplayState(events, 3)).toMatchObject({ cardIndex: 1, flippedCards: [false, false, false] });
   });
 
   it("restores category selection and the connected/next-month branches", () => {

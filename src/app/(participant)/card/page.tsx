@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Suspense, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { flushSync } from "react-dom";
 import { DetailHeader, SettingsRow, styles } from "@/features/bank/bank-ui";
 import { showDemoUnavailable } from "@/features/usability/demo-feedback";
@@ -14,8 +14,9 @@ import { CARD_SWIPE_TRAVEL, cardSwipeDestination } from "./card-gesture";
 export const fakeCard = { number: "4588 2344 4563 3124", expiry: "07/28", cvv: "456" };
 
 const cards = [
-  { id: "night", type: "night", ending: "2345", logo: "/figma/card/logo-night.svg", mir: "/figma/card/mir-night.svg" },
-  { id: "orange", type: "orange", ending: "3124", logo: "/figma/card/logo-orange.svg", mir: "/figma/card/mir-orange.svg" },
+  { id: "night", type: "night", label: "Сильные люди", ending: "2345", logo: "/figma/card/logo-night.svg", mir: "/figma/card/mir-night.svg", data: { number: "4588 2344 4563 2345", expiry: "07/28", cvv: "456" } },
+  { id: "orange", type: "orange", label: "Твой банк", ending: "3124", logo: "/figma/card/logo-orange.svg", mir: "/figma/card/mir-orange.svg", data: fakeCard },
+  { id: "salary", type: "salary", label: "Зарплатная", ending: "3451", logo: "/figma/card/logo-night.svg", mir: "/figma/card/mir-night.svg", data: { number: "4588 2344 4563 3451", expiry: "07/28", cvv: "456" } },
 ] as const;
 
 type CardType = (typeof cards)[number]["type"];
@@ -43,14 +44,14 @@ function CardField({ label, value, dataTrack, onCopy, wide = false, interactive 
   );
 }
 
-function CardBack({ type, onCopy, onHide, visible }: { type: CardType; onCopy: (kind: keyof typeof fakeCard) => void; onHide: () => void; visible: boolean }) {
+function CardBack({ type, data, onCopy, onHide, visible }: { type: CardType; data: typeof fakeCard; onCopy: (kind: keyof typeof fakeCard) => void; onHide: () => void; visible: boolean }) {
   return (
     <div aria-hidden={!visible} className={`${styles.flipFace} ${styles.flipBack} ${type === "orange" ? styles.flipBackOrange : styles.flipBackNight}`}>
       <div className={styles.flipFields}>
-        <CardField wide interactive={visible} label="Номер карты" value={fakeCard.number} dataTrack={`card.${type}.number.copy`} onCopy={() => onCopy("number")} />
+        <CardField wide interactive={visible} label="Номер карты" value={data.number} dataTrack={`card.${type}.number.copy`} onCopy={() => onCopy("number")} />
         <div className={styles.flipFieldPair}>
-          <CardField interactive={visible} label="Срок" value={fakeCard.expiry} dataTrack={`card.${type}.expiry.copy`} onCopy={() => onCopy("expiry")} />
-          <CardField interactive={visible} label="CVV" value={fakeCard.cvv} dataTrack={`card.${type}.cvv.copy`} onCopy={() => onCopy("cvv")} />
+          <CardField interactive={visible} label="Срок" value={data.expiry} dataTrack={`card.${type}.expiry.copy`} onCopy={() => onCopy("expiry")} />
+          <CardField interactive={visible} label="CVV" value={data.cvv} dataTrack={`card.${type}.cvv.copy`} onCopy={() => onCopy("cvv")} />
         </div>
       </div>
       <button type="button" tabIndex={visible ? 0 : -1} className={styles.flipBadge} data-track={`card.${type}.details.hide`} onClick={(event) => { event.stopPropagation(); onHide(); }}>
@@ -63,8 +64,9 @@ function CardBack({ type, onCopy, onHide, visible }: { type: CardType; onCopy: (
 function CardContent() {
   const params = useSearchParams();
   const { productState, replayVisualState, updateProductState } = useParticipant();
-  const [liveActiveCard, setActiveCard] = useState(params.get("card") === "orange" ? 1 : 0);
-  const [liveFlipped, setFlipped] = useState<boolean[]>([productState.cardDetailsRevealed, false]);
+  const initialCardIndex = Math.max(0, cards.findIndex((card) => card.id === params.get("card")));
+  const [liveActiveCard, setActiveCard] = useState(initialCardIndex);
+  const [liveFlipped, setFlipped] = useState<boolean[]>(() => cards.map((_, index) => index === initialCardIndex && productState.cardDetailsRevealed));
   const activeCard = replayVisualState?.cardIndex ?? liveActiveCard;
   const flipped = replayVisualState?.flippedCards ?? liveFlipped;
   const [copied, setCopied] = useState<keyof typeof fakeCard | null>(null);
@@ -80,8 +82,8 @@ function CardContent() {
     if (!next) setCopied(null);
   };
 
-  const copy = async (kind: keyof typeof fakeCard) => {
-    try { await navigator.clipboard.writeText(fakeCard[kind]); } catch {}
+  const copy = async (kind: keyof typeof fakeCard, cardIndex: number) => {
+    try { await navigator.clipboard.writeText(cards[cardIndex].data[kind]); } catch {}
     setCopied(kind);
     setCopyToastId((current) => current + 1);
   };
@@ -89,7 +91,7 @@ function CardContent() {
   const selectCard = (index: number, method: "tap" | "swipe") => {
     const revealedIndex = liveFlipped.findIndex(Boolean);
     const closedDetails = revealedIndex !== -1 || productState.cardDetailsRevealed;
-    setFlipped([false, false]);
+    setFlipped(cards.map(() => false));
     if (closedDetails) {
       const cardToHide = cards[revealedIndex === -1 ? activeCard : revealedIndex];
       updateProductState({ cardDetailsRevealed: false }, `card.${cardToHide.type}.details.hide`, { reason: "card_switch" });
@@ -116,7 +118,8 @@ function CardContent() {
 
     slideRefs.current.forEach((slide, index) => {
       if (!slide) return;
-      let offsetX = index < current.cardIndex ? -274 : index > current.cardIndex ? CARD_SWIPE_TRAVEL : 0;
+      const distance = index - current.cardIndex;
+      let offsetX = distance < 0 ? -274 + (distance + 1) * CARD_SWIPE_TRAVEL : distance * CARD_SWIPE_TRAVEL;
       let offsetY = index === current.cardIndex ? 0 : 20.5;
       let scale = index === current.cardIndex ? 1 : 0.80625;
 
@@ -179,19 +182,22 @@ function CardContent() {
 
   return (
     <main className={`${styles.screen} ${styles.cardScreen}`} data-screen="card">
-      <DetailHeader title="Карта «Твой банк»" subtitle="Платежный счет *6777" backHref="/account" />
+      <DetailHeader title={`Карта «${cards[activeCard].label}»`} subtitle="Платежный счет *6777" backHref="/account" />
 
       <section ref={carouselRef} className={styles.flipCarousel} aria-label="Карты счёта" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onClickCapture={(event) => { if (dragged.current && event.detail > 0) { event.preventDefault(); event.stopPropagation(); dragged.current = false; } }}>
         {cards.map((card, index) => {
           const positionClass = index === activeCard ? styles.cardSlideActive : index < activeCard ? styles.cardSlidePrevious : styles.cardSlideNext;
+          const distance = index - activeCard;
+          const restingOffset = distance < 0 ? -274 + (distance + 1) * CARD_SWIPE_TRAVEL : distance * CARD_SWIPE_TRAVEL;
           return (
             <div
               key={card.id}
               ref={(element) => { slideRefs.current[index] = element; }}
               className={`${styles.cardSlide} ${positionClass}`}
+              style={{ "--card-offset": `${restingOffset}px` } as CSSProperties}
               role="button"
               tabIndex={index === activeCard ? 0 : -1}
-              aria-label={`${card.type === "night" ? "Карта Сильные люди" : "Карта Твой банк"}, ${flipped[index] ? "данные показаны" : "лицевая сторона"}`}
+              aria-label={`Карта ${card.label}, ${flipped[index] ? "данные показаны" : "лицевая сторона"}`}
               data-track={`card.${card.type}.${index === activeCard ? "flip" : "select"}`}
               onClick={() => {
                 if (dragged.current) { dragged.current = false; return; }
@@ -206,7 +212,7 @@ function CardContent() {
             >
               <div className={`${styles.flipCardInner} ${flipped[index] ? styles.flipCardInnerBack : ""}`}>
                 <CardFront type={card.type} ending={card.ending} logo={card.logo} mir={card.mir} hidden={flipped[index]} />
-                <CardBack type={card.type} onCopy={copy} onHide={() => setCardSide(index, false)} visible={flipped[index]} />
+                <CardBack type={card.type} data={card.data} onCopy={(kind) => copy(kind, index)} onHide={() => setCardSide(index, false)} visible={flipped[index]} />
               </div>
             </div>
           );

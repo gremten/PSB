@@ -16,4 +16,11 @@ describe("card carousel swipe", () => {
     expect(cardSwipeDestination(0, CARD_SWIPE_THRESHOLD * 2, 2)).toBe(0);
     expect(cardSwipeDestination(1, -CARD_SWIPE_THRESHOLD * 2, 2)).toBe(1);
   });
+
+  it("moves through three cards one neighbor at a time", () => {
+    expect(cardSwipeDestination(0, -CARD_SWIPE_THRESHOLD, 3)).toBe(1);
+    expect(cardSwipeDestination(1, -CARD_SWIPE_THRESHOLD, 3)).toBe(2);
+    expect(cardSwipeDestination(2, CARD_SWIPE_THRESHOLD, 3)).toBe(1);
+    expect(cardSwipeDestination(2, -CARD_SWIPE_THRESHOLD, 3)).toBe(2);
+  });
 });

@@ -672,8 +672,7 @@
 }
 .cardSlide:focus-visible { outline: 2px solid white; outline-offset: -3px; }
 .cardSlideActive { z-index: 2; transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
-.cardSlidePrevious { z-index: 1; transform: translate3d(-274px, 20.5px, 0) scale(.80625); opacity: .96; }
-.cardSlideNext { z-index: 1; transform: translate3d(336px, 20.5px, 0) scale(.80625); opacity: .96; }
+.cardSlidePrevious, .cardSlideNext { z-index: 1; transform: translate3d(var(--card-offset), 20.5px, 0) scale(.80625); opacity: .96; }
 .flipCardInner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 440ms cubic-bezier(.2, .72, .22, 1); }
 .flipCardInnerBack { transform: rotateY(180deg); }
 .flipFace {
