@@ -50,6 +50,15 @@ npm run build:next
 npm run build
 ```
 
+Browser cases run against the dev stack through ChromeDriver and stay out of `npm test`:
+
+```powershell
+docker compose up -d
+npm run test:e2e
+```
+
+The cases, including the ones still to be written, are listed in [`docs/E2E_TEST_PLAN.md`](docs/E2E_TEST_PLAN.md).
+
 ## Cloudflare Worker
 
 The repository contains a vinext Worker build, Wrangler configuration, a provisioned D1 binding, and the initial migration. To deploy manually, run:
