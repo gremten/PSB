@@ -45,7 +45,7 @@ function semanticLabel(id: string | null | undefined) {
   if (!id) return "событие без семантической метки";
   const labels: Record<string, string> = {
     "home.account.open": "открыл текущий счёт",
-    "home.savings.open": "исследовал накопительный счёт",
+    "home.savings.open": "открыл накопительный счёт",
     "home.cashback.open": "открыл кешбек через бейдж рядом с общей суммой",
     "cashback.tab.open": "открыл кешбек через вкладку «Выгода»",
     "cashback.connect.start": "начал первое подключение кешбека",
@@ -94,7 +94,6 @@ function buildLearningSignals(events: TrackedEvent[], verdicts: Array<ScenarioVe
     firstCashbackEntry === "cashback.tab.open" ? { code: "entered_cashback_via_tabbar", evidenceEventIds: events.filter((event) => semanticId(event) === firstCashbackEntry).slice(0, 1).map((event) => event.id) } : null,
     ids.some((id) => /^cashback\.category\.[^.]+\.faq\.open$/.test(id ?? "")) ? { code: "opened_category_explanation", evidenceEventIds: events.filter((event) => /^cashback\.category\.[^.]+\.faq\.open$/.test(semanticId(event) ?? "")).map((event) => event.id) } : null,
     ids.includes("cashback.period.year") ? { code: "explored_annual_chart", evidenceEventIds: events.filter((event) => semanticId(event) === "cashback.period.year").map((event) => event.id) } : null,
-    ids.includes("home.savings.open") ? { code: "explored_savings_account_without_error", evidenceEventIds: events.filter((event) => semanticId(event) === "home.savings.open").map((event) => event.id) } : null,
   ].filter((signal): signal is { code: string; evidenceEventIds: number[] } => signal !== null);
 }
 
