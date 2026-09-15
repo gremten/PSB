@@ -72,4 +72,19 @@ describe("three recorded usability flows", () => {
     expect(classifyScenarioTap("CASHBACK_NEXT", [event(1, "tap", "cashback.tab.open")], "cashback.period.year", {}, "/cashback")).toBe("info");
     expect(scenarioProgress("CASHBACK_NEXT", [...categories, event(3, "tap", "cashback.category.fuel.faq.open")]).stage).toBe(2);
   });
+
+  it.each(["CASHBACK_CONNECT", "CASHBACK_NEXT"] as InteractiveScenarioCode[])("treats checking a fourth category as exploration in %s", (code) => {
+    const entry = code === "CASHBACK_CONNECT" ? "cashback.connect.start" : "cashback.next_month.categories.open";
+    const steps = [
+      event(1, "tap", "cashback.tab.open"),
+      event(2, "tap", entry),
+      event(3, "tap", "cashback.category.all.toggle"),
+      event(4, "tap", "cashback.category.flights.toggle"),
+      event(5, "tap", "cashback.category.taxi.toggle"),
+    ];
+    expect(classifyScenarioTap(code, steps, "cashback.category.fuel.toggle", { selectionLimitReached: true }, "/cashback/categories")).toBe("info");
+    expect(classifyScenarioTap(code, steps, "cashback.category.fuel.toggle", {}, "/cashback/categories")).toBe("info");
+    expect(scenarioVerdictForEvent(event(6, "tap", "cashback.category.fuel.toggle", { scenarioVerdict: "error" }), code)).toBe("info");
+    expect(scenarioProgress(code, [...steps, event(6, "tap", "cashback.category.fuel.toggle", { selectionLimitReached: true })]).selectedCategories).toEqual(["all", "flights", "taxi"]);
+  });
 });

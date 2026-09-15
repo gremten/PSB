@@ -56,7 +56,7 @@ Golden path: `home.cashback.open` / `cashback.tab.open` → `cashback.connect.st
 | C2 | Entry by the tabbar, closed by a drag ✅ | Same flow through `cashback.tab.open`, dismissed by dragging the handle ≥ 80 px | The run ends as `unaided`, the sheet is gone, and the ease-score question is offered |
 | C3 | Short drag does not dismiss ✅ | Drag the handle 30 px and release | The sheet stays, the run stays open, and the button still finishes it |
 | C4 | Confirming fewer than three fails ✅ | Select two categories, confirm | The tap is `error`, the screen does not navigate, and the run stays open |
-| C5 | Fourth category is refused ✅ | Select a fourth category | The tap is `error` and exactly three rows stay pressed |
+| C5 | Fourth category is disabled and explored ✅ | Select three categories, then tap a fourth | Unchecked rows are `aria-disabled`, the tap is informational `info`, exactly three rows stay selected, and clearing one re-enables the rest |
 | C6 | **Scrolling to study a screen is not a wrong click** ✅ | Scroll home, the offer screen and the category list during the flow | Scrolls are recorded as `scroll` events, never as taps; the run completes with no error verdict |
 | C7 | FAQ is informational | Tap a category `…faq.open` | The tap is `info` and the selection does not change |
 | C8 | Benefit tiles are demo-only | Tap a `cashback.benefit.*.open` tile | Demo feedback appears; no navigation, no product-state change |

@@ -146,6 +146,7 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
           targetWidth: Math.round(rect.width),
           targetHeight: Math.round(rect.height),
           ...(element.dataset.selectedCount !== undefined ? { selectedCount: Number(element.dataset.selectedCount) } : {}),
+          ...(element.dataset.selectionLimitReached === "true" ? { selectionLimitReached: true } : {}),
         },
       });
     };

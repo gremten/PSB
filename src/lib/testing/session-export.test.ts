@@ -46,10 +46,11 @@ const snapshot: SessionSnapshot = {
     event(4, "tap", "cashback.category.all.toggle", "correct"),
     event(5, "tap", "cashback.category.flights.toggle", "correct"),
     event(6, "tap", "cashback.category.taxi.toggle", "correct"),
-    { ...event(7, "tap", "cashback.categories.confirm", "correct"), metadata: { scenarioVerdict: "correct", selectedCount: 3 } },
-    event(8, "tap", "cashback.success.close", "correct"),
+    { ...event(7, "tap", "cashback.category.family.toggle", "error"), metadata: { scenarioVerdict: "error", selectionLimitReached: true } },
+    { ...event(8, "tap", "cashback.categories.confirm", "correct"), metadata: { scenarioVerdict: "correct", selectedCount: 3 } },
+    event(9, "tap", "cashback.success.close", "correct"),
     // The sheet dismisses itself 200 ms after the tap, and that is what completes the run.
-    event(9, "product_state_change", "cashback.success.dismissed"),
+    event(10, "product_state_change", "cashback.success.dismissed"),
   ],
 };
 
@@ -62,7 +63,7 @@ describe("STARL session export", () => {
     expect(result.starlRecords[0]).toMatchObject({
       scenarioCode: "CASHBACK_CONNECT",
       task: { goldenTapCount: 7 },
-      action: { counts: { correctTaps: 7, errorTaps: 0, informationalTaps: 1 } },
+      action: { counts: { correctTaps: 7, errorTaps: 0, informationalTaps: 2 } },
       result: { completed: true, journeySegment: "completed_with_exploration", completionSupportedByEventSequence: true },
       learning: { status: "evidence_only_requires_interpretation" },
     });
@@ -74,12 +75,17 @@ describe("STARL session export", () => {
     expect(result.events[0].elapsedFromScenarioStartMs).toBe(1_000);
     expect(result.events[0].capturedAt).toBe(result.events[0].timestamp);
     expect(result.starlRecords[0].learning.signals).toContainEqual({ code: "opened_category_explanation", evidenceEventIds: [3] });
+    expect(result.starlRecords[0].learning.signals).toContainEqual({ code: "explored_category_selection_limit", evidenceEventIds: [7] });
     expect(result.starlRecords[0].action.firstInteraction).toMatchObject({
       eventId: 1,
       semanticLabel: "открыл кешбек через бейдж рядом с общей суммой",
       interpretation: "ожидаемый шаг сценария",
     });
     expect(result.starlRecords[0].action.interactionNarrative[2].narrative).toContain("исследование интерфейса — не ошибка");
+    expect(result.starlRecords[0].action.interactionNarrative[6]).toMatchObject({
+      semanticLabel: "проверил возможность выбрать больше трёх категорий; выбор не изменился",
+      verdict: "info",
+    });
   });
 
   it("adds stable automation columns to CSV without removing legacy columns", () => {
@@ -91,6 +97,7 @@ describe("STARL session export", () => {
     expect(csv).toContain('"elapsedTaskMs"');
     expect(csv).toContain('"semanticLabel"');
     expect(csv).toContain('"исследование интерфейса — не ошибка"');
+    expect(csv).toContain('"проверил возможность выбрать больше трёх категорий; выбор не изменился","info"');
     expect(csv).not.toContain('"elapsedSessionMs"');
   });
 

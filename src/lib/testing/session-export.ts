@@ -7,7 +7,7 @@ import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
 export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v5";
 
-export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: они основаны на времени касания участника с серверным fallback; не вычисляй общее время сессии. Учитывай размер выборки и 95% доверительные интервалы, не называй описательную связь ошибки с completion причинной и не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
+export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Попытка выбрать четвёртую категорию после достижения лимита трёх — это limit discovery: допустимое исследование ограничения, а не ошибка. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: они основаны на времени касания участника с серверным fallback; не вычисляй общее время сессии. Учитывай размер выборки и 95% доверительные интервалы, не называй описательную связь ошибки с completion причинной и не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -49,7 +49,7 @@ function semanticId(event: TrackedEvent) {
   return event.target ?? event.action;
 }
 
-function semanticLabel(id: string | null | undefined) {
+function semanticLabel(id: string | null | undefined, event?: TrackedEvent) {
   if (!id) return "событие без семантической метки";
   const labels: Record<string, string> = {
     "home.account.open": "открыл текущий счёт",
@@ -68,7 +68,10 @@ function semanticLabel(id: string | null | undefined) {
   if (/^account\.card\.[^.]+\.open$/.test(id)) return "открыл карту счёта";
   if (/^card\.[^.]+\.flip$/.test(id)) return "раскрыл данные карты";
   if (/^card\.[^.]+\.(number|expiry|cvv)\.copy$/.test(id)) return "скопировал поле данных карты";
-  if (/^cashback\.category\.[^.]+\.toggle$/.test(id)) return "изменил выбор категории кешбека";
+  if (/^cashback\.category\.[^.]+\.toggle$/.test(id)) {
+    if (event?.metadata.selectionLimitReached === true || event?.metadata.scenarioVerdict === "error") return "проверил возможность выбрать больше трёх категорий; выбор не изменился";
+    return "изменил выбор категории кешбека";
+  }
   if (/^cashback\.category\.[^.]+\.faq\.open$/.test(id)) return "открыл пояснение категории";
   return id;
 }
@@ -101,6 +104,9 @@ function buildLearningSignals(events: TrackedEvent[], verdicts: Array<ScenarioVe
     firstCashbackEntry === "home.cashback.open" ? { code: "discovered_cashback_via_balance_badge", evidenceEventIds: events.filter((event) => semanticId(event) === firstCashbackEntry).slice(0, 1).map((event) => event.id) } : null,
     firstCashbackEntry === "cashback.tab.open" ? { code: "entered_cashback_via_tabbar", evidenceEventIds: events.filter((event) => semanticId(event) === firstCashbackEntry).slice(0, 1).map((event) => event.id) } : null,
     ids.some((id) => /^cashback\.category\.[^.]+\.faq\.open$/.test(id ?? "")) ? { code: "opened_category_explanation", evidenceEventIds: events.filter((event) => /^cashback\.category\.[^.]+\.faq\.open$/.test(semanticId(event) ?? "")).map((event) => event.id) } : null,
+    events.some((event) => /^cashback\.category\.[^.]+\.toggle$/.test(semanticId(event) ?? "") && scenarioVerdictForEvent(event, taskCode) === "info")
+      ? { code: "explored_category_selection_limit", evidenceEventIds: events.filter((event) => /^cashback\.category\.[^.]+\.toggle$/.test(semanticId(event) ?? "") && scenarioVerdictForEvent(event, taskCode) === "info").map((event) => event.id) }
+      : null,
     ids.includes("cashback.period.year") ? { code: "explored_annual_chart", evidenceEventIds: events.filter((event) => semanticId(event) === "cashback.period.year").map((event) => event.id) } : null,
   ].filter((signal): signal is { code: string; evidenceEventIds: number[] } => signal !== null);
 }
@@ -119,7 +125,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     const progress = interactive ? scenarioProgress(interactive.code, runEvents) : null;
     const interactions = runEvents.filter((event) => event.type === "tap").map((event, index) => {
       const verdict = scenarioVerdictForEvent(event, run.taskCode);
-      const label = semanticLabel(semanticId(event));
+      const label = semanticLabel(semanticId(event), event);
       return {
         order: index + 1,
         eventId: event.id,
@@ -285,7 +291,7 @@ export function buildSessionEventsCsv(snapshot: SessionSnapshot) {
     ...orderedEvents.map((event) => {
       const run = event.taskRunId ? runs.get(event.taskRunId) : undefined;
       const verdict = scenarioVerdictForEvent(event, run?.taskCode);
-      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event, originByRun.get(event.taskRunId ?? "") ?? null), semanticId(event), semanticLabel(semanticId(event)), verdict, interactionInterpretation(verdict), new Date(trackedEventTime(event)).toISOString()];
+      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event, originByRun.get(event.taskRunId ?? "") ?? null), semanticId(event), semanticLabel(semanticId(event), event), verdict, interactionInterpretation(verdict), new Date(trackedEventTime(event)).toISOString()];
     }),
   ];
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;

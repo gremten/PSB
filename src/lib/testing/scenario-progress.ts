@@ -45,6 +45,10 @@ export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string):
   if (taskCode === "CARD_COPY" && target === "home.savings.open") return "error";
   // Copying any field of any card is the goal of the card flow, never an error.
   if (taskCode === "CARD_COPY" && target && cardCopy.test(target)) return "correct";
+  // Reinterpret both new explicit limit attempts and their historical stored
+  // error verdicts as interface exploration. The selection never changes.
+  if (taskCode?.startsWith("CASHBACK_") && target && categoryToggle.test(target)
+    && (event.metadata.selectionLimitReached === true || event.metadata.scenarioVerdict === "error")) return "info";
   if (taskCode && taskCode !== "CARD_COPY" && isScenarioInfoTarget(event.target ?? event.action)) return "info";
   const verdict = event.metadata.scenarioVerdict;
   return verdict === "correct" || verdict === "error" || verdict === "recovery" || verdict === "info" ? verdict : null;
@@ -105,7 +109,10 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
   if (stage === 1 && target === entry) return "correct";
   if (stage === 2) {
     const match = categoryToggle.exec(target);
-    if (match) return selectedCategories.includes(match[1]) || selectedCategories.length < 3 ? "correct" : "error";
+    if (match) {
+      if (metadata.selectionLimitReached === true) return "info";
+      return selectedCategories.includes(match[1]) || selectedCategories.length < 3 ? "correct" : "info";
+    }
     if (target === "cashback.categories.confirm") return metadata.selectedCount === 3 || selectedCategories.length === 3 ? "correct" : "error";
   }
   if (stage >= 3 && (target === `${finish}.close` || target === `${finish}.drag`)) return "correct";

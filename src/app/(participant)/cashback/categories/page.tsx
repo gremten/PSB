@@ -55,7 +55,9 @@ export default function CashbackCategoriesPage() {
 
   const toggle = (id: string) => {
     setSelected((current) => {
-      const next = current.includes(id) ? current.filter((item) => item !== id) : current.length < 3 ? [...current, id] : current;
+      const active = current.includes(id);
+      if (!active && current.length >= 3) return current;
+      const next = active ? current.filter((item) => item !== id) : [...current, id];
       const period = selectingNextMonth ? "next_month" : "current_month";
       track("action", { screen: "/cashback/categories", action: "cashback.category.selection_changed", target: id, metadata: { period, selectedCount: next.length } });
       if (selectingNextMonth) {
@@ -117,9 +119,18 @@ export default function CashbackCategoriesPage() {
         <div className={styles.categoryList}>
           {categories.map((category) => {
             const active = selected.includes(category.id);
+            const selectionDisabled = selected.length === 3 && !active;
             return (
               <div key={category.id} className={styles.categoryRowWrap}>
-                <button type="button" className={styles.categoryRow} onClick={() => toggle(category.id)} data-track={`cashback.category.${category.id}.toggle`} aria-pressed={active}>
+                <button
+                  type="button"
+                  className={`${styles.categoryRow} ${selectionDisabled ? styles.categoryRowSelectionDisabled : ""}`}
+                  onClick={() => toggle(category.id)}
+                  data-track={`cashback.category.${category.id}.toggle`}
+                  data-selection-limit-reached={selectionDisabled ? "true" : undefined}
+                  aria-disabled={selectionDisabled}
+                  aria-pressed={active}
+                >
                   <span className={styles.categoryIcon}><Image src={category.image} alt="" width={32} height={32} /></span>
                   <span><span className={styles.categoryName}>{category.title}</span><span className={styles.categoryDescription}>{category.description}</span></span>
                   <span className={styles.categoryFaqPlaceholder} aria-hidden="true" />

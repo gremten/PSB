@@ -20,6 +20,7 @@ describe("case-study research summary", () => {
       tap(4, "s2", "r4", "cashback.period.year", "error"),
       tap(5, "s1", "r2", "card.block.open", "error"),
       tap(6, "s1", "r3", "navigation.back", "recovery"),
+      tap(7, "s2", "r4", "cashback.category.family.toggle", "error"),
     ];
     const summary = calculateResearchSummary(sessions, runs, events);
     const byId = Object.fromEntries(summary.metrics.map((item) => [item.id, item]));
@@ -27,6 +28,7 @@ describe("case-study research summary", () => {
     expect(byId.cashback_tab_first).toMatchObject({ count: 1, total: 2, percent: 50 });
     expect(byId.all_scenarios_completed).toMatchObject({ count: 1, total: 3, percent: 33 });
     expect(byId.category_help.count).toBe(1);
+    expect(byId.category_limit).toMatchObject({ count: 1, total: 2, percent: 50 });
     expect(byId.year_chart.count).toBe(1);
     expect(byId.without_errors.count).toBe(2);
     expect(Object.fromEntries(summary.journeySegments.map((item) => [item.id, item.percent]))).toEqual({

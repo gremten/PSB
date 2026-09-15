@@ -927,6 +927,8 @@
 .categoryRow:active { scale: 1; }
 .categoryRow .checkbox { scale: 1; transition: scale 180ms cubic-bezier(.2, .75, .25, 1); }
 .categoryRow:active .checkbox { scale: .975; }
+.categoryRowSelectionDisabled { cursor: not-allowed; }
+.categoryRowSelectionDisabled:active .checkbox { scale: 1; }
 .categoryFaqPlaceholder { width: 24px; height: 24px; }
 .categoryFaqButton { position: absolute; top: 50%; right: calc(14px + var(--category-row-gap)); display: grid; width: 44px; height: 44px; place-items: center; transform: translateY(-50%); border: 0; padding: 0; background: transparent; cursor: pointer; touch-action: manipulation; }
 .categoryFaqButton:active { scale: 1; }

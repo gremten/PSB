@@ -152,6 +152,7 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
   const sessionsWithRecovery = eventsBySession((event) => verdictFor(event) === "recovery");
   const sessionsWithInfo = eventsBySession((event) => verdictFor(event) === "info");
   const helpUsers = eventsBySession((event) => /^cashback\.category\.[^.]+\.faq\.open$/.test(event.target ?? event.action ?? ""));
+  const categoryLimitUsers = eventsBySession((event) => /^cashback\.category\.[^.]+\.toggle$/.test(event.target ?? event.action ?? "") && verdictFor(event) === "info");
   const yearUsers = eventsBySession((event) => (event.target ?? event.action) === "cashback.period.year");
   const total = recorded.length;
   const cashbackTotal = cashbackParticipants.size;
@@ -180,6 +181,7 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
     metric("recovered", "Возвращались после неверного раздела", sessionsWithRecovery, total, "всех записанных сессий"),
     metric("explored", "Изучали дополнительные элементы", sessionsWithInfo, total, "всех записанных сессий"),
     metric("category_help", "Открывали пояснение категории «?»", helpUsers, total, "всех записанных сессий"),
+    metric("category_limit", "Проверяли возможность выбрать больше трёх категорий", categoryLimitUsers, cashbackTotal, "участников кешбэк-сценариев"),
     metric("year_chart", "Переключали график на весь год", yearUsers, total, "всех записанных сессий"),
   ];
 
