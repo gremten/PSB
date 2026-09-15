@@ -80,6 +80,10 @@ describe("independent participant session lifecycle", () => {
     await tap("cashback.categories.confirm", "/cashback/categories", { selectedCount: 3 });
     await tap("cashback.success.close", "/");
     expect((await getParticipantScenarioStatus(session.id))?.completedScenarios).toContain("CASHBACK_CONNECT");
+    // The dismissal follows the closing tap by 200 ms; it still belongs to the run it closed,
+    // otherwise the participant never reaches the ease-score question.
+    const lateDismissal = await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CASHBACK_CONNECT", eventName: "product_state_change", screen: "/", action: "cashback.success.dismissed" });
+    expect(lateDismissal?.taskRunId).toBeTruthy();
     expect((await getSession(session.id))?.endedAt).toBeNull();
 
     await assignParticipantScenario(session.id, "CASHBACK_NEXT");

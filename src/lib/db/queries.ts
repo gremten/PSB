@@ -6,7 +6,7 @@ import { aggregateTaskMetrics, calculateTaskMetrics } from "@/lib/testing/metric
 import { sanitizeMetadata } from "@/lib/testing/metadata";
 import { calculateResearchSummary } from "@/lib/testing/research-summary";
 import { presenceCutoff } from "@/lib/testing/session-presence";
-import { classifyScenarioTap, isScenarioGateTarget, scenarioProgress } from "@/lib/testing/scenario-progress";
+import { classifyScenarioTap, completionScenarioForAction, isScenarioGateTarget, scenarioProgress } from "@/lib/testing/scenario-progress";
 import type {
   CashbackVariant,
   ResearchSession,
@@ -325,14 +325,21 @@ export async function recordParticipantEvent(input: {
     FROM task_runs tr JOIN sessions s ON s.id = tr.session_id
     WHERE s.id = ? AND s.started_at IS NOT NULL AND s.ended_at IS NULL AND tr.ended_at IS NULL
     ORDER BY tr.started_at DESC LIMIT 1`, [input.sessionId]);
-  const lateTerminalTapScenario = input.eventName === "tap" && input.target ? ({
-    "cashback.success.close": "CASHBACK_CONNECT",
-    "cashback.success.drag": "CASHBACK_CONNECT",
-    "cashback.next_month.success.close": "CASHBACK_NEXT",
-    "cashback.next_month.success.drag": "CASHBACK_NEXT",
-  } as Partial<Record<string, string>>)[input.target] : undefined;
+  // The closing tap and the dismissal it triggers 200 ms later race each other: whichever
+  // ends the run, the other still belongs to it, and the participant needs its confirmation
+  // to reach the ease-score question.
+  const lateTerminalScenario = input.eventName === "tap"
+    ? input.target ? ({
+      "cashback.success.close": "CASHBACK_CONNECT",
+      "cashback.success.drag": "CASHBACK_CONNECT",
+      "cashback.next_month.success.close": "CASHBACK_NEXT",
+      "cashback.next_month.success.drag": "CASHBACK_NEXT",
+    } as Partial<Record<string, string>>)[input.target] : undefined
+    : input.eventName === "action" || input.eventName === "product_state_change"
+      ? completionScenarioForAction(input.action)
+      : undefined;
   if ((!runRow || (input.scenarioCode !== undefined && input.scenarioCode !== runRow.taskCode))
-    && lateTerminalTapScenario && input.scenarioCode === lateTerminalTapScenario) {
+    && lateTerminalScenario && input.scenarioCode === lateTerminalScenario) {
     const completedRun = await getDatabase().first<ActiveParticipantRunRow>(`
       SELECT tr.id, tr.session_id sessionId, tr.task_code taskCode, tr.started_at startedAt,
         tr.ended_at endedAt, tr.result, tr.was_aided wasAided, tr.ease_score easeScore,
@@ -340,7 +347,7 @@ export async function recordParticipantEvent(input: {
         s.created_at sessionCreatedAt, s.started_at sessionStartedAt, s.last_seen_at sessionLastSeenAt
       FROM task_runs tr JOIN sessions s ON s.id = tr.session_id
       WHERE s.id = ? AND tr.task_code = ? AND tr.ended_at IS NOT NULL AND tr.result IN ('unaided', 'aided')
-      ORDER BY tr.ended_at DESC LIMIT 1`, [input.sessionId, lateTerminalTapScenario]);
+      ORDER BY tr.ended_at DESC LIMIT 1`, [input.sessionId, lateTerminalScenario]);
     const endedAt = completedRun?.endedAt ? new Date(completedRun.endedAt).getTime() : 0;
     if (completedRun && Math.abs(Date.now() - endedAt) <= 10_000) runRow = completedRun;
   }
