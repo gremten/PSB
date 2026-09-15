@@ -30,13 +30,23 @@ export function recordedEventTime(event: TrackedEvent) {
     ? clientTime : serverTime;
 }
 
-// Keep real ordering and short pauses, but skip long idle periods in the visual replay.
+function minimumReplayDwell(event: TrackedEvent, next: TrackedEvent) {
+  if (event.type === "scroll" && next.type === "scroll") return 16;
+  if (event.type === "tap") return 420;
+  if (event.type === "task_started" || event.type === "task_finished") return 600;
+  if (event.type === "screen_view") return 320;
+  if (event.type === "product_state_change" || event.type === "card_selection" || event.type === "action") return 260;
+  return 100;
+}
+
+// Keep real ordering and short pauses, skip long idle periods, and give every
+// interaction enough visible time to survive a single animation-frame sample.
 export function replayEventTimes(events: TrackedEvent[]) {
   const times: number[] = [];
   for (let index = 0; index < events.length; index++) {
     const gap = index ? recordedEventTime(events[index]) - recordedEventTime(events[index - 1]) : 0;
-    const continuousScroll = index > 0 && events[index - 1].type === "scroll" && events[index].type === "scroll";
-    times.push((times.at(-1) ?? 0) + (index ? Math.max(continuousScroll ? 16 : 100, Math.min(1200, gap)) : 0));
+    const minimumDwell = index ? minimumReplayDwell(events[index - 1], events[index]) : 0;
+    times.push((times.at(-1) ?? 0) + (index ? Math.max(minimumDwell, Math.min(1200, gap)) : 0));
   }
   return times;
 }

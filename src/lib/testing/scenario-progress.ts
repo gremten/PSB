@@ -13,6 +13,15 @@ const cardBadge = /^account\.card\.(primary|strong|salary)\.open$/;
 const cardFlip = /^card\.(night|orange|salary)\.flip$/;
 const cardCopy = /^card\.(night|orange|salary)\.(number|expiry|cvv)\.copy$/;
 const categoryToggle = /^cashback\.category\.([a-z]+)\.toggle$/;
+const completionScenarioByAction: Partial<Record<string, InteractiveScenarioCode>> = {
+  "card.copy.toast.closed": "CARD_COPY",
+  "cashback.success.dismissed": "CASHBACK_CONNECT",
+  "cashback.next_month.success.dismissed": "CASHBACK_NEXT",
+};
+
+export function completionScenarioForAction(action: string | null | undefined) {
+  return action ? completionScenarioByAction[action] : undefined;
+}
 
 export function isScenarioGateTarget(target: string | null | undefined) {
   return target === "participant.scenario.start";
@@ -29,6 +38,7 @@ export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string):
   // These controls exist only after success, so late-arriving taps remain correct.
   if (taskCode === "CASHBACK_CONNECT" && (target === "cashback.success.close" || target === "cashback.success.drag")) return "correct";
   if (taskCode === "CASHBACK_NEXT" && (target === "cashback.next_month.success.close" || target === "cashback.next_month.success.drag")) return "correct";
+  if (taskCode === "CARD_COPY" && target === "home.savings.open") return "info";
   if (taskCode && taskCode !== "CARD_COPY" && isScenarioInfoTarget(event.target ?? event.action)) return "info";
   const verdict = event.metadata.scenarioVerdict;
   return verdict === "correct" || verdict === "error" || verdict === "recovery" || verdict === "info" ? verdict : null;
@@ -70,6 +80,7 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
     : ["/", "/cashback", "/cashback/categories", code === "CASHBACK_CONNECT" ? "/" : "/cashback"][Math.min(stage, 3)];
   if (target === "navigation.back" || target === "tab.home.open") return screen !== expectedScreen ? "recovery" : "error";
   if (code === "CARD_COPY") {
+    if (target === "home.savings.open") return "info";
     if (stage === 0 && target === "home.account.open") return "correct";
     if (stage === 1 && cardBadge.test(target)) return "correct";
     if (stage === 2 && (cardFlip.test(target) || /^card\.[^.]+\.select$/.test(target))) return "correct";

@@ -85,7 +85,14 @@ describe("action replay state", () => {
     const events = [event(1, "tap", "a"), event(2, "action", "b"), event(3, "tap", "c")];
     events[1].timestamp = new Date(1100).toISOString();
     events[2].timestamp = new Date(600_000).toISOString();
-    expect(replayEventTimes(events)).toEqual([0, 100, 1300]);
+    expect(replayEventTimes(events)).toEqual([0, 420, 1620]);
+  });
+
+  it("gives rapid taps and state changes a readable dwell time", () => {
+    const events = [event(1, "tap", "first"), event(2, "product_state_change", "changed"), event(3, "tap", "second")];
+    events[1].timestamp = new Date(1010).toISOString();
+    events[2].timestamp = new Date(1020).toISOString();
+    expect(replayEventTimes(events)).toEqual([0, 420, 680]);
   });
 
   it("preserves frequent scroll samples for smooth interpolation", () => {

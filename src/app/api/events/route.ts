@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { recordParticipantEvent } from "@/lib/db/queries";
+import { getParticipantScenarioStatus, recordParticipantEvent } from "@/lib/db/queries";
+import { completionScenarioForAction } from "@/lib/testing/scenario-progress";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,5 +20,12 @@ export async function POST(request: Request) {
     target: typeof body.target === "string" ? body.target : undefined,
     metadata: body.metadata,
   });
-  return NextResponse.json({ accepted: Boolean(event), eventId: event?.id ?? null });
+  const completionScenario = completionScenarioForAction(body.action);
+  const status = event && body.sessionId && completionScenario ? await getParticipantScenarioStatus(body.sessionId) : null;
+  return NextResponse.json({
+    accepted: Boolean(event),
+    eventId: event?.id ?? null,
+    scenarioCompleted: Boolean(event?.taskRunId && status && completionScenario && !status.activeScenario && status.completedScenarios.includes(completionScenario)),
+    status,
+  });
 }

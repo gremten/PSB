@@ -64,10 +64,18 @@ describe("STARL session export", () => {
       learning: { status: "evidence_only_requires_interpretation" },
     });
     expect(result.analysisContract.timeBasis).toBe("task_run_only");
+    expect(result.analysisPrompt.text).toContain("просмотр и копирование данных карты");
+    expect(result.analysisPrompt.text).toContain("не вычисляй общее время сессии");
     expect(result.starlRecords[0].situation).not.toHaveProperty("sessionStartedAt");
     expect(result.events[0]).not.toHaveProperty("elapsedFromSessionStartMs");
     expect(result.events[0].elapsedFromScenarioStartMs).toBe(1_000);
     expect(result.starlRecords[0].learning.signals).toContainEqual({ code: "opened_category_explanation", evidenceEventIds: [3] });
+    expect(result.starlRecords[0].action.firstInteraction).toMatchObject({
+      eventId: 1,
+      semanticLabel: "открыл кешбек через бейдж рядом с общей суммой",
+      interpretation: "ожидаемый шаг сценария",
+    });
+    expect(result.starlRecords[0].action.interactionNarrative[2].narrative).toContain("исследование интерфейса — не ошибка");
   });
 
   it("adds stable automation columns to CSV without removing legacy columns", () => {
@@ -75,8 +83,10 @@ describe("STARL session export", () => {
     expect(csv).toContain('"id","timestamp","type","screen","action","target","taskRunId","metadata"');
     expect(csv).toContain(`"${STARL_EXPORT_SCHEMA_VERSION}"`);
     expect(csv).toContain('"CASHBACK_CONNECT","unaided"');
-    expect(csv).toContain('"home.cashback.open","correct"');
+    expect(csv).toContain('"home.cashback.open","открыл кешбек через бейдж рядом с общей суммой","correct"');
     expect(csv).toContain('"elapsedTaskMs"');
+    expect(csv).toContain('"semanticLabel"');
+    expect(csv).toContain('"исследование интерфейса — не ошибка"');
     expect(csv).not.toContain('"elapsedSessionMs"');
   });
 });

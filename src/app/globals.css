@@ -172,6 +172,20 @@ html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .telegram-d
   pointer-events: none;
 }
 .participant-content::-webkit-scrollbar { display: none; }
+.participant-route-surface {
+  min-height: 100%;
+  isolation: isolate;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  animation: participant-route-ready 160ms ease-out both;
+}
+@keyframes participant-route-ready {
+  from { opacity: .88; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .participant-route-surface { animation: none; }
+}
 .stack { display: grid; gap: var(--space-4); }
 .row { display: flex; align-items: center; gap: var(--space-3); }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

@@ -3,7 +3,9 @@ import { calculateTaskMetrics } from "./metrics";
 import { isScenarioGateTarget, scenarioProgress, scenarioVerdictForEvent, type ScenarioVerdict } from "./scenario-progress";
 import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
-export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v2";
+export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v3";
+
+export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: не вычисляй общее время сессии, поскольку ожидание старта и разговор с модератором не относятся к задаче. Не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -39,6 +41,38 @@ function semanticId(event: TrackedEvent) {
   return event.target ?? event.action;
 }
 
+function semanticLabel(id: string | null | undefined) {
+  if (!id) return "событие без семантической метки";
+  const labels: Record<string, string> = {
+    "home.account.open": "открыл текущий счёт",
+    "home.savings.open": "исследовал накопительный счёт",
+    "home.cashback.open": "открыл кешбек через бейдж рядом с общей суммой",
+    "cashback.tab.open": "открыл кешбек через вкладку «Выгода»",
+    "cashback.connect.start": "начал первое подключение кешбека",
+    "cashback.next_month.categories.open": "открыл выбор категорий на октябрь",
+    "cashback.categories.confirm": "подтвердил выбранные категории",
+    "cashback.period.month": "переключил график на месяц",
+    "cashback.period.year": "переключил график на год",
+    "navigation.back": "вернулся на предыдущий экран",
+    "tab.home.open": "перешёл на главную",
+  };
+  if (labels[id]) return labels[id];
+  if (/^account\.card\.[^.]+\.open$/.test(id)) return "открыл карту счёта";
+  if (/^card\.[^.]+\.flip$/.test(id)) return "раскрыл данные карты";
+  if (/^card\.[^.]+\.(number|expiry|cvv)\.copy$/.test(id)) return "скопировал поле данных карты";
+  if (/^cashback\.category\.[^.]+\.toggle$/.test(id)) return "изменил выбор категории кешбека";
+  if (/^cashback\.category\.[^.]+\.faq\.open$/.test(id)) return "открыл пояснение категории";
+  return id;
+}
+
+function interactionInterpretation(verdict: ScenarioVerdict | null) {
+  if (verdict === "correct") return "ожидаемый шаг сценария";
+  if (verdict === "info") return "исследование интерфейса — не ошибка";
+  if (verdict === "recovery") return "возврат после отклонения от маршрута";
+  if (verdict === "error") return "действие вне активного сценария";
+  return "не классифицировано";
+}
+
 function journeySegment(verdicts: Array<ScenarioVerdict | null>, run: TaskRun) {
   if (run.result === "corrupted") return "corrupted";
   if (!run.endedAt || !run.result) return "incomplete";
@@ -60,6 +94,7 @@ function buildLearningSignals(events: TrackedEvent[], verdicts: Array<ScenarioVe
     firstCashbackEntry === "cashback.tab.open" ? { code: "entered_cashback_via_tabbar", evidenceEventIds: events.filter((event) => semanticId(event) === firstCashbackEntry).slice(0, 1).map((event) => event.id) } : null,
     ids.some((id) => /^cashback\.category\.[^.]+\.faq\.open$/.test(id ?? "")) ? { code: "opened_category_explanation", evidenceEventIds: events.filter((event) => /^cashback\.category\.[^.]+\.faq\.open$/.test(semanticId(event) ?? "")).map((event) => event.id) } : null,
     ids.includes("cashback.period.year") ? { code: "explored_annual_chart", evidenceEventIds: events.filter((event) => semanticId(event) === "cashback.period.year").map((event) => event.id) } : null,
+    ids.includes("home.savings.open") ? { code: "explored_savings_account_without_error", evidenceEventIds: events.filter((event) => semanticId(event) === "home.savings.open").map((event) => event.id) } : null,
   ].filter((signal): signal is { code: string; evidenceEventIds: number[] } => signal !== null);
 }
 
@@ -72,6 +107,21 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     const verdicts = runEvents.map((event) => scenarioVerdictForEvent(event, run.taskCode));
     const interactive = interactiveScenarios.find((scenario) => scenario.code === run.taskCode);
     const progress = interactive ? scenarioProgress(interactive.code, runEvents) : null;
+    const interactions = runEvents.filter((event) => event.type === "tap").map((event, index) => {
+      const verdict = scenarioVerdictForEvent(event, run.taskCode);
+      const label = semanticLabel(semanticId(event));
+      return {
+        order: index + 1,
+        eventId: event.id,
+        elapsedFromScenarioStartMs: elapsedMs(event.timestamp, run.startedAt),
+        screen: event.screen,
+        semanticId: semanticId(event),
+        semanticLabel: label,
+        verdict,
+        interpretation: interactionInterpretation(verdict),
+        narrative: `${index === 0 ? "Сначала" : "Затем"} участник ${label}. ${interactionInterpretation(verdict)}.`,
+      };
+    });
     return {
       recordId: run.id,
       scenarioCode: run.taskCode,
@@ -99,6 +149,8 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
           informationalTaps: metrics.infoTaps,
         },
         firstMeaningfulAction: metrics.firstMeaningfulAction,
+        firstInteraction: interactions[0] ?? null,
+        interactionNarrative: interactions,
         chronologicalEvidence: runEvents.map((event, index) => ({
           sequence: index + 1,
           eventId: event.id,
@@ -167,6 +219,11 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
       privacy: "participantCode is the study pseudonym. Event metadata is sanitized at ingestion; banking values, clipboard contents and other personal data are not exported.",
       automationGuidance: "Use only scenarioStartedAt, scenarioEndedAt, completionTimeMs and elapsedFromScenarioStartMs for timing analysis. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
     },
+    analysisPrompt: {
+      language: "ru",
+      methodology: "STARL",
+      text: STARL_ANALYSIS_PROMPT_RU,
+    },
     coverage,
     starlRecords,
     session: snapshot.session,
@@ -188,10 +245,11 @@ function csvCell(value: unknown) {
 export function buildSessionEventsCsv(snapshot: SessionSnapshot) {
   const runs = new Map(snapshot.taskRuns.map((run) => [run.id, run]));
   const rows = [
-    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedTaskMs", "semanticId", "scenarioVerdict"],
+    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedTaskMs", "semanticId", "semanticLabel", "scenarioVerdict", "interpretation"],
     ...snapshot.events.map((event) => {
       const run = event.taskRunId ? runs.get(event.taskRunId) : undefined;
-      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event.timestamp, run?.startedAt), semanticId(event), scenarioVerdictForEvent(event, run?.taskCode)];
+      const verdict = scenarioVerdictForEvent(event, run?.taskCode);
+      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event.timestamp, run?.startedAt), semanticId(event), semanticLabel(semanticId(event)), verdict, interactionInterpretation(verdict)];
     }),
   ];
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;

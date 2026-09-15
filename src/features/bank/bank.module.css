@@ -435,6 +435,7 @@
 .heroAction { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; color: #0a0c0f; background: white; font-size: 16px; cursor: pointer; }
 .heroAction img { width: 24px; height: 24px; filter: invert(1); }
 
+.bankUiRoot { position: relative; }
 .accountScreen { position: relative; overflow: clip; isolation: isolate; }
 .accountForeground { position: relative; z-index: 1; }
 .accountGradientFrame {

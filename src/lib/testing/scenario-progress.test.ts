@@ -36,6 +36,13 @@ describe("three recorded usability flows", () => {
     expect(scenarioProgress("CARD_COPY", [...before, event(2, "screen_view", "/cashback")]).stage).toBe(1);
   });
 
+  it("treats the savings account as allowed exploration during card copy", () => {
+    const savingsTap = event(1, "tap", "home.savings.open", { scenarioVerdict: "error" });
+    expect(classifyScenarioTap("CARD_COPY", [], "home.savings.open", {}, "/")).toBe("info");
+    expect(scenarioVerdictForEvent(savingsTap, "CARD_COPY")).toBe("info");
+    expect(scenarioProgress("CARD_COPY", [savingsTap]).stage).toBe(0);
+  });
+
   it("classifies category help and chart period changes as informational", () => {
     const categories = [event(1, "tap", "cashback.tab.open"), event(2, "tap", "cashback.next_month.categories.open")];
     expect(classifyScenarioTap("CASHBACK_NEXT", categories, "cashback.category.fuel.faq.open", {}, "/cashback/categories")).toBe("info");

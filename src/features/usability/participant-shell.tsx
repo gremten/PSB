@@ -5,10 +5,19 @@ import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "re
 import { getInteractiveScenario } from "@/config/test-scenarios";
 import { Tabbar } from "@/components/ui";
 import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
+import bankStyles from "@/features/bank/bank.module.css";
 import { DEMO_UNAVAILABLE_EVENT, showDemoUnavailable } from "./demo-feedback";
 import { GlassToast } from "./glass-toast";
 import { ParticipantProvider } from "./participant-provider";
-import { PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY } from "@/lib/testing/tracking";
+import {
+  PARTICIPANT_ACTIVE_SCENARIO_KEY,
+  PARTICIPANT_COMPLETION_LOCK_KEY,
+  PARTICIPANT_SCENARIO_COMPLETED,
+  PARTICIPANT_SCENARIO_COMPLETING,
+  PARTICIPANT_SCENARIO_COMPLETION_FAILED,
+  PARTICIPANT_SESSION_CHANGED,
+  PARTICIPANT_SESSION_KEY,
+} from "@/lib/testing/tracking";
 import { resetParticipantState } from "@/lib/testing/participant-state";
 import gateStyles from "./scenario-gate.module.css";
 
@@ -85,8 +94,34 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   const [submitting, setSubmitting] = useState(false);
   const [scenarioStatus, setScenarioStatus] = useState<ScenarioStatus | null>(null);
   const [scenarioError, setScenarioError] = useState("");
+  const [completingScenario, setCompletingScenario] = useState(false);
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
   const preloadImages = useRef<HTMLImageElement[]>([]);
+
+  useEffect(() => {
+    const begin = () => setCompletingScenario(true);
+    const complete = (event: Event) => {
+      setScenarioStatus((event as CustomEvent<ScenarioStatus>).detail);
+      setCompletingScenario(false);
+    };
+    const fail = () => setCompletingScenario(false);
+    window.addEventListener(PARTICIPANT_SCENARIO_COMPLETING, begin);
+    window.addEventListener(PARTICIPANT_SCENARIO_COMPLETED, complete);
+    window.addEventListener(PARTICIPANT_SCENARIO_COMPLETION_FAILED, fail);
+    return () => {
+      window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETING, begin);
+      window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETED, complete);
+      window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETION_FAILED, fail);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (scenarioStatus?.activeScenario) {
+      window.sessionStorage.setItem(PARTICIPANT_ACTIVE_SCENARIO_KEY, scenarioStatus.activeScenario);
+      window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
+    }
+    else window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
+  }, [scenarioStatus?.activeScenario]);
 
   useEffect(() => {
     if ((!participantEntered && !replaying) || (sessionId && window.sessionStorage.getItem(`${SESSION_CACHE_CLEARED_PREFIX}${sessionId}`))) return;
@@ -133,7 +168,10 @@ function ShellBody({ children }: { children: React.ReactNode }) {
         }
         if (!response.ok) return;
         const payload = await response.json() as { status: ScenarioStatus };
-        if (!cancelled) setScenarioStatus(payload.status);
+        if (!cancelled) {
+          setScenarioStatus(payload.status);
+          if (!payload.status.activeScenario) setCompletingScenario(false);
+        }
       } catch { /* Presence and status polling retry without blocking product UI. */ }
     };
     void refresh();
@@ -161,6 +199,8 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       const payload = await response.json() as { session?: { id: string }; error?: string };
       if (!response.ok || !payload.session) throw new Error(payload.error ?? "Не удалось начать тест");
       window.sessionStorage.setItem(PARTICIPANT_SESSION_KEY, payload.session.id);
+      window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
+      window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
       window.dispatchEvent(new Event(PARTICIPANT_SESSION_CHANGED));
       resetParticipantState("disconnected");
       enterParticipant();
@@ -174,6 +214,8 @@ function ShellBody({ children }: { children: React.ReactNode }) {
 
   const skipParticipantSession = () => {
     window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
+    window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
+    window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
     resetParticipantState("disconnected");
     enterParticipant();
   };
@@ -186,16 +228,18 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       const response = await fetch(`/api/testing/sessions/${encodeURIComponent(sessionId)}/scenario`, { method: "POST" });
       const payload = await response.json() as { status?: ScenarioStatus; error?: string };
       if (!response.ok || !payload.status) throw new Error(payload.error ?? "Не удалось начать сценарий");
+      window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
+      if (payload.status.activeScenario) window.sessionStorage.setItem(PARTICIPANT_ACTIVE_SCENARIO_KEY, payload.status.activeScenario);
       setScenarioStatus(payload.status);
       router.push(getInteractiveScenario(scenarioStatus.assignedScenario)?.startRoute ?? "/");
     } catch (cause) { setScenarioError(cause instanceof Error ? cause.message : "Не удалось начать сценарий"); }
     finally { setSubmitting(false); }
   };
 
-  const awaitingScenario = participantEntered && !replaying && Boolean(sessionId) && !scenarioStatus?.activeScenario;
+  const awaitingScenario = participantEntered && !replaying && Boolean(sessionId) && (completingScenario || !scenarioStatus?.activeScenario);
   const assigned = getInteractiveScenario(scenarioStatus?.assignedScenario ?? "");
 
-  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className={`role-gate ${gateStyles.entry}`} aria-labelledby="role-gate-title"><button type="button" className={gateStyles.entrySkip} data-track="participant.session.skip" onClick={skipParticipantSession}>Без сессии</button><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Начать тест</h1><p>Введите псевдоним или код участника — без&nbsp;фамилии и&nbsp;других личных данных.</p><form className="role-gate__form" onSubmit={createParticipantSession}><label htmlFor="participant-name">Псевдоним участника</label><input className={gateStyles.entryInput} id="participant-name" name="participantName" maxLength={32} autoComplete="off" placeholder="Например, P-01" value={participantName} onChange={(event) => setParticipantName(event.target.value)} />{entryError && <p className="role-gate__error" role="alert">{entryError}</p>}<button type="submit" className={gateStyles.entryStart} data-track="participant.session.create" disabled={!participantName.trim() || submitting}>Начать тест</button></form></section> : awaitingScenario ? <section className="role-gate" aria-labelledby="scenario-gate-title"><p className="role-gate__eyebrow">PSB usability test</p><h1 id="scenario-gate-title">{scenarioStatus?.ended ? scenarioStatus.endReason === "all_scenarios_completed" ? "Тест завершён" : "Сессия завершена" : assigned ? assigned.title : "Ожидаем задание"}</h1><p>{scenarioStatus?.ended ? "Запись завершена. Спасибо за участие." : assigned ? assigned.prompt : "Модератор выберет следующее задание. Пожалуйста, оставайтесь на этом экране."}</p>{scenarioError && <p className="role-gate__error" role="alert">{scenarioError}</p>}<div className={gateStyles.actions}>{assigned && !scenarioStatus?.ended && <button type="button" className={gateStyles.start} data-track="participant.scenario.start" disabled={submitting} onClick={() => void startScenario()}>Старт</button>}</div></section> : <div className="participant-phone"><div className="participant-content">{children}</div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
+  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className={`role-gate ${gateStyles.entry}`} aria-labelledby="role-gate-title"><button type="button" className={gateStyles.entrySkip} data-track="participant.session.skip" onClick={skipParticipantSession}>Без сессии</button><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Начать тест</h1><p>Введите псевдоним или код участника — без&nbsp;фамилии и&nbsp;других личных данных.</p><form className="role-gate__form" onSubmit={createParticipantSession}><label htmlFor="participant-name">Псевдоним участника</label><input className={gateStyles.entryInput} id="participant-name" name="participantName" maxLength={32} autoComplete="off" placeholder="Например, P-01" value={participantName} onChange={(event) => setParticipantName(event.target.value)} />{entryError && <p className="role-gate__error" role="alert">{entryError}</p>}<button type="submit" className={gateStyles.entryStart} data-track="participant.session.create" disabled={!participantName.trim() || submitting}>Начать тест</button></form></section> : awaitingScenario ? <section className="role-gate" aria-labelledby="scenario-gate-title"><p className="role-gate__eyebrow">PSB usability test</p><h1 id="scenario-gate-title">{completingScenario ? "Задание завершено" : scenarioStatus?.ended ? scenarioStatus.endReason === "all_scenarios_completed" ? "Тест завершён" : "Сессия завершена" : assigned ? assigned.title : "Ожидаем задание"}</h1><p>{completingScenario ? "Сохраняем результат…" : scenarioStatus?.ended ? "Запись завершена. Спасибо за участие." : assigned ? assigned.prompt : "Модератор выберет следующее задание. Пожалуйста, оставайтесь на этом экране."}</p>{scenarioError && <p className="role-gate__error" role="alert">{scenarioError}</p>}<div className={gateStyles.actions}>{!completingScenario && assigned && !scenarioStatus?.ended && <button type="button" className={gateStyles.start} data-track="participant.scenario.start" disabled={submitting} onClick={() => void startScenario()}>Старт</button>}</div></section> : <div className={`participant-phone ${bankStyles.bankUiRoot}`}><div className="participant-content"><div className="participant-route-surface" key={pathname}>{children}</div></div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {
