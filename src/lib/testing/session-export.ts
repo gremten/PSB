@@ -64,6 +64,7 @@ function buildLearningSignals(events: TrackedEvent[], verdicts: Array<ScenarioVe
 }
 
 export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString()) {
+  const taskRunById = new Map(snapshot.taskRuns.map((run) => [run.id, run]));
   const starlRecords = snapshot.taskRuns.map((run) => {
     const task = getTask(run.taskCode);
     const runEvents = snapshot.events.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(semanticId(event))));
@@ -172,9 +173,9 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     taskRuns: snapshot.taskRuns,
     events: snapshot.events.map((event) => ({
       ...event,
-      elapsedFromScenarioStartMs: elapsedMs(event.timestamp, snapshot.taskRuns.find((run) => run.id === event.taskRunId)?.startedAt),
+      elapsedFromScenarioStartMs: elapsedMs(event.timestamp, taskRunById.get(event.taskRunId ?? "")?.startedAt),
       semanticId: semanticId(event),
-      scenarioVerdict: scenarioVerdictForEvent(event, snapshot.taskRuns.find((run) => run.id === event.taskRunId)?.taskCode),
+      scenarioVerdict: scenarioVerdictForEvent(event, taskRunById.get(event.taskRunId ?? "")?.taskCode),
     })),
   };
 }

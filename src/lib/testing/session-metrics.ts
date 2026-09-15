@@ -50,7 +50,7 @@ function countDemoMissclicks(events: TrackedEvent[], verdictFor: (event: Tracked
   return explicit.length + legacy.length;
 }
 
-export function calculateSessionInteractionMetrics(session: ResearchSession, events: TrackedEvent[], nowMs = Date.now(), taskRuns: TaskRun[] = []): SessionInteractionMetrics {
+export function calculateSessionInteractionMetrics(_session: ResearchSession, events: TrackedEvent[], nowMs = Date.now(), taskRuns: TaskRun[] = []): SessionInteractionMetrics {
   const taskCodeByRun = new Map(taskRuns.map((run) => [run.id, run.taskCode]));
   const verdictFor = (event: TrackedEvent) => scenarioVerdictForEvent(event, event.taskRunId ? taskCodeByRun.get(event.taskRunId) : undefined);
   const scenarioEvents = events.filter((event) => !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)));
