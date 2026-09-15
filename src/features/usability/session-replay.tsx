@@ -162,7 +162,7 @@ export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: Tr
         const index = replayEvents.findIndex((item) => item.taskRunId === event.target.value);
         if (index >= 0) selectEvent(eventTimes[index]);
       }}><option value="" disabled>Перейти к сценарию</option>{taskRuns.map((run) => <option key={run.id} value={run.id}>{getTask(run.taskCode)?.title ?? run.taskCode}</option>)}</select>}
-      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по\u00a0времени" />
+      <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label={"Позиция replay по\u00a0времени"} />
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
     </div>
     <ReplayTimeline events={replayEvents} times={eventTimes} startedAt={startedAt} activeIndex={safeIndex} select={selectEvent} taskCodeByRun={taskCodeByRun} />

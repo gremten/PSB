@@ -68,7 +68,7 @@ export default function AccountPage() {
             <p className={styles.dateHeading}>19 марта, четверг</p>
             <div className={styles.historyList}>
               <Transaction imageSrc="/figma/account/merchant-psb.webp" title="Банкомат ПСБ" meta="Внесение наличных" amount="+ 2 000 ₽" />
-              <Transaction imageSrc="/figma/account/merchant-bbq.webp" title="BARBECUE Rostov RUS" meta="Оплата товаров и\u00a0услуг" amount="− 1 691 ₽" />
+              <Transaction imageSrc="/figma/account/merchant-bbq.webp" title="BARBECUE Rostov RUS" meta={"Оплата товаров и\u00a0услуг"} amount="− 1 691 ₽" />
             </div>
             <p className={`${styles.dateHeading} ${styles.accountSecondDate}`}>18 марта, среда</p>
             <div className={styles.historyList}>
@@ -81,9 +81,9 @@ export default function AccountPage() {
             <h2 className={styles.accountSettingsTitle}>Настройки счёта</h2>
             <div className={styles.settingsList}>
               <SettingsRow label="Реквизиты" dataTrack="account.details.open" />
-              <SettingsRow label="Тарифы и\u00a0лимиты" dataTrack="account.tariffs.open" />
-              <SettingsRow label="Справки и\u00a0выписки" dataTrack="account.statements.open" />
-              <SettingsRow label="Уведомления об\u00a0операциях" dataTrack="account.notifications.open" />
+              <SettingsRow label={"Тарифы и\u00a0лимиты"} dataTrack="account.tariffs.open" />
+              <SettingsRow label={"Справки и\u00a0выписки"} dataTrack="account.statements.open" />
+              <SettingsRow label={"Уведомления об\u00a0операциях"} dataTrack="account.notifications.open" />
             </div>
             <div className={styles.accountDangerRow}>
               <button type="button" className={styles.accountDangerButton} data-track="account.block.open" onClick={showDemoUnavailable}>Заблокировать счёт</button>

@@ -151,7 +151,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          <HorizontalScroller className={styles.accountScroller} ariaLabel="Счета и\u00a0продукты">
+          <HorizontalScroller className={styles.accountScroller} ariaLabel={"Счета и\u00a0продукты"}>
             <Link className={styles.accountCard} href="/account" data-track="home.account.open">
               <span className={styles.accountBadge}>
                 <Image src="/figma/home/bankcard.svg" alt="" width={16} height={16} />
