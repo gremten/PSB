@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Reinstall only when the lockfile changed, then start the Next dev server.
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      # Override in .env.local, which docker compose reads through env_file below.
+      MODERATOR_SECRET: change-this-local-secret
+      # Research data lives in the bind-mounted repository, so it survives rebuilds.
+      PSB_DB_PATH: /app/data/psb-research.sqlite
+      # Bind-mounted sources need polling for reliable file watching on macOS/Windows.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    env_file:
+      - path: .env.local
+        required: false
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules:
+  next_cache:

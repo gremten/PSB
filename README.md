@@ -21,6 +21,26 @@ npm run dev
 
 Open `http://localhost:3000` for the participant app and `http://localhost:3000/moderator` for the dashboard. Research data is stored in `data/psb-research.sqlite` and survives server restarts.
 
+## Docker Compose
+
+The dev stack runs the same Next dev server inside Linux, so `better-sqlite3` is built for the container instead of the host:
+
+```powershell
+Copy-Item .env.example .env.local   # optional; overrides MODERATOR_SECRET
+docker compose up
+```
+
+`http://localhost:3000` serves the participant app and `http://localhost:3000/moderator` the dashboard. Research data is written to the bind-mounted `data/psb-research.sqlite`, so it survives container rebuilds. `node_modules` and `.next` stay in named volumes and never mix with a host build; `npm install` runs on every start and is a no-op when the lockfile is unchanged.
+
+Checks run in the container the same way:
+
+```powershell
+docker compose exec app npm test
+docker compose exec app npx tsc --noEmit
+```
+
+`docker compose down -v` also drops the dependency and build-cache volumes. The dev server rewrites the generated `next-env.d.ts` for plain Next; restore it with `git checkout next-env.d.ts` before committing, since the repository keeps the vinext variant. Cloudflare builds and deploys still run through vinext and Wrangler on the host, not through this image.
+
 ## Checks
 
 ```powershell
