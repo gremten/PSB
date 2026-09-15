@@ -48,6 +48,8 @@ const snapshot: SessionSnapshot = {
     event(6, "tap", "cashback.category.taxi.toggle", "correct"),
     { ...event(7, "tap", "cashback.categories.confirm", "correct"), metadata: { scenarioVerdict: "correct", selectedCount: 3 } },
     event(8, "tap", "cashback.success.close", "correct"),
+    // The sheet dismisses itself 200 ms after the tap, and that is what completes the run.
+    event(9, "product_state_change", "cashback.success.dismissed"),
   ],
 };
 

@@ -16,7 +16,8 @@
     "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json",
     "deploy:cloudflare": "npm run db:migrate:remote && npm run deploy:vinext",
     "db:migrate:local": "wrangler d1 migrations apply PSB_DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply PSB_DB --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply PSB_DB --remote",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/onest": "latest",
@@ -35,10 +36,12 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/selenium-webdriver": "^4.35.7",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitejs/plugin-rsc": "^0.5.34",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "selenium-webdriver": "^4.49.0",
     "typescript": "latest",
     "vite": "^8.2.2",
     "vitest": "latest",

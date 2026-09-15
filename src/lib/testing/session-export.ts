@@ -15,7 +15,6 @@ const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpo
     { step: 2, purpose: "Открыть карту счёта", acceptedSemanticIds: ["account.card.primary.open", "account.card.strong.open", "account.card.salary.open"] },
     { step: 3, purpose: "Раскрыть данные карты", acceptedSemanticIds: ["card.night.flip", "card.orange.flip", "card.salary.flip"] },
     { step: 4, purpose: "Скопировать поле карты", acceptedSemanticIds: ["card.*.number.copy", "card.*.expiry.copy", "card.*.cvv.copy"] },
-    { step: 5, purpose: "Дождаться закрытия подтверждения", acceptedSemanticIds: ["card.copy.toast.closed", "card.copy.toast.dismiss"] },
   ],
   CASHBACK_CONNECT: [
     { step: 1, purpose: "Открыть кешбэк", acceptedSemanticIds: ["home.cashback.open", "cashback.tab.open"] },

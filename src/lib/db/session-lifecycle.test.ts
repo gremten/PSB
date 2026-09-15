@@ -67,9 +67,9 @@ describe("independent participant session lifecycle", () => {
     await tap("home.account.open", "/");
     await tap("account.card.salary.open", "/account");
     await tap("card.salary.flip", "/card");
-    await tap("card.salary.number.copy", "/card");
     expect((await getParticipantScenarioStatus(session.id))?.activeScenario).toBe("CARD_COPY");
-    await action("card.copy.toast.closed", "/card");
+    // Copying finishes the flow; hiding the card before the toast fades cannot block it.
+    await tap("card.salary.cvv.copy", "/card");
     expect((await getParticipantScenarioStatus(session.id))?.completedScenarios).toContain("CARD_COPY");
 
     await assignParticipantScenario(session.id, "CASHBACK_CONNECT");
@@ -79,6 +79,9 @@ describe("independent participant session lifecycle", () => {
     for (const id of ["all", "flights", "taxi"]) await tap(`cashback.category.${id}.toggle`, "/cashback/categories");
     await tap("cashback.categories.confirm", "/cashback/categories", { selectedCount: 3 });
     await tap("cashback.success.close", "/");
+    // The closing tap alone leaves the scenario open: the sheet still has to dismiss itself.
+    expect((await getParticipantScenarioStatus(session.id))?.activeScenario).toBe("CASHBACK_CONNECT");
+    await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CASHBACK_CONNECT", eventName: "product_state_change", screen: "/", action: "cashback.success.dismissed" });
     expect((await getParticipantScenarioStatus(session.id))?.completedScenarios).toContain("CASHBACK_CONNECT");
     expect((await getSession(session.id))?.endedAt).toBeNull();
 
