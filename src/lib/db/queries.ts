@@ -80,6 +80,16 @@ export async function getSessionSnapshot(id: string, eventLimit = 500): Promise<
   return { session, taskRuns, events };
 }
 
+/** Full, ordered snapshot for durable exports. Live moderator reads stay bounded. */
+export async function getFullSessionSnapshot(id: string): Promise<SessionSnapshot | null> {
+  await expireDisconnectedSessions(id);
+  const session = await getSession(id);
+  if (!session) return null;
+  const taskRuns = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id = ? ORDER BY started_at`, [id])).map(asTaskRun);
+  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id = ? ORDER BY id`, [id])).map(asEvent);
+  return { session, taskRuns, events };
+}
+
 export async function getResearchState(): Promise<ResearchSessionState> {
   const row = await getDatabase().first<{
         sessionId: string | null;

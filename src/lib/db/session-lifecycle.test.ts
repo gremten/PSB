@@ -6,7 +6,7 @@ import type { DatabaseAdapter } from "./types";
 let database: Database.Database;
 let adapter: DatabaseAdapter;
 vi.mock("./index", () => ({ getDatabase: () => adapter }));
-import { assignParticipantScenario, beginParticipantScenario, createParticipantSession, deleteSession, endSession, getParticipantScenarioStatus, getSession, getSessionSnapshot, heartbeatSession, leaveParticipantScenario, listSessions, recordParticipantEvent } from "./queries";
+import { assignParticipantScenario, beginParticipantScenario, createParticipantSession, deleteSession, endSession, getFullSessionSnapshot, getParticipantScenarioStatus, getSession, getSessionSnapshot, heartbeatSession, leaveParticipantScenario, listSessions, recordParticipantEvent } from "./queries";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -114,6 +114,16 @@ describe("independent participant session lifecycle", () => {
     expect(snapshot?.session.endReason).toBe("moderator");
     expect(snapshot?.events.filter((event) => event.type === "tap")).toHaveLength(1);
     expect(snapshot?.events.filter((event) => event.type === "session_ended")).toHaveLength(1);
+  });
+
+  it("does not silently truncate the durable export snapshot", async () => {
+    const session = await createParticipantSession("Export-all");
+    await assignParticipantScenario(session.id, "CARD_COPY");
+    await beginParticipantScenario(session.id);
+    await recordParticipantEvent({ sessionId: session.id, eventName: "tap", action: "home.account.open" });
+    await recordParticipantEvent({ sessionId: session.id, eventName: "tap", action: "account.card.primary.open" });
+    expect((await getSessionSnapshot(session.id, 1))?.events).toHaveLength(1);
+    expect((await getFullSessionSnapshot(session.id))?.events).toHaveLength(4);
   });
 
   it("deletes exactly one session with its task and events, preserving other clients", async () => {
