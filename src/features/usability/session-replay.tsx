@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import { getTask } from "@/config/test-scenarios";
-import { isScenarioGateTarget } from "@/lib/testing/scenario-progress";
+import { isScenarioGateTarget, scenarioVerdictForEvent } from "@/lib/testing/scenario-progress";
 import type { TaskRun, TrackedEvent } from "@/lib/testing/types";
 import { isDemoMissclick } from "@/lib/testing/session-metrics";
 import { GlassToast } from "./glass-toast";
@@ -27,19 +27,20 @@ function replayUrl(screen: string) {
   return `${REPLAY_SCREENS.has(screen) ? screen : "/"}?replay=1`;
 }
 
-const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, activeIndex, select }: {
-  events: TrackedEvent[]; times: number[]; startedAt: string | null; activeIndex: number; select: (time: number) => void;
+const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, activeIndex, select, taskCodeByRun }: {
+  events: TrackedEvent[]; times: number[]; startedAt: string | null; activeIndex: number; select: (time: number) => void; taskCodeByRun: Map<string, string>;
 }) {
   return <div className={styles.replayTimeline}>
-    {events.map((event, index) => <button type="button" className={`${index === activeIndex ? styles.replayEventActive : ""} ${event.type === "tap" ? event.metadata.scenarioVerdict === "correct" || event.metadata.scenarioVerdict === "recovery" ? styles.replayTapCorrect : styles.replayTapEvent : ""}`} key={event.id} onClick={() => select(times[index])}>
+    {events.map((event, index) => { const verdict = scenarioVerdictForEvent(event, event.taskRunId ? taskCodeByRun.get(event.taskRunId) : undefined); return <button type="button" className={`${index === activeIndex ? styles.replayEventActive : ""} ${event.type === "tap" ? verdict === "info" ? styles.replayTapInfo : verdict === "correct" || verdict === "recovery" ? styles.replayTapCorrect : styles.replayTapEvent : ""}`} key={event.id} onClick={() => select(times[index])}>
       <span>{eventElapsed(event, startedAt, events[0].timestamp)}</span>
       <strong>{event.type}</strong>
       <small>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</small>
-    </button>)}
+    </button>; })}
   </div>;
 });
 
 export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
+  const taskCodeByRun = useMemo(() => new Map(taskRuns.map((run) => [run.id, run.taskCode])), [taskRuns]);
   const replayEvents = useMemo(() => events.filter((event) => (event.screen || event.type === "tap") && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)))
     .sort((a, b) => recordedEventTime(a) - recordedEventTime(b) || a.id - b.id), [events]);
   const eventTimes = useMemo(() => replayEventTimes(replayEvents), [replayEvents]);
@@ -170,7 +171,7 @@ export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: Tr
     <div>
       <div className={styles.replayViewport} ref={viewportRef}>
         <iframe ref={iframeRef} src={replayUrl(replayEvents[0].screen ?? "/")} title={`Replay экрана ${screen}`} onLoad={postReplayState} />
-        {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused} ${activeTap.metadata.scenarioVerdict === "correct" || activeTap.metadata.scenarioVerdict === "recovery" ? styles.replayPointCorrect : ""}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
+        {tapPoint && activeTap && showTap && tapPoint.id === activeTap.id && <span key={tapPoint.id} className={`${styles.replayPoint} ${activelyPlaying ? styles.replayPointCurrent : styles.replayPointPaused} ${scenarioVerdictForEvent(activeTap, activeTap.taskRunId ? taskCodeByRun.get(activeTap.taskRunId) : undefined) === "info" ? styles.replayPointInfo : scenarioVerdictForEvent(activeTap, activeTap.taskRunId ? taskCodeByRun.get(activeTap.taskRunId) : undefined) === "correct" || scenarioVerdictForEvent(activeTap, activeTap.taskRunId ? taskCodeByRun.get(activeTap.taskRunId) : undefined) === "recovery" ? styles.replayPointCorrect : ""}`} style={{ left: tapPoint.left, top: tapPoint.top }}><i /></span>}
         {replayToastEvent && replayToastEvent.id !== dismissedToastId && <GlassToast key={replayToastEvent.id} placement="bottom" tone="orange" trackId="moderator.replay.demo_toast.dismiss" className={styles.replayToast} onDone={() => setDismissedToastId(replayToastEvent.id)}>Недоступно в&nbsp;демо-демонстрации</GlassToast>}
       </div>
       <div className={styles.replayControls}>
@@ -184,6 +185,6 @@ export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: Tr
       <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label="Позиция replay по\u00a0времени" />
       <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
     </div>
-    <ReplayTimeline events={replayEvents} times={eventTimes} startedAt={startedAt} activeIndex={safeIndex} select={selectEvent} />
+    <ReplayTimeline events={replayEvents} times={eventTimes} startedAt={startedAt} activeIndex={safeIndex} select={selectEvent} taskCodeByRun={taskCodeByRun} />
   </div>;
 }

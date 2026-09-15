@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import { interactiveScenarios } from "@/config/test-scenarios";
 import type { AggregateTaskMetrics } from "@/lib/testing/metrics";
+import type { ResearchSummary } from "@/lib/testing/research-summary";
+import { scenarioVerdictForEvent } from "@/lib/testing/scenario-progress";
 import { calculateSessionInteractionMetrics, isDemoMissclick } from "@/lib/testing/session-metrics";
 import type { ResearchSession, SessionSnapshot } from "@/lib/testing/types";
 import { GlassToast } from "./glass-toast";
@@ -42,6 +44,9 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   const [error, setError] = useState("");
   const [clock, setClock] = useState(() => Date.now());
   const [liveMissclickId, setLiveMissclickId] = useState<number | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [researchSummary, setResearchSummary] = useState<ResearchSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const selectionRequest = useRef(0);
   const seenMissclick = useRef({ sessionId: initialSnapshot?.session.id ?? null, id: initialSnapshot?.events.filter(isDemoMissclick).at(-1)?.id ?? 0 });
   const selectedId = snapshot?.session.id;
@@ -94,7 +99,8 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [openSession, selectedId]);
 
-  const observed = useMemo(() => snapshot ? calculateSessionInteractionMetrics(snapshot.session, snapshot.events, clock) : null, [clock, snapshot]);
+  const observed = useMemo(() => snapshot ? calculateSessionInteractionMetrics(snapshot.session, snapshot.events, clock, snapshot.taskRuns) : null, [clock, snapshot]);
+  const taskCodeByRun = useMemo(() => new Map(snapshot?.taskRuns.map((run) => [run.id, run.taskCode]) ?? []), [snapshot]);
   const activeRun = snapshot?.taskRuns.find((run) => !run.endedAt);
   const completedCodes = new Set(snapshot?.taskRuns.filter((run) => run.result === "unaided" || run.result === "aided").map((run) => run.taskCode) ?? []);
 
@@ -109,6 +115,17 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
       if (!response.ok) throw new Error(payload.error ?? "Не удалось назначить сценарий");
       await openSession(snapshot.session.id);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось назначить сценарий"); }
+  };
+
+  const toggleResearchSummary = async () => {
+    if (summaryOpen) { setSummaryOpen(false); return; }
+    setSummaryOpen(true);
+    setSummaryLoading(true);
+    try {
+      const payload = await readJson<{ summary: ResearchSummary }>("/api/moderator/metrics");
+      setResearchSummary(payload.summary);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось получить саммари"); }
+    finally { setSummaryLoading(false); }
   };
 
   return <main className={styles.page}><div className={styles.shell}>
@@ -142,11 +159,16 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
           <div className={styles.metricGrid}>
             <div className={styles.stat}><span>Время</span><strong>{duration(observed.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{observed.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{observed.meaningfulSteps}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{observed.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{observed.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{observed.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{observed.productStateChanges}</strong></div><div className={styles.stat}><span>Мисклики</span><strong>{observed.missclickCount}</strong></div><div className={styles.stat}><span>Текущий экран</span><strong>{observed.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{observed.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{observed.lastAction ?? "—"}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{observed.eventCount}</strong></div>
           </div>
-          <div className={styles.metricGrid}><div className={styles.stat}><span>Верные клики</span><strong>{observed.correctTapCount}</strong></div><div className={styles.stat}><span>Ошибки в сценариях</span><strong>{observed.scenarioErrorCount}</strong></div><div className={styles.stat}><span>Возвраты</span><strong>{observed.recoveryCount}</strong></div></div>
+          <div className={styles.metricGrid}><div className={styles.stat}><span>Верные клики</span><strong>{observed.correctTapCount}</strong></div><div className={styles.stat}><span>Ошибки в сценариях</span><strong>{observed.scenarioErrorCount}</strong></div><div className={styles.stat}><span>Возвраты</span><strong>{observed.recoveryCount}</strong></div><div className={styles.stat}><span>Изучение интерфейса</span><strong>{observed.infoTapCount}</strong></div></div>
         </section>
-        <section className={styles.card}><div className="row-between"><div><h2>Live timeline</h2><p className={styles.build}>Клики и&nbsp;действия появляются здесь в&nbsp;реальном времени.</p></div><span className={styles.build}>{snapshot.events.length} events</span></div><div className={styles.eventLog}>{snapshot.events.length ? [...snapshot.events].reverse().map((event) => <div className={`${styles.event} ${event.metadata.scenarioVerdict === "error" ? styles.liveError : event.metadata.scenarioVerdict === "correct" || event.metadata.scenarioVerdict === "recovery" ? styles.liveCorrect : ""}`} key={event.id}><span>{shortTime(event.timestamp)}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>) : <div className={styles.empty}>Ждём первое действие участника</div>}</div></section>
+        <section className={styles.card}><div className="row-between"><div><h2>Live timeline</h2><p className={styles.build}>Клики и&nbsp;действия появляются здесь в&nbsp;реальном времени.</p></div><span className={styles.build}>{snapshot.events.length} events</span></div><div className={styles.eventLog}>{snapshot.events.length ? [...snapshot.events].reverse().map((event) => { const verdict = scenarioVerdictForEvent(event, event.taskRunId ? taskCodeByRun.get(event.taskRunId) : undefined); return <div className={`${styles.event} ${verdict === "error" ? styles.liveError : verdict === "info" ? styles.liveInfo : verdict === "correct" || verdict === "recovery" ? styles.liveCorrect : ""}`} key={event.id}><span>{shortTime(event.timestamp)}</span><span className={styles.eventType}>{event.type}</span><span className={styles.eventAction}>{event.screen ?? "—"} · {event.action ?? event.target ?? "—"}</span></div>; }) : <div className={styles.empty}>Ждём первое действие участника</div>}</div></section>
         <section className={styles.card}><h2>Последовательность экранов и&nbsp;действий</h2>{observed.sequence.length ? <ol className={styles.sequence}>{observed.sequence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ol> : <div className={styles.empty}>Последовательность пока пуста</div>}</section>
       </> : <section className={styles.card}><div className={styles.empty}>Выберите запись участника, чтобы увидеть метрики и&nbsp;клики.</div></section>}
+
+      <section className={styles.card}>
+        <div className="row-between"><div><h2>Саммари по сессиям</h2><p className={styles.build}>Доли считаются по участникам, а не по количеству событий.</p></div><button type="button" className={`${styles.button} ${styles.secondary}`} onClick={() => void toggleResearchSummary()}>{summaryOpen ? "Скрыть саммари" : "Открыть саммари"}</button></div>
+        {summaryOpen && (summaryLoading ? <div className={styles.empty}>Считаем показатели…</div> : researchSummary ? <><p className={styles.summaryTotal}>Записанных сессий: <strong>{researchSummary.recordedSessions}</strong></p><h3 className={styles.summaryHeading}>Качество завершённых сценариев</h3><div className={styles.metricGrid}>{researchSummary.journeySegments.map((metric) => <div className={styles.stat} key={metric.id}><span>{metric.label}</span><strong>{metric.count} из {metric.total} · {metric.percent}%</strong><small className={styles.summaryDenominator}>{metric.denominatorLabel}</small></div>)}</div><h3 className={styles.summaryHeading}>Поведение участников</h3><div className={styles.metricGrid}>{researchSummary.metrics.map((metric) => <div className={styles.stat} key={metric.id}><span>{metric.label}</span><strong>{metric.count} из {metric.total} · {metric.percent}%</strong><small className={styles.summaryDenominator}>{metric.denominatorLabel}</small></div>)}</div></> : <div className={styles.empty}>Нет данных для саммари</div>)}
+      </section>
 
       {initialMetrics.length > 0 && <section className={styles.card}><h2>Агрегаты завершённых задач</h2><div className={styles.sessionTableWrap}><table className={styles.metrics}><thead><tr><th>Task</th><th>Unaided</th><th>Aided</th><th>Failed</th><th>Median time</th><th>Median steps</th><th>Median deviation</th><th>Ease median</th></tr></thead><tbody>{initialMetrics.map((metric) => <tr key={metric.taskCode}><td>{metric.taskCode}</td><td>{Math.round(metric.unaidedCompletionRate * 100)}%</td><td>{metric.aidedCount}</td><td>{metric.failedCount}</td><td>{metric.medianCompletionTimeMs === null ? "—" : duration(metric.medianCompletionTimeMs)}</td><td>{metric.medianSteps ?? "—"}</td><td>{metric.medianDeviationFromGoldenPath ?? "—"}</td><td>{metric.easeMedian ?? "—"}</td></tr>)}</tbody></table></div></section>}
     </div>

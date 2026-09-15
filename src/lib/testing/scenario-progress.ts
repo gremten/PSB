@@ -1,7 +1,7 @@
 import type { InteractiveScenarioCode } from "@/config/test-scenarios";
 import type { TrackedEvent } from "./types";
 
-export type ScenarioVerdict = "correct" | "error" | "recovery";
+export type ScenarioVerdict = "correct" | "error" | "recovery" | "info";
 
 export interface ScenarioProgress {
   stage: number;
@@ -16,6 +16,17 @@ const categoryToggle = /^cashback\.category\.([a-z]+)\.toggle$/;
 
 export function isScenarioGateTarget(target: string | null | undefined) {
   return target === "participant.scenario.start";
+}
+
+export function isScenarioInfoTarget(target: string | null | undefined) {
+  return Boolean(target && (/^cashback\.category\.[^.]+\.faq\.open$/.test(target) || target === "cashback.period.month" || target === "cashback.period.year"));
+}
+
+export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string): ScenarioVerdict | null {
+  if (event.type !== "tap") return null;
+  if (taskCode && taskCode !== "CARD_COPY" && isScenarioInfoTarget(event.target ?? event.action)) return "info";
+  const verdict = event.metadata.scenarioVerdict;
+  return verdict === "correct" || verdict === "error" || verdict === "recovery" || verdict === "info" ? verdict : null;
 }
 
 export function scenarioProgress(code: InteractiveScenarioCode, events: TrackedEvent[]): ScenarioProgress {
@@ -61,6 +72,7 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
     if (stage === 4 && target === "card.copy.toast.dismiss") return "correct";
     return "error";
   }
+  if (isScenarioInfoTarget(target)) return "info";
   const entry = code === "CASHBACK_CONNECT" ? "cashback.connect.start" : "cashback.next_month.categories.open";
   const finish = code === "CASHBACK_CONNECT" ? "cashback.success" : "cashback.next_month.success";
   if (stage === 0 && (target === "home.cashback.open" || target === "cashback.tab.open")) return "correct";

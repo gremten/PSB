@@ -1,5 +1,5 @@
 import type { UsabilityTask } from "@/config/test-scenarios";
-import { isScenarioGateTarget } from "./scenario-progress";
+import { isScenarioGateTarget, scenarioVerdictForEvent } from "./scenario-progress";
 import type { TaskRun, TrackedEvent } from "./types";
 
 const meaningfulTypes = new Set(["tap", "action", "navigation", "product_state_change"]);
@@ -12,6 +12,7 @@ export interface TaskMetrics {
   correctTaps: number;
   wrongTaps: number;
   recoveryTaps: number;
+  infoTaps: number;
   goldenPathSteps: number | null;
   deviationFromGoldenPath: number | null;
   easeScore: number | null;
@@ -36,9 +37,10 @@ export function calculateTaskMetrics(
         ? null
         : Math.max(0, new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()),
     meaningfulSteps: steps.length,
-    correctTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "correct").length,
-    wrongTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error").length,
-    recoveryTaps: relevant.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "recovery").length,
+    correctTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "correct").length,
+    wrongTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "error").length,
+    recoveryTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "recovery").length,
+    infoTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "info").length,
     goldenPathSteps: golden,
     deviationFromGoldenPath: golden === null ? null : steps.length - golden,
     easeScore: run.easeScore,

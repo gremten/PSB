@@ -32,4 +32,11 @@ describe("three recorded usability flows", () => {
     expect(classifyScenarioTap("CARD_COPY", before, "navigation.back", {}, "/cashback")).toBe("recovery");
     expect(scenarioProgress("CARD_COPY", [...before, event(2, "screen_view", "/cashback")]).stage).toBe(1);
   });
+
+  it("classifies category help and chart period changes as informational", () => {
+    const categories = [event(1, "tap", "cashback.tab.open"), event(2, "tap", "cashback.next_month.categories.open")];
+    expect(classifyScenarioTap("CASHBACK_NEXT", categories, "cashback.category.fuel.faq.open", {}, "/cashback/categories")).toBe("info");
+    expect(classifyScenarioTap("CASHBACK_NEXT", [event(1, "tap", "cashback.tab.open")], "cashback.period.year", {}, "/cashback")).toBe("info");
+    expect(scenarioProgress("CASHBACK_NEXT", [...categories, event(3, "tap", "cashback.category.fuel.faq.open")]).stage).toBe(2);
+  });
 });

@@ -3,6 +3,7 @@ import { getInteractiveScenario, getTask, interactiveScenarios } from "@/config/
 import { eventBus } from "@/lib/events";
 import { aggregateTaskMetrics, calculateTaskMetrics } from "@/lib/testing/metrics";
 import { sanitizeMetadata } from "@/lib/testing/metadata";
+import { calculateResearchSummary } from "@/lib/testing/research-summary";
 import { presenceCutoff } from "@/lib/testing/session-presence";
 import { classifyScenarioTap, isScenarioGateTarget, scenarioProgress } from "@/lib/testing/scenario-progress";
 import type {
@@ -464,4 +465,12 @@ export async function getAggregateMetrics() {
   const runs = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE ended_at IS NOT NULL AND result IS NOT NULL`)).map(asTaskRun);
   const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE task_run_id IS NOT NULL ORDER BY id`)).map(asEvent);
   return aggregateTaskMetrics(runs.map((run) => calculateTaskMetrics(run, events, getTask(run.taskCode))));
+}
+
+export async function getResearchSummary() {
+  await expireDisconnectedSessions();
+  const sessions = await getDatabase().all<SessionRow>(`${sessionSelect} WHERE started_at IS NOT NULL ORDER BY created_at`);
+  const runs = (await getDatabase().all<TaskRunRow>(`${taskSelect} ORDER BY started_at`)).map(asTaskRun);
+  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE type = 'tap' ORDER BY id`)).map(asEvent);
+  return calculateResearchSummary(sessions, runs, events);
 }

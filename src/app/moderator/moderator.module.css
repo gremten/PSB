@@ -33,6 +33,9 @@
 .stat { padding: 12px; border-radius: 12px; background: #0f141b; }
 .stat span { display: block; margin-bottom: 5px; color: #818c9a; font-size: 11px; text-transform: uppercase; }
 .stat strong { overflow-wrap: anywhere; font-size: 14px; }
+.summaryTotal { margin: 14px 0; color: #aeb7c4; }
+.summaryHeading { margin: 18px 0 10px; color: #eef2f7; font-size: 14px; }
+.summaryDenominator { display: block; margin-top: 5px; color: #697483; font-size: 10px; line-height: 1.35; }
 .timer { color: #ff9d6d; font: 750 32px/1 ui-monospace, monospace; }
 .eventLog { max-height: 460px; overflow: auto; border: 1px solid #27303b; border-radius: 12px; background: #0a0e13; }
 .event { display: grid; grid-template-columns: 76px 120px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid #202733; padding: 9px 11px; font: 12px/1.4 ui-monospace, monospace; }
@@ -41,6 +44,7 @@
 .eventAction { color: #cad2dd; overflow-wrap: anywhere; }
 .liveError { box-shadow: inset 3px 0 #ff3030; }
 .liveCorrect { box-shadow: inset 3px 0 #27d278; }
+.liveInfo { box-shadow: inset 3px 0 #f0b429; }
 .empty { padding: 20px; color: #76808e; text-align: center; }
 .sessions { display: grid; gap: 7px; }
 .session { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-radius: 11px; padding: 10px 12px; background: #0f141b; }
@@ -70,11 +74,14 @@
 .replayPointPaused { width: 38px; height: 38px; border: 2px solid rgb(255 255 255 / 90%); background: rgb(255 24 24 / 52%); box-shadow: 0 0 0 8px rgb(255 24 24 / 20%); }
 .replayPointCorrect { background: rgb(22 200 102 / 55%); box-shadow: 0 0 0 8px rgb(22 200 102 / 20%); }
 .replayPointCurrent.replayPointCorrect { animation-name: replay-hit-correct; }
+.replayPointInfo { background: rgb(240 180 41 / 58%); box-shadow: 0 0 0 8px rgb(240 180 41 / 20%); }
+.replayPointCurrent.replayPointInfo { animation-name: replay-hit-info; }
 .replayPoint i { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; }
 .replayToast { bottom: 92px; z-index: 5; }
 .moderatorLiveToast { position: fixed; bottom: 24px; z-index: 60; }
 @keyframes replay-hit { from { opacity: 1; box-shadow: 0 0 0 2px rgb(255 24 24 / 50%); } to { opacity: 0; box-shadow: 0 0 0 18px rgb(255 24 24 / 0%); } }
 @keyframes replay-hit-correct { from { opacity: 1; box-shadow: 0 0 0 2px rgb(22 200 102 / 50%); } to { opacity: 0; box-shadow: 0 0 0 18px rgb(22 200 102 / 0%); } }
+@keyframes replay-hit-info { from { opacity: 1; box-shadow: 0 0 0 2px rgb(240 180 41 / 50%); } to { opacity: 0; box-shadow: 0 0 0 18px rgb(240 180 41 / 0%); } }
 .replayControls { display: grid; grid-template-columns: 1fr 90px; gap: 8px; margin-top: 10px; }
 .replayControls .select { height: 42px; }
 .replayRange { width: 100%; accent-color: #e86630; }
@@ -86,6 +93,7 @@
 .replayTimeline button:hover, .replayTimeline .replayEventActive { background: #242a33; }
 .replayTimeline .replayTapEvent { box-shadow: inset 3px 0 #ff3030; }
 .replayTimeline .replayTapCorrect { box-shadow: inset 3px 0 #27d278; }
+.replayTimeline .replayTapInfo { box-shadow: inset 3px 0 #f0b429; }
 .replayTimeline span { color: #ff9d6d; }
 .replayTimeline strong { color: #eef2f7; }
 .replayTimeline small { overflow-wrap: anywhere; color: #aeb7c4; }

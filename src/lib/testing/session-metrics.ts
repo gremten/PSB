@@ -1,5 +1,5 @@
-import type { ResearchSession, TrackedEvent } from "./types";
-import { isScenarioGateTarget } from "./scenario-progress";
+import type { ResearchSession, TaskRun, TrackedEvent } from "./types";
+import { isScenarioGateTarget, scenarioVerdictForEvent } from "./scenario-progress";
 
 const meaningfulTypes = new Set(["tap", "action", "navigation", "product_state_change"]);
 
@@ -17,6 +17,7 @@ export interface SessionInteractionMetrics {
   scenarioErrorCount: number;
   correctTapCount: number;
   recoveryCount: number;
+  infoTapCount: number;
   firstMeaningfulAction: string | null;
   lastAction: string | null;
   lastScreen: string;
@@ -28,8 +29,16 @@ export function isDemoMissclick(event: TrackedEvent) {
     || (event.type === "tap" && (event.action ?? event.target ?? "").includes("unavailable") && event.action !== "demo.unavailable.toast.dismiss");
 }
 
-function countDemoMissclicks(events: TrackedEvent[]) {
-  const explicit = events.filter((event) => event.type === "action" && event.action === "demo.unavailable");
+function countDemoMissclicks(events: TrackedEvent[], verdictFor: (event: TrackedEvent) => ReturnType<typeof scenarioVerdictForEvent>) {
+  const informational = events.filter((event) => verdictFor(event) === "info");
+  const explicit = events.filter((event) => {
+    if (event.type !== "action" || event.action !== "demo.unavailable") return false;
+    const recordedTime = Number(event.metadata.clientTimeMs) || new Date(event.timestamp).getTime();
+    return !informational.some((tap) => {
+      const tapTime = Number(tap.metadata.clientTimeMs) || new Date(tap.timestamp).getTime();
+      return tap.screen === event.screen && tap.target === event.target && Math.abs(recordedTime - tapTime) < 500;
+    });
+  });
   const legacy = events.filter((event) => {
     if (event.type !== "tap" || !isDemoMissclick(event)) return false;
     const time = Number(event.metadata.clientTimeMs) || new Date(event.timestamp).getTime();
@@ -41,18 +50,21 @@ function countDemoMissclicks(events: TrackedEvent[]) {
   return explicit.length + legacy.length;
 }
 
-export function calculateSessionInteractionMetrics(session: ResearchSession, events: TrackedEvent[], nowMs = Date.now()): SessionInteractionMetrics {
+export function calculateSessionInteractionMetrics(session: ResearchSession, events: TrackedEvent[], nowMs = Date.now(), taskRuns: TaskRun[] = []): SessionInteractionMetrics {
+  const taskCodeByRun = new Map(taskRuns.map((run) => [run.id, run.taskCode]));
+  const verdictFor = (event: TrackedEvent) => scenarioVerdictForEvent(event, event.taskRunId ? taskCodeByRun.get(event.taskRunId) : undefined);
   const scenarioEvents = events.filter((event) => !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)));
   const meaningful = scenarioEvents.filter((event) => meaningfulTypes.has(event.type));
   const screens = events.flatMap((event) => event.screen ? [event.screen] : []);
   const last = events.at(-1) ?? null;
   const startedAt = session.startedAt ? new Date(session.startedAt).getTime() : new Date(session.createdAt).getTime();
   const lastObservedAt = session.endedAt ? new Date(session.endedAt).getTime() : last ? Math.max(new Date(last.timestamp).getTime(), nowMs) : nowMs;
-  const missclickCount = countDemoMissclicks(events);
-  const scenarioErrorCount = scenarioEvents.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error").length;
-  const correctTapCount = scenarioEvents.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "correct").length;
-  const recoveryCount = scenarioEvents.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "recovery").length;
-  const erroneousTaps = scenarioEvents.filter((event) => event.type === "tap" && event.metadata.scenarioVerdict === "error");
+  const missclickCount = countDemoMissclicks(events, verdictFor);
+  const scenarioErrorCount = scenarioEvents.filter((event) => verdictFor(event) === "error").length;
+  const correctTapCount = scenarioEvents.filter((event) => verdictFor(event) === "correct").length;
+  const recoveryCount = scenarioEvents.filter((event) => verdictFor(event) === "recovery").length;
+  const infoTapCount = scenarioEvents.filter((event) => verdictFor(event) === "info").length;
+  const erroneousTaps = scenarioEvents.filter((event) => verdictFor(event) === "error");
   const duplicateDemoCount = events.filter((event) => event.type === "action" && event.action === "demo.unavailable" && erroneousTaps.some((tap) => {
     const actionTime = Number(event.metadata.clientTimeMs) || new Date(event.timestamp).getTime();
     const tapTime = Number(tap.metadata.clientTimeMs) || new Date(tap.timestamp).getTime();
@@ -78,6 +90,7 @@ export function calculateSessionInteractionMetrics(session: ResearchSession, eve
     scenarioErrorCount,
     correctTapCount,
     recoveryCount,
+    infoTapCount,
     firstMeaningfulAction: meaningful[0]?.action ?? meaningful[0]?.target ?? null,
     lastAction: last?.action ?? last?.target ?? last?.type ?? null,
     lastScreen: [...screens].at(-1) ?? "/",

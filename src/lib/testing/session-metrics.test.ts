@@ -46,4 +46,16 @@ describe("moderator missclick metric", () => {
     expect(metrics.scenarioErrorCount).toBe(0);
     expect(metrics.missclickCount).toBe(0);
   });
+
+  it("counts category help as exploration, not a missclick, including its demo feedback", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const help = event(1, "tap", "cashback.category.fuel.faq.open", "cashback.category.fuel.faq.open", time);
+    help.metadata.scenarioVerdict = "info";
+    const feedback = event(2, "action", "demo.unavailable", "cashback.category.fuel.faq.open", time + 10);
+    const metrics = calculateSessionInteractionMetrics(session, [help, feedback], time + 100);
+    expect(metrics.infoTapCount).toBe(1);
+    expect(metrics.scenarioErrorCount).toBe(0);
+    expect(metrics.missclickCount).toBe(0);
+    expect(metrics.demoFeedbackCount).toBe(0);
+  });
 });
