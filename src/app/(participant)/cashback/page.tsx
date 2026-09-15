@@ -127,6 +127,7 @@ function ConnectedCashback() {
   const period = replayVisualState?.cashbackPeriod ?? livePeriod;
   const nextMonthConfirmed = productState.nextMonthCashbackSelectionStatus === "confirmed";
   const [nextMonthSuccessOpen, setNextMonthSuccessOpen] = useState(false);
+  const nextMonthSuccessVisible = replayVisualState ? replayVisualState.successSheet === "next_month" : nextMonthSuccessOpen;
   const selectedNextMonth = getNextMonthPresentation(productState.nextMonthCashbackCategories);
   const yearChartRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -238,7 +239,7 @@ function ConnectedCashback() {
         </div>
         <FaqList />
       </div>
-      {nextMonthSuccessOpen && <NextMonthSuccessSheet onDismiss={() => { setNextMonthSuccessOpen(false); router.replace("/cashback", { scroll: false }); }} />}
+      {nextMonthSuccessVisible && <NextMonthSuccessSheet onDismiss={() => { setNextMonthSuccessOpen(false); router.replace("/cashback", { scroll: false }); }} />}
     </main>
   );
 }

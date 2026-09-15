@@ -94,6 +94,38 @@ export function ParticipantProvider({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("replay")) return;
+    let frame = 0;
+    let finalTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastSentAt = 0;
+    let lastSentY = 0;
+    let content: HTMLElement | null = null;
+    const send = () => {
+      frame = 0;
+      if (!content) return;
+      const scrollY = Math.round(content.scrollTop);
+      if (scrollY === lastSentY) return;
+      lastSentAt = performance.now();
+      lastSentY = scrollY;
+      void track("scroll", { screen: pathname, action: "screen.scroll", metadata: { scrollY, viewportHeight: window.innerHeight } });
+    };
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.classList.contains("participant-content")) return;
+      content = target;
+      if (finalTimer) clearTimeout(finalTimer);
+      if (!frame && performance.now() - lastSentAt >= 80) frame = requestAnimationFrame(send);
+      finalTimer = setTimeout(send, 120);
+    };
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener("scroll", onScroll, { capture: true });
+      if (frame) cancelAnimationFrame(frame);
+      if (finalTimer) clearTimeout(finalTimer);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       const element = (event.target as HTMLElement).closest<HTMLElement>("[data-track]");
       if (!element?.dataset.track) return;

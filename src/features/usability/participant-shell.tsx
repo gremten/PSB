@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getInteractiveScenario } from "@/config/test-scenarios";
 import { Tabbar } from "@/components/ui";
 import { TelegramMiniAppBridge } from "@/features/telegram/telegram-mini-app";
@@ -30,6 +30,16 @@ const tabs = [
 
 const ROLE_SESSION_KEY = "psb-entry-role-v1";
 const ROLE_CHANGED_EVENT = "psb:entry-role-changed";
+const SESSION_CACHE_CLEARED_PREFIX = "psb-session-router-cache-cleared-v1:";
+const participantRoutes = ["/", "/account", "/card?card=night", "/card?card=orange", "/card?card=salary", "/cashback", "/cashback/categories"];
+const participantAssets = [
+  "/figma/home/avatar.svg", "/figma/home/bell.svg", "/figma/home/search.svg", "/figma/icons/back.svg",
+  "/figma/home/banner-new-bg.svg", "/figma/home/banner-new.webp", "/figma/home/banner-strong-bg.svg", "/figma/home/banner-strong.webp",
+  "/figma/account/background-blob.svg", "/figma/account/merchant-bbq.webp", "/figma/account/merchant-five.webp", "/figma/account/merchant-psb.webp",
+  "/figma/card/logo-night.svg", "/figma/card/logo-orange.svg", "/figma/card/mir-night.svg", "/figma/card/mir-orange.svg", "/figma/card/show.svg", "/figma/card/hide.svg", "/figma/card/copy.svg",
+  "/figma/categories/background-blob-soft.svg", "/figma/categories/hero-card.png", "/figma/categories/asset-01.webp", "/figma/categories/asset-03.webp", "/figma/categories/asset-04.webp", "/figma/categories/asset-05.webp", "/figma/categories/asset-06.webp", "/figma/categories/asset-08.webp", "/figma/categories/asset-12.webp",
+  "/figma/cashback/partner-5.svg", "/figma/cashback/next-month-delivery.png", "/figma/cashback/next-month-fuel.png", "/figma/cashback/next-month-family.png", "/figma/success/asset-14.webp",
+];
 
 function subscribeToRole(callback: () => void) {
   window.addEventListener(ROLE_CHANGED_EVENT, callback);
@@ -76,6 +86,36 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   const [scenarioStatus, setScenarioStatus] = useState<ScenarioStatus | null>(null);
   const [scenarioError, setScenarioError] = useState("");
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
+  const preloadImages = useRef<HTMLImageElement[]>([]);
+
+  useEffect(() => {
+    if ((!participantEntered && !replaying) || (sessionId && window.sessionStorage.getItem(`${SESSION_CACHE_CLEARED_PREFIX}${sessionId}`))) return;
+    const frame = requestAnimationFrame(() => {
+      participantRoutes.forEach((route) => router.prefetch(route));
+      preloadImages.current = participantAssets.map((src) => {
+        const image = new window.Image();
+        image.decoding = "async";
+        image.fetchPriority = "low";
+        image.src = src;
+        void image.decode().catch(() => undefined);
+        return image;
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      preloadImages.current.forEach((image) => { image.src = ""; });
+      preloadImages.current = [];
+    };
+  }, [participantEntered, replaying, router, scenarioStatus?.assignedScenario, sessionId]);
+
+  useEffect(() => {
+    if (!sessionId || replaying || !scenarioStatus?.ended) return;
+    const cacheKey = `${SESSION_CACHE_CLEARED_PREFIX}${sessionId}`;
+    if (window.sessionStorage.getItem(cacheKey)) return;
+    window.sessionStorage.setItem(cacheKey, "1");
+    // A hard navigation discards Next's in-memory Router Cache for this research session.
+    window.location.replace("/");
+  }, [replaying, scenarioStatus?.ended, sessionId]);
 
   useEffect(() => {
     if (!sessionId || replaying) return;

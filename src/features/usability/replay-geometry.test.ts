@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findReplayIndex, projectTrackedTap } from "./replay-geometry";
+import { findReplayIndex, interpolateReplayScroll, projectTrackedTap } from "./replay-geometry";
 
 describe("moderator action replay", () => {
   it("anchors a tap to its target despite a changed Telegram top inset", () => {
@@ -19,5 +19,14 @@ describe("moderator action replay", () => {
     expect(findReplayIndex(times, 999)).toBe(1);
     expect(findReplayIndex(times, 1000)).toBe(2);
     expect(findReplayIndex(times, 4000)).toBe(3);
+  });
+
+  it("interpolates recorded scroll samples with the playback position", () => {
+    const events = [
+      { screen: "/cashback", metadata: { scrollY: 100 } },
+      { screen: "/cashback", metadata: { scrollY: 300 } },
+    ];
+    expect(interpolateReplayScroll(events, [0, 200], 0, 100, "/cashback")).toBe(200);
+    expect(interpolateReplayScroll(events, [0, 200], 1, 200, "/cashback")).toBe(300);
   });
 });

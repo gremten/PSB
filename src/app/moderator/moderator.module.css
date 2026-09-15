@@ -21,6 +21,9 @@
 .buttonRow { display: flex; flex-wrap: wrap; gap: 8px; }
 .sessionActions { display: grid; gap: 12px; margin-bottom: 16px; }
 .sessionActions p { margin: 0; }
+.sessionActionsInline { display: block; margin: 0; }
+.summaryTopbar { align-items: flex-start; }
+.summaryBack { display: inline-block; margin-bottom: 14px; color: #f28c59; font-weight: 700; text-decoration: none; }
 .scenarioPicker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
 .scenarioButton { display: grid; gap: 5px; min-height: 76px; border: 1px solid #343e4b; border-radius: 12px; padding: 12px; color: #e9edf4; background: #242a33; text-align: left; cursor: pointer; }
 .scenarioButton strong { color: #ff9d6d; font-size: 12px; }
@@ -83,7 +86,7 @@
 @keyframes replay-hit-correct { from { opacity: 1; box-shadow: 0 0 0 2px rgb(22 200 102 / 50%); } to { opacity: 0; box-shadow: 0 0 0 18px rgb(22 200 102 / 0%); } }
 @keyframes replay-hit-info { from { opacity: 1; box-shadow: 0 0 0 2px rgb(240 180 41 / 50%); } to { opacity: 0; box-shadow: 0 0 0 18px rgb(240 180 41 / 0%); } }
 .replayControls { display: grid; grid-template-columns: 1fr 90px; gap: 8px; margin-top: 10px; }
-.replayControls .select { height: 42px; }
+.replaySpeed { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; border: 1px solid #343e4b; border-radius: 10px; color: #aeb7c4; background: #0f141b; font: 700 12px ui-monospace, monospace; }
 .replayRange { width: 100%; accent-color: #e86630; }
 .replayNow { min-height: 44px; margin: 4px 0 0; color: #aeb7c4; font: 12px/1.5 ui-monospace, monospace; overflow-wrap: anywhere; }
 .replayNow strong { color: #ff9d6d; }
@@ -94,6 +97,10 @@
 .replayTimeline .replayTapEvent { box-shadow: inset 3px 0 #ff3030; }
 .replayTimeline .replayTapCorrect { box-shadow: inset 3px 0 #27d278; }
 .replayTimeline .replayTapInfo { box-shadow: inset 3px 0 #f0b429; }
+.replayTimeline .replayScenarioStart { border-block: 1px solid #e86630; padding-block: 14px; background: #3a2118; box-shadow: inset 4px 0 #e86630; }
+.replayTimeline .replayScenarioFinish { border-block: 1px solid #2f7651; padding-block: 14px; background: #142a20; box-shadow: inset 4px 0 #47c47d; }
+.replayTimeline .replayScenarioStart strong { color: #ffad83; }
+.replayTimeline .replayScenarioFinish strong { color: #7df1a8; }
 .replayTimeline span { color: #ff9d6d; }
 .replayTimeline strong { color: #eef2f7; }
 .replayTimeline small { overflow-wrap: anywhere; color: #aeb7c4; }

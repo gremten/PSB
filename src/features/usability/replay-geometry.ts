@@ -36,3 +36,34 @@ export function findReplayIndex(times: number[], playheadMs: number) {
   }
   return low - 1;
 }
+
+export function interpolateReplayScroll(
+  events: Array<{ screen: string | null; metadata: Record<string, unknown> }>,
+  times: number[],
+  safeIndex: number,
+  playheadMs: number,
+  screen: string,
+) {
+  let previousIndex = -1;
+  for (let index = safeIndex; index >= 0; index--) {
+    if (events[index].screen && events[index].screen !== screen) break;
+    if (events[index].screen === screen && finiteNumber(events[index].metadata.scrollY) !== null) {
+      previousIndex = index;
+      break;
+    }
+  }
+  if (previousIndex < 0) return 0;
+  const previous = finiteNumber(events[previousIndex].metadata.scrollY) ?? 0;
+  let nextIndex = -1;
+  for (let index = safeIndex + 1; index < events.length; index++) {
+    if (events[index].screen && events[index].screen !== screen) break;
+    if (events[index].screen === screen && finiteNumber(events[index].metadata.scrollY) !== null) {
+      nextIndex = index;
+      break;
+    }
+  }
+  if (nextIndex < 0 || times[nextIndex] <= times[previousIndex]) return previous;
+  const next = finiteNumber(events[nextIndex].metadata.scrollY) ?? previous;
+  const progress = clamp((playheadMs - times[previousIndex]) / (times[nextIndex] - times[previousIndex]));
+  return previous + (next - previous) * progress;
+}

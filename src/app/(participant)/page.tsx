@@ -100,6 +100,7 @@ export default function HomePage() {
   const promoTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const visiblePromos = useMemo(() => promos.filter((promo) => !productState.dismissedHomePromos.includes(promo.id)), [productState.dismissedHomePromos]);
   const currencies = currencyRates[currencyMode];
+  const cashbackSuccessVisible = replayVisualState ? replayVisualState.successSheet === "current_month" : productState.cashbackSuccessVisible;
 
   useEffect(() => () => promoTimers.current.forEach(clearTimeout), []);
 
@@ -233,7 +234,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {productState.cashbackSuccessVisible && <CashbackSuccessSheet onDismiss={() => updateProductState({ cashbackSuccessVisible: false }, "cashback.success.dismissed")} />}
+      {cashbackSuccessVisible && <CashbackSuccessSheet onDismiss={() => updateProductState({ cashbackSuccessVisible: false }, "cashback.success.dismissed")} />}
     </main>
   );
 }

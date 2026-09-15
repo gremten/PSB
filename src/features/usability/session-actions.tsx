@@ -5,7 +5,7 @@ import { useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import type { ResearchSession } from "@/lib/testing/types";
 
-export function SessionActions({ session, onChanged }: { session: ResearchSession; onChanged?: (deleted: boolean) => void }) {
+export function SessionActions({ session, onChanged, actions = "all", showStatus = true }: { session: ResearchSession; onChanged?: (deleted: boolean) => void; actions?: "all" | "end" | "delete"; showStatus?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -26,13 +26,13 @@ export function SessionActions({ session, onChanged }: { session: ResearchSessio
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Ошибка запроса"); }
     finally { setBusy(false); }
   };
-  return <div className={styles.sessionActions}>
-    <p className={styles.build}>{session.endedAt
+  return <div className={`${styles.sessionActions} ${!showStatus ? styles.sessionActionsInline : ""}`}>
+    {showStatus && <p className={styles.build}>{session.endedAt
       ? `Завершена: ${session.endReason === "client_timeout" ? "клиент отключился" : "модератором"}`
-      : "Запись идёт · автозавершение через 90 секунд без\u00a0связи с\u00a0клиентом"}</p>
+      : "Запись идёт · автозавершение через 90 секунд без\u00a0связи с\u00a0клиентом"}</p>}
     <div className={styles.buttonRow}>
-      {!session.endedAt && <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={busy} onClick={() => void mutate("end")}>Завершить сессию</button>}
-      <button type="button" className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => void mutate("delete")}>Удалить запись</button>
+      {actions !== "delete" && !session.endedAt && <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={busy} onClick={() => void mutate("end")}>Завершить сессию</button>}
+      {actions !== "end" && <button type="button" className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => void mutate("delete")}>Удалить запись</button>}
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
   </div>;

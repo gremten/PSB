@@ -20,6 +20,15 @@ describe("action replay state", () => {
     expect(deriveReplayState(events, 1)).toMatchObject({ cardIndex: 1, flippedCards: [false, false, false] });
   });
 
+  it("restores the copy toast until its recorded close event", () => {
+    const events = [
+      event(1, "tap", "card.orange.number.copy", "/card"),
+      event(2, "action", "card.copy.toast.closed", "/card"),
+    ];
+    expect(deriveReplayState(events, 0).copyToastVisible).toBe(true);
+    expect(deriveReplayState(events, 1).copyToastVisible).toBe(false);
+  });
+
   it("closes all card backs on a new carousel selection, including when seeking backward", () => {
     const events = [
       event(1, "product_state_change", "card.orange.details.reveal", "/card"),
@@ -57,14 +66,31 @@ describe("action replay state", () => {
       event(9, "action", "cashback.category.selection_changed", "/cashback/categories", "delivery"),
       event(10, "product_state_change", "cashback.next_month.selection.changed", "/cashback/categories"),
     ];
-    expect(deriveReplayState(events, 4).productState).toMatchObject({ cashbackConnected: true, selectedCashbackCategories: ["На все покупки", "Авиабилеты", "Бензин"], cashbackSuccessVisible: true });
+    expect(deriveReplayState(events, 4)).toMatchObject({ successSheet: "current_month", productState: { cashbackConnected: true, selectedCashbackCategories: ["На все покупки", "Авиабилеты", "Бензин"], cashbackSuccessVisible: true } });
+    expect(deriveReplayState(events, 5).successSheet).toBeNull();
     expect(deriveReplayState(events, 9).productState).toMatchObject({ nextMonthCashbackCategories: ["На все покупки", "Деливери"], nextMonthCashbackSelectionStatus: "draft" });
+  });
+
+  it("restores the next-month success sheet until dismissal", () => {
+    const events = [
+      event(1, "product_state_change", "cashback.next_month.categories.confirmed", "/cashback/categories"),
+      event(2, "screen_view", "screen.cashback.view", "/cashback"),
+      event(3, "action", "cashback.next_month.success.dismissed", "/cashback"),
+    ];
+    expect(deriveReplayState(events, 1).successSheet).toBe("next_month");
+    expect(deriveReplayState(events, 2).successSheet).toBeNull();
   });
 
   it("shortens idle time without merging rapid consecutive events", () => {
     const events = [event(1, "tap", "a"), event(2, "action", "b"), event(3, "tap", "c")];
     events[1].timestamp = new Date(1100).toISOString();
     events[2].timestamp = new Date(600_000).toISOString();
-    expect(replayEventTimes(events)).toEqual([0, 120, 920]);
+    expect(replayEventTimes(events)).toEqual([0, 100, 1300]);
+  });
+
+  it("preserves frequent scroll samples for smooth interpolation", () => {
+    const events = [event(1, "scroll", "screen.scroll"), event(2, "scroll", "screen.scroll")];
+    events[1].timestamp = new Date(1040).toISOString();
+    expect(replayEventTimes(events)).toEqual([0, 40]);
   });
 });

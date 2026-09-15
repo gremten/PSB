@@ -15,6 +15,8 @@ export interface ReplayVisualState {
   productState: ParticipantProductState;
   cardIndex: 0 | 1 | 2;
   flippedCards: [boolean, boolean, boolean];
+  copyToastVisible: boolean;
+  successSheet: "current_month" | "next_month" | null;
   currencyMode: "buy" | "sell";
   cashbackPeriod: "month" | "year";
   selectedCategoryIds: string[];
@@ -33,7 +35,8 @@ export function replayEventTimes(events: TrackedEvent[]) {
   const times: number[] = [];
   for (let index = 0; index < events.length; index++) {
     const gap = index ? recordedEventTime(events[index]) - recordedEventTime(events[index - 1]) : 0;
-    times.push((times.at(-1) ?? 0) + (index ? Math.max(120, Math.min(800, gap)) : 0));
+    const continuousScroll = index > 0 && events[index - 1].type === "scroll" && events[index].type === "scroll";
+    times.push((times.at(-1) ?? 0) + (index ? Math.max(continuousScroll ? 16 : 100, Math.min(1200, gap)) : 0));
   }
   return times;
 }
@@ -42,6 +45,8 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
   const productState = getInitialParticipantState("disconnected");
   const flippedCards: [boolean, boolean, boolean] = [false, false, false];
   let cardIndex: 0 | 1 | 2 = 0;
+  let copyToastVisible = false;
+  let successSheet: ReplayVisualState["successSheet"] = null;
   let currencyMode: "buy" | "sell" = "buy";
   let cashbackPeriod: "month" | "year" = "month";
   let selectedCategoryIds: string[] = [];
@@ -61,6 +66,7 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
       if (action === "account.card.salary.open") cardIndex = 2;
       if (action === "home.currency.buy") currencyMode = "buy";
       if (action === "home.currency.sell") currencyMode = "sell";
+      if (/^card\.(night|orange|salary)\.(number|expiry|cvv)\.copy$/.test(action)) copyToastVisible = true;
       const faq = /^cashback\.faq\.(\d+)\.toggle$/.exec(action);
       if (faq) {
         const faqIndex = Number(faq[1]);
@@ -80,6 +86,8 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
     if (event.type === "action") {
       if (action === "cashback.period.month") cashbackPeriod = "month";
       if (action === "cashback.period.year") cashbackPeriod = "year";
+      if (action === "card.copy.toast.closed") copyToastVisible = false;
+      if (action === "cashback.next_month.success.dismissed") successSheet = null;
       if (action === "cashback.category.selection_changed" && typeof event.target === "string" && categoryLabels[event.target]) {
         selectedCategoryIds = selectedCategoryIds.includes(event.target)
           ? selectedCategoryIds.filter((id) => id !== event.target)
@@ -109,13 +117,18 @@ export function deriveReplayState(events: TrackedEvent[], throughIndex: number):
       productState.selectedCashbackCategories = selectedCategoryIds.map((id) => categoryLabels[id]);
       productState.nextMonthCashbackSelectionStatus = "available";
       productState.cashbackSuccessVisible = true;
+      successSheet = "current_month";
     }
     if (action === "cashback.next_month.categories.confirmed") {
       productState.nextMonthCashbackCategories = selectedCategoryIds.map((id) => categoryLabels[id]);
       productState.nextMonthCashbackSelectionStatus = "confirmed";
+      successSheet = "next_month";
     }
-    if (action === "cashback.success.dismissed") productState.cashbackSuccessVisible = false;
+    if (action === "cashback.success.dismissed") {
+      productState.cashbackSuccessVisible = false;
+      successSheet = null;
+    }
   }
 
-  return { productState, cardIndex, flippedCards, currencyMode, cashbackPeriod, selectedCategoryIds, openFaqIndex };
+  return { productState, cardIndex, flippedCards, copyToastVisible, successSheet, currencyMode, cashbackPeriod, selectedCategoryIds, openFaqIndex };
 }

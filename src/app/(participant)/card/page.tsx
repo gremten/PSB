@@ -75,6 +75,7 @@ function CardContent() {
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const gesture = useRef<CardGesture | null>(null);
   const dragged = useRef(false);
+  const visibleCopyToast = replayVisualState?.copyToastVisible ? "number" : copied;
 
   const setCardSide = (index: number, next: boolean) => {
     setFlipped((current) => current.map((value, cardIndex) => cardIndex === index ? next : value));
@@ -217,7 +218,7 @@ function CardContent() {
             </div>
           );
         })}
-        {copied && <GlassToast key={copyToastId} placement="top" trackId="card.copy.toast.dismiss" className={styles.copiedToast} onDone={() => { void track("action", { screen: "/card", action: "card.copy.toast.closed" }); setCopied((current) => current === copied ? null : current); }}><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</GlassToast>}
+        {visibleCopyToast && <GlassToast key={replayVisualState ? `replay-copy-${visibleCopyToast}` : copyToastId} placement="top" trackId="card.copy.toast.dismiss" className={styles.copiedToast} autoDismiss={!replayVisualState} onDone={() => { if (!replayVisualState) { void track("action", { screen: "/card", action: "card.copy.toast.closed" }); setCopied((current) => current === visibleCopyToast ? null : current); } }}><Image src="/figma/icons/check.svg" alt="" width={16} height={16} />Скопировано</GlassToast>}
       </section>
 
       <section className={styles.cardSettings}>

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTask } from "@/config/test-scenarios";
 import styles from "@/app/moderator/moderator.module.css";
-import { getSessionSnapshot } from "@/lib/db/queries";
+import { getFullSessionSnapshot } from "@/lib/db/queries";
 import { calculateTaskMetrics } from "@/lib/testing/metrics";
 import { calculateSessionInteractionMetrics } from "@/lib/testing/session-metrics";
 import { isValidModeratorToken, MODERATOR_COOKIE } from "@/lib/moderator-auth";
@@ -22,14 +22,14 @@ export default async function SessionSummaryPage({ params }: { params: Promise<{
   const cookieStore = await cookies();
   if (!isValidModeratorToken(cookieStore.get(MODERATOR_COOKIE)?.value)) return <ModeratorLogin configured={Boolean(process.env.MODERATOR_SECRET)} />;
   const { id } = await params;
-  const snapshot = await getSessionSnapshot(id, 2000);
+  const snapshot = await getFullSessionSnapshot(id);
   if (!snapshot) notFound();
   const interaction = calculateSessionInteractionMetrics(snapshot.session, snapshot.events, undefined, snapshot.taskRuns);
   const taskMetrics = snapshot.taskRuns.map((run) => ({ run, metric: calculateTaskMetrics(run, snapshot.events, getTask(run.taskCode)) }));
 
   return <main className={styles.page}><div className={`${styles.shell} ${styles.summary}`}>
-    <section className={styles.card}><SessionActions session={snapshot.session} /></section>
-    <header className={styles.topbar}><div><p className={styles.build}>session summary · build {snapshot.session.buildId}</p><h1 className={styles.brand}>{snapshot.session.participantCode}</h1></div><div className={styles.buttonRow}><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export`}>Скачать JSON</Link><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export?format=csv`}>Скачать CSV</Link><Link className={styles.link} href="/moderator">← Dashboard</Link></div></header>
+    <header className={`${styles.topbar} ${styles.summaryTopbar}`}><div><Link className={styles.summaryBack} href="/moderator">← Dashboard</Link><p className={styles.build}>session summary · build {snapshot.session.buildId}</p><h1 className={styles.brand}>{snapshot.session.participantCode}</h1></div><div className={styles.buttonRow}><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export`}>Скачать JSON</Link><Link className={`${styles.button} ${styles.secondary}`} href={`/api/moderator/sessions/${snapshot.session.id}/export?format=csv`}>Скачать CSV</Link><SessionActions session={snapshot.session} actions="delete" showStatus={false} /></div></header>
+    <section className={styles.card}><SessionActions session={snapshot.session} actions="end" /></section>
 
     <section className={styles.card}><h2>Метрики сессии</h2><div className={styles.metricGrid}><div className={styles.stat}><span>Время</span><strong>{duration(interaction.durationMs)}</strong></div><div className={styles.stat}><span>Клики</span><strong>{interaction.tapCount}</strong></div><div className={styles.stat}><span>Meaningful steps</span><strong>{interaction.meaningfulSteps}</strong></div><div className={styles.stat}><span>Всего событий</span><strong>{interaction.eventCount}</strong></div><div className={styles.stat}><span>Просмотры экранов</span><strong>{interaction.screenViewCount}</strong></div><div className={styles.stat}><span>Уникальные экраны</span><strong>{interaction.uniqueScreens}</strong></div><div className={styles.stat}><span>Переходы</span><strong>{interaction.navigationCount}</strong></div><div className={styles.stat}><span>Изменения состояния</span><strong>{interaction.productStateChanges}</strong></div><div className={styles.stat}><span>Мисклики</span><strong>{interaction.missclickCount}</strong></div><div className={styles.stat}><span>Изучение интерфейса</span><strong>{interaction.infoTapCount}</strong></div><div className={styles.stat}><span>Последний экран</span><strong>{interaction.lastScreen}</strong></div><div className={styles.stat}><span>Первое действие</span><strong>{interaction.firstMeaningfulAction ?? "—"}</strong></div><div className={styles.stat}><span>Последнее действие</span><strong>{interaction.lastAction ?? "—"}</strong></div></div></section>
 

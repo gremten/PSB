@@ -7,12 +7,13 @@ import styles from "./glass-toast.module.css";
 
 const OPTICS = { strength: 0.16, depth: 0.2, curvature: 0.72, dispersion: 0.5, bend: 0.8, bendWidth: 0.2, frost: 4, splay: 0, sheen: 0.8, sheenAngle: -45, specular: 0.8 };
 
-export function GlassToast({ children, placement, tone = "neutral", trackId, className = "", onDone }: {
+export function GlassToast({ children, placement, tone = "neutral", trackId, className = "", autoDismiss = true, onDone }: {
   children: ReactNode;
   placement: "top" | "bottom";
   tone?: "neutral" | "orange";
   trackId: string;
   className?: string;
+  autoDismiss?: boolean;
   onDone: () => void;
 }) {
   const [phase, setPhase] = useState<"enter" | "visible" | "exit">("enter");
@@ -38,13 +39,13 @@ export function GlassToast({ children, placement, tone = "neutral", trackId, cla
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setPhase("visible"));
-    timer.current = setTimeout(dismiss, TOAST_DURATION_MS + TOAST_TRANSITION_MS);
+    if (autoDismiss) timer.current = setTimeout(dismiss, TOAST_DURATION_MS + TOAST_TRANSITION_MS);
     return () => {
       cancelAnimationFrame(frame);
       if (timer.current) clearTimeout(timer.current);
       if (exitTimer.current) clearTimeout(exitTimer.current);
     };
-  }, [dismiss]);
+  }, [autoDismiss, dismiss]);
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -73,7 +74,7 @@ export function GlassToast({ children, placement, tone = "neutral", trackId, cla
       dismiss();
     } else {
       setDragY(0);
-      timer.current = setTimeout(dismiss, TOAST_DURATION_MS);
+      if (autoDismiss) timer.current = setTimeout(dismiss, TOAST_DURATION_MS);
     }
   };
   const visual = toastDragVisual(dragY, placement);

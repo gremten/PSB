@@ -58,4 +58,15 @@ describe("moderator missclick metric", () => {
     expect(metrics.missclickCount).toBe(0);
     expect(metrics.demoFeedbackCount).toBe(0);
   });
+
+  it("keeps scroll samples out of clicks, meaningful steps, and errors", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const scroll = event(1, "scroll", "screen.scroll", null, time);
+    scroll.metadata = { clientTimeMs: time, scrollY: 240, viewportHeight: 844 };
+    const metrics = calculateSessionInteractionMetrics(session, [scroll], time + 100);
+    expect(metrics.tapCount).toBe(0);
+    expect(metrics.meaningfulSteps).toBe(0);
+    expect(metrics.scenarioErrorCount).toBe(0);
+    expect(metrics.missclickCount).toBe(0);
+  });
 });
