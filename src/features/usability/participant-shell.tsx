@@ -46,7 +46,8 @@ const participantRoutes = ["/", "/account", "/card?card=night", "/card?card=oran
 const participantAssets = [
   "/figma/home/avatar.svg", "/figma/home/bell.svg", "/figma/home/search.svg", "/figma/icons/back.svg",
   "/figma/home/banner-new-bg.svg", "/figma/home/banner-new.webp", "/figma/home/banner-strong-bg.svg", "/figma/home/banner-strong.webp",
-  "/figma/account/background-blob.svg", "/figma/account/merchant-bbq.webp", "/figma/account/merchant-five.webp", "/figma/account/merchant-psb.webp",
+  "/figma/account/background-blob.svg", "/figma/account/add-card.svg", "/figma/account/topup.svg", "/figma/account/send.svg",
+  "/figma/account/chevron-open.svg", "/figma/account/arrow-forward.svg", "/figma/account/merchant-bbq.webp", "/figma/account/merchant-five.webp", "/figma/account/merchant-psb.webp",
   "/figma/card/logo-night.svg", "/figma/card/logo-orange.svg", "/figma/card/mir-night.svg", "/figma/card/mir-orange.svg", "/figma/card/show.svg", "/figma/card/hide.svg", "/figma/card/copy.svg",
   "/figma/categories/background-blob-soft.svg", "/figma/categories/hero-card.png", "/figma/categories/asset-01.webp", "/figma/categories/asset-03.webp", "/figma/categories/asset-04.webp", "/figma/categories/asset-05.webp", "/figma/categories/asset-06.webp", "/figma/categories/asset-08.webp", "/figma/categories/asset-12.webp",
   "/figma/cashback/partner-5.svg", "/figma/cashback/next-month-delivery.png", "/figma/cashback/next-month-fuel.png", "/figma/cashback/next-month-family.png", "/figma/success/asset-14.webp",

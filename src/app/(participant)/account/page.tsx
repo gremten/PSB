@@ -31,7 +31,7 @@ export default function AccountPage() {
 
             <div className={styles.accountCardBadges} aria-label="Карты счёта">
               <button type="button" className={styles.accountAddCard} aria-label="Добавить карту" data-track="account.card.add" onClick={showDemoUnavailable}>
-                <Image src="/figma/account/add-card.svg" alt="" width={24} height={24} />
+                <Image src="/figma/account/add-card.svg" alt="" width={24} height={24} loading="eager" decoding="sync" />
               </button>
               <Link className={styles.accountCardBadge} href="/card?card=orange" data-track="account.card.primary.open">
                 <span className={`${styles.accountCardMiniature} ${styles.accountCardMiniatureOrange}`} aria-hidden="true" />
@@ -51,10 +51,10 @@ export default function AccountPage() {
           <div className={styles.accountOperationBlock}>
             <div className={styles.accountActions}>
               <button type="button" className={styles.accountAction} data-track="account.topup.open" onClick={showDemoUnavailable}>
-                <Image src="/figma/account/topup.svg" alt="" width={24} height={24} />Пополнить
+                <Image src="/figma/account/topup.svg" alt="" width={24} height={24} loading="eager" decoding="sync" />Пополнить
               </button>
               <button type="button" className={styles.accountAction} data-track="account.send.open" onClick={showDemoUnavailable}>
-                <Image src="/figma/account/send.svg" alt="" width={24} height={24} />Отправить
+                <Image src="/figma/account/send.svg" alt="" width={24} height={24} loading="eager" decoding="sync" />Отправить
               </button>
             </div>
 
