@@ -38,15 +38,25 @@ describe("case-study research summary", () => {
     expect(summary.scenarioMetrics.find((item) => item.code === "CASHBACK_CONNECT")).toMatchObject({
       startedParticipants: 2,
       completedParticipants: 1,
+      inProgressParticipants: 1,
+      excludedParticipants: 0,
       completionRate: 50,
+      completionConfidence95: { lower: 9, upper: 91 },
       firstClickSuccessRate: 100,
+      firstClickConfidence95: { lower: 34, upper: 100 },
       seqMedian: 6,
+      seqMean: 6,
       seqResponseCount: 1,
+      seqPositiveConfidence95: { lower: 21, upper: 100 },
     });
     expect(summary.issueMetrics.find((item) => item.semanticId === "card.block.open")).toMatchObject({
       affectedParticipants: 1,
       startedParticipants: 2,
       prevalencePercent: 50,
+      prevalenceConfidence95: { lower: 9, upper: 91 },
+      affectedCompletionRate: 100,
+      unaffectedCompletionRate: 100,
+      completionDifferencePp: 0,
     });
   });
 });

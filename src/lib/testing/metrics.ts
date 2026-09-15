@@ -1,4 +1,5 @@
 import type { UsabilityTask } from "@/config/test-scenarios";
+import { sortTrackedEvents, trackedEventTime } from "./event-time";
 import { isScenarioGateTarget, scenarioVerdictForEvent } from "./scenario-progress";
 import type { TaskRun, TrackedEvent } from "./types";
 
@@ -29,7 +30,7 @@ export function calculateTaskMetrics(
   events: TrackedEvent[],
   task: UsabilityTask | { goldenStepCount: number | null; metricMode?: string } | null,
 ): TaskMetrics {
-  const relevant = events.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)));
+  const relevant = sortTrackedEvents(events.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action))));
   const meaningful = relevant.filter((event) => meaningfulTypes.has(event.type));
   const steps = task && "metricMode" in task && task.metricMode === "taps" ? relevant.filter((event) => event.type === "tap") : meaningful;
   const golden = task?.goldenStepCount ?? null;
@@ -37,13 +38,16 @@ export function calculateTaskMetrics(
   const verdicts = taps.map((event) => scenarioVerdictForEvent(event, run.taskCode));
   const errorFree = !verdicts.includes("error");
   const excessTaps = golden === null ? null : Math.max(0, taps.length - golden);
+  const started = relevant.find((event) => event.type === "task_started");
+  const finished = relevant.findLast((event) => event.type === "task_finished");
+  const capturedCompletionTime = started && finished
+    ? Math.max(0, trackedEventTime(finished) - trackedEventTime(started))
+    : null;
   return {
     taskCode: run.taskCode,
     result: run.result,
-    completionTimeMs:
-      run.endedAt === null
-        ? null
-        : Math.max(0, new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()),
+    completionTimeMs: run.endedAt === null ? null : capturedCompletionTime
+      ?? Math.max(0, new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()),
     meaningfulSteps: steps.length,
     correctTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "correct").length,
     wrongTaps: relevant.filter((event) => scenarioVerdictForEvent(event, run.taskCode) === "error").length,

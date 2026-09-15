@@ -33,7 +33,7 @@ const ReplayTimeline = memo(function ReplayTimeline({ events, times, activeIndex
   </div>;
 });
 
-export function SessionReplay({ events, startedAt: _startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
+export function SessionReplay({ events, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
   const taskCodeByRun = useMemo(() => new Map(taskRuns.map((run) => [run.id, run.taskCode])), [taskRuns]);
   const replayEvents = useMemo(() => events.filter((event) => (event.screen || event.type === "tap" || event.type === "task_started" || event.type === "task_finished") && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)))
     .sort((a, b) => recordedEventTime(a) - recordedEventTime(b) || a.id - b.id), [events]);

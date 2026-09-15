@@ -1,12 +1,13 @@
 import { getTask, interactiveScenarios, type InteractiveScenarioCode } from "@/config/test-scenarios";
+import { sortTrackedEvents, trackedEventTime } from "./event-time";
 import { calculateTaskMetrics } from "./metrics";
 import type { ResearchSummary } from "./research-summary";
 import { isScenarioGateTarget, scenarioProgress, scenarioVerdictForEvent, type ScenarioVerdict } from "./scenario-progress";
 import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
-export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v4";
+export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v5";
 
-export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: не вычисляй общее время сессии, поскольку ожидание старта и разговор с модератором не относятся к задаче. Не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
+export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: они основаны на времени касания участника с серверным fallback; не вычисляй общее время сессии. Учитывай размер выборки и 95% доверительные интервалы, не называй описательную связь ошибки с completion причинной и не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -32,9 +33,16 @@ const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpo
   ],
 };
 
-function elapsedMs(timestamp: string, origin: string | null | undefined) {
-  if (!origin) return null;
-  const value = new Date(timestamp).getTime() - new Date(origin).getTime();
+function scenarioOriginMs(run: TaskRun | undefined, events: TrackedEvent[]) {
+  if (!run) return null;
+  const boundary = events.find((event) => event.taskRunId === run.id && event.type === "task_started");
+  const value = boundary ? trackedEventTime(boundary) : new Date(run.startedAt).getTime();
+  return Number.isFinite(value) ? value : null;
+}
+
+function elapsedMs(event: TrackedEvent, origin: number | null) {
+  if (origin === null) return null;
+  const value = trackedEventTime(event) - origin;
   return Number.isFinite(value) ? Math.max(0, value) : null;
 }
 
@@ -100,9 +108,12 @@ function buildLearningSignals(events: TrackedEvent[], verdicts: Array<ScenarioVe
 
 export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString()) {
   const taskRunById = new Map(snapshot.taskRuns.map((run) => [run.id, run]));
+  const orderedEvents = sortTrackedEvents(snapshot.events);
+  const originByRun = new Map(snapshot.taskRuns.map((run) => [run.id, scenarioOriginMs(run, orderedEvents)]));
   const starlRecords = snapshot.taskRuns.map((run) => {
     const task = getTask(run.taskCode);
-    const runEvents = snapshot.events.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(semanticId(event))));
+    const runEvents = orderedEvents.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(semanticId(event))));
+    const origin = originByRun.get(run.id) ?? null;
     const metrics = calculateTaskMetrics(run, runEvents, task);
     const verdicts = runEvents.map((event) => scenarioVerdictForEvent(event, run.taskCode));
     const interactive = interactiveScenarios.find((scenario) => scenario.code === run.taskCode);
@@ -113,7 +124,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
       return {
         order: index + 1,
         eventId: event.id,
-        elapsedFromScenarioStartMs: elapsedMs(event.timestamp, run.startedAt),
+        elapsedFromScenarioStartMs: elapsedMs(event, origin),
         screen: event.screen,
         semanticId: semanticId(event),
         semanticLabel: label,
@@ -155,7 +166,8 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
           sequence: index + 1,
           eventId: event.id,
           timestamp: event.timestamp,
-          elapsedFromScenarioStartMs: elapsedMs(event.timestamp, run.startedAt),
+          capturedAt: new Date(trackedEventTime(event)).toISOString(),
+          elapsedFromScenarioStartMs: elapsedMs(event, origin),
           type: event.type,
           screen: event.screen,
           semanticId: semanticId(event),
@@ -215,13 +227,22 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         firstClickSuccess: "attempts whose first recorded tap is correct / attempts with a recorded tap",
         completionTime: "median and P75 of successful task-run duration",
         issuePrevalence: "unique affected participants / unique participants who started that scenario",
+        uncertainty: "Wilson 95% confidence intervals for binary participant rates; descriptive association is not causation",
         seq: "Single Ease Question, 1 very difficult to 7 very easy, asked after each successful scenario",
       },
+      references: [
+        "https://www.iso.org/standard/63500.html",
+        "https://www.nngroup.com/articles/usability-metrics/",
+        "https://www.nngroup.com/articles/success-rate-the-simplest-usability-metric/",
+        "https://research.google/pubs/measuring-the-user-experience-on-a-large-scale-user-centered-metrics-for-web-applications/",
+        "https://measuringu.com/seq10/",
+      ],
     },
     analysisContract: {
       timestampFormat: "ISO-8601 UTC",
+      timestampSemantics: "timestamp is server receipt time; capturedAt and elapsedFromScenarioStartMs represent validated participant capture time",
       durationUnit: "milliseconds",
-      timeBasis: "task_run_only",
+      timeBasis: "participant_capture_time_with_server_fallback",
       verdicts: {
         correct: "expected scenario tap",
         error: "tap unrelated to the active scenario",
@@ -230,7 +251,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         null: "non-tap event or unclassified legacy event",
       },
       privacy: "participantCode is the study pseudonym. Event metadata is sanitized at ingestion; banking values, clipboard contents and other personal data are not exported.",
-      automationGuidance: "Use only scenarioStartedAt, scenarioEndedAt, completionTimeMs and elapsedFromScenarioStartMs for timing analysis. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Use unique participants, not event totals, for issue prevalence. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
+      automationGuidance: "Use only completionTimeMs and elapsedFromScenarioStartMs for timing analysis; these prefer participant capture time and fall back to server time. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Use unique participants, not event totals, for issue prevalence. Report sample size and confidence intervals, and never describe an observed completion-rate difference as causal. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
     },
     analysisPrompt: {
       language: "ru",
@@ -241,9 +262,10 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     starlRecords,
     session: snapshot.session,
     taskRuns: snapshot.taskRuns,
-    events: snapshot.events.map((event) => ({
+    events: orderedEvents.map((event) => ({
       ...event,
-      elapsedFromScenarioStartMs: elapsedMs(event.timestamp, taskRunById.get(event.taskRunId ?? "")?.startedAt),
+      capturedAt: new Date(trackedEventTime(event)).toISOString(),
+      elapsedFromScenarioStartMs: elapsedMs(event, originByRun.get(event.taskRunId ?? "") ?? null),
       semanticId: semanticId(event),
       scenarioVerdict: scenarioVerdictForEvent(event, taskRunById.get(event.taskRunId ?? "")?.taskCode),
     })),
@@ -257,12 +279,14 @@ function csvCell(value: unknown) {
 
 export function buildSessionEventsCsv(snapshot: SessionSnapshot) {
   const runs = new Map(snapshot.taskRuns.map((run) => [run.id, run]));
+  const orderedEvents = sortTrackedEvents(snapshot.events);
+  const originByRun = new Map(snapshot.taskRuns.map((run) => [run.id, scenarioOriginMs(run, orderedEvents)]));
   const rows = [
-    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedTaskMs", "semanticId", "semanticLabel", "scenarioVerdict", "interpretation"],
-    ...snapshot.events.map((event) => {
+    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedTaskMs", "semanticId", "semanticLabel", "scenarioVerdict", "interpretation", "capturedAt"],
+    ...orderedEvents.map((event) => {
       const run = event.taskRunId ? runs.get(event.taskRunId) : undefined;
       const verdict = scenarioVerdictForEvent(event, run?.taskCode);
-      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event.timestamp, run?.startedAt), semanticId(event), semanticLabel(semanticId(event)), verdict, interactionInterpretation(verdict)];
+      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event, originByRun.get(event.taskRunId ?? "") ?? null), semanticId(event), semanticLabel(semanticId(event)), verdict, interactionInterpretation(verdict), new Date(trackedEventTime(event)).toISOString()];
     }),
   ];
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
@@ -412,26 +436,36 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
     );
     lines.push("", "### Стандартные метрики по сценариям", "");
     researchSummary.scenarioMetrics.forEach((scenario) => {
+      const completionCi = scenario.completionConfidence95 ? `${scenario.completionConfidence95.lower}–${scenario.completionConfidence95.upper}%` : "—";
+      const firstClickCi = scenario.firstClickConfidence95 ? `${scenario.firstClickConfidence95.lower}–${scenario.firstClickConfidence95.upper}%` : "—";
+      const errorFreeCi = scenario.errorFreeConfidence95 ? `${scenario.errorFreeConfidence95.lower}–${scenario.errorFreeConfidence95.upper}%` : "—";
+      const directPathCi = scenario.directPathConfidence95 ? `${scenario.directPathConfidence95.lower}–${scenario.directPathConfidence95.upper}%` : "—";
+      const seqPositiveCi = scenario.seqPositiveConfidence95 ? `${scenario.seqPositiveConfidence95.lower}–${scenario.seqPositiveConfidence95.upper}%` : "—";
       lines.push(
         `#### ${markdownValue(scenario.title)}`,
         "",
-        `- Task completion: **${scenario.completedParticipants} из ${scenario.startedParticipants} — ${scenario.completionRate}%**.`,
+        `- Task completion: **${scenario.completedParticipants} из ${scenario.startedParticipants} — ${scenario.completionRate}%**; 95% ДИ **${completionCi}**.`,
         `- Без помощи: **${scenario.unaidedCompletionRate}%**; с помощью: **${scenario.aidedCompletionRate}%**; неуспешно: **${scenario.failureRate}%**.`,
-        `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших.`,
-        `- Direct path: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов.`,
-        `- Успешный первый клик: **${scenario.firstClickSuccessRate}%** запусков с зафиксированным первым тапом.`,
+        `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших; 95% ДИ **${errorFreeCi}**.`,
+        `- Direct path: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов; 95% ДИ **${directPathCi}**.`,
+        `- Успешный первый клик: **${scenario.firstClickSuccessRate}%** запусков с зафиксированным первым тапом; 95% ДИ **${firstClickCi}**.`,
         `- Время выполнения: median **${humanDuration(scenario.medianCompletionTimeMs)}**, P75 **${humanDuration(scenario.p75CompletionTimeMs)}**.`,
         `- Лишние тапы сверх эталонного пути: median **${scenario.medianExcessTaps ?? "—"}**, P75 **${scenario.p75ExcessTaps ?? "—"}**.`,
-        `- SEQ: median **${scenario.seqMedian ?? "—"} из 7**, ответов **${scenario.seqResponseCount}**, оценили лёгкость на 5–7 — **${scenario.seqPositiveRate}%**.`,
+        `- SEQ: среднее **${scenario.seqMean ?? "—"}**, median **${scenario.seqMedian ?? "—"} из 7**, ответов **${scenario.seqResponseCount}**, оценили лёгкость на 5–7 — **${scenario.seqPositiveRate}%**; 95% ДИ **${seqPositiveCi}**.`,
+        `- Сейчас выполняют: **${scenario.inProgressParticipants}**; исключено повреждённых попыток: **${scenario.excludedParticipants}**. Они не входят в проценты выше.`,
       );
       if (scenario.dropoffs.length) {
         lines.push("- Точки схода:", ...scenario.dropoffs.map((dropoff) => `  - ${markdownValue(dropoff.label)} — **${dropoff.count} из ${dropoff.total}, ${dropoff.percent}%**.`));
       }
       lines.push("");
     });
-    lines.push("### Распространённость проблем", "");
+    lines.push("### Распространённость проблем", "", "Ниже показана описательная связь с завершением в этой выборке. Она помогает приоритизировать наблюдения, но не доказывает причинность.", "");
     if (researchSummary.issueMetrics.length) {
-      lines.push(...researchSummary.issueMetrics.map((issue) => `- **${markdownValue(issue.scenarioTitle)}:** ${markdownValue(issue.label)} — затронуло **${issue.affectedParticipants} из ${issue.startedParticipants} участников (${issue.prevalencePercent}%)**; всего повторов: **${issue.occurrenceCount}**.`));
+      lines.push(...researchSummary.issueMetrics.map((issue) => {
+        const confidence = issue.prevalenceConfidence95 ? `${issue.prevalenceConfidence95.lower}–${issue.prevalenceConfidence95.upper}%` : "—";
+        const comparison = issue.unaffectedCompletionRate === null ? "группы сравнения нет" : `без проблемы — ${issue.unaffectedCompletionRate}%, разница ${issue.completionDifferencePp! > 0 ? "+" : ""}${issue.completionDifferencePp} п.п.`;
+        return `- **${markdownValue(issue.scenarioTitle)}:** ${markdownValue(issue.label)} — затронуло **${issue.affectedParticipants} из ${issue.startedParticipants} участников (${issue.prevalencePercent}%; 95% ДИ ${confidence})**; completion с проблемой — **${issue.affectedCompletionRate}%**, ${comparison}; вернулись после отклонения — **${issue.recoveredParticipants} (${issue.recoveryRate}%)**; всего повторов: **${issue.occurrenceCount}**.`;
+      }));
     } else {
       lines.push("Ошибочных действий в выборке пока не зафиксировано.");
     }
@@ -487,6 +521,17 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
   });
 
   lines.push(
+    "",
+    "## Как интерпретировать метрики в кейсе",
+    "",
+    "- **Effectiveness:** Task completion, error-free completion и успешный первый клик показывают, смог ли участник достичь цели и насколько хорошо интерфейс направил первое действие.",
+    "- **Efficiency:** task time, direct path и лишние тапы показывают цену достижения цели. Время считается только внутри сценария по моментам действий участника.",
+    "- **Satisfaction:** SEQ — самостоятельная субъективная оценка лёгкости сразу после задания; она дополняет, но не заменяет наблюдаемое поведение.",
+    "- **Проблемы:** распространённость считается по уникальным участникам. Количество повторных кликов лишь показывает интенсивность проблемы.",
+    "- **Неопределённость:** рядом с бинарными долями указан Wilson 95% ДИ. При небольшой выборке он закономерно широк, поэтому выводы следует формулировать как наблюдения этой выборки и проверять на следующей итерации.",
+    "- **Влияние:** разница completion у столкнувшихся и не столкнувшихся с проблемой — описательная связь, а не доказательство причинности.",
+    "",
+    "Методическая опора: [ISO 9241-11](https://www.iso.org/standard/63500.html), [Nielsen Norman Group — Usability Metrics](https://www.nngroup.com/articles/usability-metrics/), [Nielsen Norman Group — Success Rate](https://www.nngroup.com/articles/success-rate-the-simplest-usability-metric/), [Google HEART](https://research.google/pubs/measuring-the-user-experience-on-a-large-scale-user-centered-metrics-for-web-applications/), [MeasuringU — SEQ](https://measuringu.com/seq10/).",
     "",
     "## Инструкция для анализа нейросетью",
     "",

@@ -47,6 +47,20 @@ describe("usability metrics", () => {
     expect(aggregate.easeMedian).toBe(6);
     expect(aggregate.easePositiveRate).toBe(1);
   });
+
+  it("uses participant capture time and capture order for task timing and first click", () => {
+    const origin = new Date("2026-01-01T00:00:00.000Z").getTime();
+    const captured = [
+      { id: 4, sessionId: "session-1", taskRunId: "run-1", timestamp: "2026-01-01T00:00:04.000Z", type: "tap", screen: "/", action: "later", target: "later", metadata: { clientTimeMs: origin + 4_000, scenarioVerdict: "error" } },
+      { id: 1, sessionId: "session-1", taskRunId: "run-1", timestamp: "2026-01-01T00:00:01.000Z", type: "task_started", screen: "/", action: "A1", target: null, metadata: { clientTimeMs: origin + 1_000 } },
+      { id: 3, sessionId: "session-1", taskRunId: "run-1", timestamp: "2026-01-01T00:00:03.000Z", type: "tap", screen: "/", action: "first", target: "first", metadata: { clientTimeMs: origin + 2_000, scenarioVerdict: "correct" } },
+      { id: 5, sessionId: "session-1", taskRunId: "run-1", timestamp: "2026-01-01T00:00:08.000Z", type: "task_finished", screen: "/", action: "A1", target: null, metadata: { clientTimeMs: origin + 6_000 } },
+    ] satisfies TrackedEvent[];
+    const metric = calculateTaskMetrics(run, captured, { goldenStepCount: 1 });
+    expect(metric.completionTimeMs).toBe(5_000);
+    expect(metric.firstMeaningfulAction).toBe("first");
+    expect(metric.firstClickCorrect).toBe(true);
+  });
 });
 
 describe("analytics privacy", () => {

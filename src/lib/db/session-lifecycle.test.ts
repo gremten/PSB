@@ -89,6 +89,8 @@ describe("independent participant session lifecycle", () => {
     for (const id of ["delivery", "fuel", "family"]) await tap(`cashback.category.${id}.toggle`, "/cashback/categories");
     await tap("cashback.categories.confirm", "/cashback/categories", { selectedCount: 3 });
     await action("cashback.next_month.success.dismissed", "/cashback");
+    const lateCloseTap = await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CASHBACK_NEXT", eventName: "tap", screen: "/cashback", action: "cashback.next_month.success.close", target: "cashback.next_month.success.close" });
+    expect(lateCloseTap?.metadata.scenarioVerdict).toBe("correct");
     const snapshot = await getSessionSnapshot(session.id);
     expect(snapshot?.taskRuns.map((run) => run.result)).toEqual(["unaided", "unaided", "unaided"]);
     expect(snapshot?.session.endReason).toBe("all_scenarios_completed");

@@ -97,8 +97,9 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   const [scenarioStatus, setScenarioStatus] = useState<ScenarioStatus | null>(null);
   const [scenarioError, setScenarioError] = useState("");
   const [completingScenario, setCompletingScenario] = useState(false);
-  const [pendingEaseScenario, setPendingEaseScenario] = useState<string | null>(null);
-  const [easeStateReady, setEaseStateReady] = useState(false);
+  const [pendingEaseScenario, setPendingEaseScenario] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : window.sessionStorage.getItem(PENDING_EASE_SCORE_KEY));
+  const [easeStateReady] = useState(() => typeof window !== "undefined");
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
   const preloadImages = useRef<HTMLImageElement[]>([]);
 
@@ -121,11 +122,6 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETED, complete);
       window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETION_FAILED, fail);
     };
-  }, []);
-
-  useEffect(() => {
-    setPendingEaseScenario(window.sessionStorage.getItem(PENDING_EASE_SCORE_KEY));
-    setEaseStateReady(true);
   }, []);
 
   useEffect(() => {

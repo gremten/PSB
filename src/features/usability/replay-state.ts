@@ -1,4 +1,5 @@
 import { getInitialParticipantState } from "@/lib/testing/participant-state";
+import { trackedEventTime } from "@/lib/testing/event-time";
 import type { ParticipantProductState, TrackedEvent } from "@/lib/testing/types";
 
 export const REPLAY_MESSAGE = "psb:replay-state";
@@ -24,10 +25,7 @@ export interface ReplayVisualState {
 }
 
 export function recordedEventTime(event: TrackedEvent) {
-  const serverTime = new Date(event.timestamp).getTime();
-  const clientTime = event.metadata.clientTimeMs;
-  return typeof clientTime === "number" && Number.isFinite(clientTime) && Math.abs(clientTime - serverTime) < 300_000
-    ? clientTime : serverTime;
+  return trackedEventTime(event);
 }
 
 function minimumReplayDwell(event: TrackedEvent, next: TrackedEvent) {

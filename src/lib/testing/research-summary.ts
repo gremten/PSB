@@ -1,4 +1,5 @@
 import { interactiveScenarios } from "@/config/test-scenarios";
+import { sortTrackedEvents, trackedEventTime } from "./event-time";
 import { calculateTaskMetrics } from "./metrics";
 import { scenarioProgress, scenarioVerdictForEvent } from "./scenario-progress";
 import type { ResearchSession, TaskRun, TrackedEvent } from "./types";
@@ -28,20 +29,28 @@ export interface ScenarioResearchMetrics {
   unaidedParticipants: number;
   aidedParticipants: number;
   failedParticipants: number;
+  inProgressParticipants: number;
+  excludedParticipants: number;
   completionRate: number;
+  completionConfidence95: ConfidenceRange | null;
   unaidedCompletionRate: number;
   aidedCompletionRate: number;
   failureRate: number;
   errorFreeCompletionRate: number;
+  errorFreeConfidence95: ConfidenceRange | null;
   directPathRate: number;
+  directPathConfidence95: ConfidenceRange | null;
   firstClickSuccessRate: number;
+  firstClickConfidence95: ConfidenceRange | null;
   medianCompletionTimeMs: number | null;
   p75CompletionTimeMs: number | null;
   medianExcessTaps: number | null;
   p75ExcessTaps: number | null;
   seqResponseCount: number;
+  seqMean: number | null;
   seqMedian: number | null;
   seqPositiveRate: number;
+  seqPositiveConfidence95: ConfidenceRange | null;
   dropoffs: Array<{ stage: number; label: string; count: number; total: number; percent: number }>;
 }
 
@@ -53,8 +62,17 @@ export interface ResearchIssueMetric {
   affectedParticipants: number;
   startedParticipants: number;
   prevalencePercent: number;
+  prevalenceConfidence95: ConfidenceRange | null;
   occurrenceCount: number;
+  affectedCompletionRate: number;
+  unaffectedParticipants: number;
+  unaffectedCompletionRate: number | null;
+  completionDifferencePp: number | null;
+  recoveredParticipants: number;
+  recoveryRate: number;
 }
+
+export interface ConfidenceRange { lower: number; upper: number }
 
 function metric(id: string, label: string, count: number, total: number, denominatorLabel: string): ResearchSummaryMetric {
   return { id, label, count, total, percent: total ? Math.round(count / total * 100) : 0, denominatorLabel };
@@ -74,6 +92,20 @@ function percentile(values: number[], value: number) {
   const lower = Math.floor(position);
   const upper = Math.ceil(position);
   return lower === upper ? sorted[lower] : sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+}
+
+function mean(values: number[]) {
+  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 10) / 10 : null;
+}
+
+function wilson95(count: number, total: number): ConfidenceRange | null {
+  if (!total) return null;
+  const z = 1.96;
+  const proportion = count / total;
+  const denominator = 1 + z * z / total;
+  const centre = (proportion + z * z / (2 * total)) / denominator;
+  const margin = z * Math.sqrt((proportion * (1 - proportion) + z * z / (4 * total)) / total) / denominator;
+  return { lower: Math.max(0, Math.round((centre - margin) * 100)), upper: Math.min(100, Math.round((centre + margin) * 100)) };
 }
 
 const stageLabels: Record<string, string[]> = {
@@ -110,7 +142,7 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
   for (const sessionId of cashbackParticipants) {
     const firstEntry = events
       .filter((event) => event.sessionId === sessionId && event.taskRunId && cashbackRunIds.has(event.taskRunId) && event.type === "tap" && (event.target === "home.cashback.open" || event.target === "cashback.tab.open"))
-      .sort((a, b) => a.id - b.id)[0];
+      .sort((a, b) => trackedEventTime(a) - trackedEventTime(b) || a.id - b.id)[0];
     if (firstEntry?.target === "home.cashback.open") badgeFirst += 1;
     if (firstEntry?.target === "cashback.tab.open") tabFirst += 1;
   }
@@ -152,7 +184,9 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
   ];
 
   const scenarioMetrics: ScenarioResearchMetrics[] = interactiveScenarios.map((scenario) => {
-    const scenarioRuns = runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code && run.result !== "corrupted");
+    const allScenarioRuns = runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code);
+    const scenarioRuns = allScenarioRuns.filter((run) => run.result !== "corrupted");
+    const excludedParticipants = new Set(allScenarioRuns.filter((run) => run.result === "corrupted").map((run) => run.sessionId)).size;
     const representatives = [...new Set(scenarioRuns.map((run) => run.sessionId))].map((sessionId) => {
       const participantRuns = scenarioRuns.filter((run) => run.sessionId === sessionId);
       return participantRuns.find((run) => run.result === "unaided" || run.result === "aided") ?? participantRuns.at(-1)!;
@@ -167,9 +201,14 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
     const completionTimes = completed.flatMap(({ metric: item }) => item.completionTimeMs === null ? [] : [item.completionTimeMs]);
     const excessTaps = completed.flatMap(({ metric: item }) => item.excessTaps === null ? [] : [item.excessTaps]);
     const seqScores = completed.flatMap(({ run }) => run.easeScore === null ? [] : [run.easeScore]);
+    const firstClickAttempts = calculated.filter(({ metric: item }) => item.firstClickCorrect !== null);
+    const firstClickSuccesses = firstClickAttempts.filter(({ metric: item }) => item.firstClickCorrect).length;
+    const errorFreeSuccesses = completed.filter(({ metric: item }) => item.errorFree).length;
+    const directPathSuccesses = completed.filter(({ metric: item }) => item.directPath).length;
+    const seqPositive = seqScores.filter((score) => score >= 5).length;
     const dropoffCounts = new Map<number, number>();
     calculated.filter(({ run }) => run.result === "failed").forEach(({ events: runEvents }) => {
-      const stage = scenarioProgress(scenario.code, runEvents).stage;
+      const stage = scenarioProgress(scenario.code, sortTrackedEvents(runEvents)).stage;
       dropoffCounts.set(stage, (dropoffCounts.get(stage) ?? 0) + 1);
     });
     const rate = (count: number, denominator = started) => denominator ? Math.round(count / denominator * 100) : 0;
@@ -181,20 +220,28 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
       unaidedParticipants: completed.filter(({ run }) => run.result === "unaided").length,
       aidedParticipants: completed.filter(({ run }) => run.result === "aided").length,
       failedParticipants: calculated.filter(({ run }) => run.result === "failed").length,
+      inProgressParticipants: calculated.filter(({ run }) => run.result === null).length,
+      excludedParticipants,
       completionRate: rate(completed.length),
+      completionConfidence95: wilson95(completed.length, started),
       unaidedCompletionRate: rate(completed.filter(({ run }) => run.result === "unaided").length),
       aidedCompletionRate: rate(completed.filter(({ run }) => run.result === "aided").length),
       failureRate: rate(calculated.filter(({ run }) => run.result === "failed").length),
-      errorFreeCompletionRate: rate(completed.filter(({ metric: item }) => item.errorFree).length, completed.length),
-      directPathRate: rate(completed.filter(({ metric: item }) => item.directPath).length, completed.length),
-      firstClickSuccessRate: rate(calculated.filter(({ metric: item }) => item.firstClickCorrect).length, calculated.filter(({ metric: item }) => item.firstClickCorrect !== null).length),
+      errorFreeCompletionRate: rate(errorFreeSuccesses, completed.length),
+      errorFreeConfidence95: wilson95(errorFreeSuccesses, completed.length),
+      directPathRate: rate(directPathSuccesses, completed.length),
+      directPathConfidence95: wilson95(directPathSuccesses, completed.length),
+      firstClickSuccessRate: rate(firstClickSuccesses, firstClickAttempts.length),
+      firstClickConfidence95: wilson95(firstClickSuccesses, firstClickAttempts.length),
       medianCompletionTimeMs: median(completionTimes),
       p75CompletionTimeMs: percentile(completionTimes, 0.75),
       medianExcessTaps: median(excessTaps),
       p75ExcessTaps: percentile(excessTaps, 0.75),
       seqResponseCount: seqScores.length,
+      seqMean: mean(seqScores),
       seqMedian: median(seqScores),
-      seqPositiveRate: rate(seqScores.filter((score) => score >= 5).length, seqScores.length),
+      seqPositiveRate: rate(seqPositive, seqScores.length),
+      seqPositiveConfidence95: wilson95(seqPositive, seqScores.length),
       dropoffs: [...dropoffCounts.entries()].sort(([a], [b]) => a - b).map(([stage, count]) => ({
         stage,
         label: stageLabels[scenario.code]?.[stage] ?? `остановился на этапе ${stage}`,
@@ -206,8 +253,12 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
   });
 
   const issueMetrics: ResearchIssueMetric[] = interactiveScenarios.flatMap((scenario) => {
-    const scenarioRunIds = new Set(runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code && run.result !== "corrupted").map((run) => run.id));
-    const startedParticipants = new Set(runs.filter((run) => scenarioRunIds.has(run.id)).map((run) => run.sessionId)).size;
+    const scenarioRuns = runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code && run.result !== "corrupted");
+    const scenarioRunIds = new Set(scenarioRuns.map((run) => run.id));
+    const startedSessionIds = new Set(scenarioRuns.map((run) => run.sessionId));
+    const completedSessionIds = new Set(scenarioRuns.filter((run) => run.result === "unaided" || run.result === "aided").map((run) => run.sessionId));
+    const recoveredSessionIds = new Set(events.filter((event) => event.taskRunId && scenarioRunIds.has(event.taskRunId) && verdictFor(event) === "recovery").map((event) => event.sessionId));
+    const startedParticipants = startedSessionIds.size;
     const grouped = new Map<string, { sessions: Set<string>; occurrences: number }>();
     events.filter((event) => event.taskRunId && scenarioRunIds.has(event.taskRunId) && verdictFor(event) === "error").forEach((event) => {
       const semanticId = event.target ?? event.action ?? "unknown";
@@ -216,16 +267,31 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
       current.occurrences += 1;
       grouped.set(semanticId, current);
     });
-    return [...grouped.entries()].map(([semanticId, value]) => ({
-      scenarioCode: scenario.code,
-      scenarioTitle: scenario.title,
-      semanticId,
-      label: issueLabel(semanticId),
-      affectedParticipants: value.sessions.size,
-      startedParticipants,
-      prevalencePercent: startedParticipants ? Math.round(value.sessions.size / startedParticipants * 100) : 0,
-      occurrenceCount: value.occurrences,
-    }));
+    return [...grouped.entries()].map(([semanticId, value]) => {
+      const affectedCompleted = [...value.sessions].filter((sessionId) => completedSessionIds.has(sessionId)).length;
+      const unaffected = [...startedSessionIds].filter((sessionId) => !value.sessions.has(sessionId));
+      const unaffectedCompleted = unaffected.filter((sessionId) => completedSessionIds.has(sessionId)).length;
+      const affectedCompletionRate = value.sessions.size ? Math.round(affectedCompleted / value.sessions.size * 100) : 0;
+      const unaffectedCompletionRate = unaffected.length ? Math.round(unaffectedCompleted / unaffected.length * 100) : null;
+      const recoveredParticipants = [...value.sessions].filter((sessionId) => recoveredSessionIds.has(sessionId)).length;
+      return {
+        scenarioCode: scenario.code,
+        scenarioTitle: scenario.title,
+        semanticId,
+        label: issueLabel(semanticId),
+        affectedParticipants: value.sessions.size,
+        startedParticipants,
+        prevalencePercent: startedParticipants ? Math.round(value.sessions.size / startedParticipants * 100) : 0,
+        prevalenceConfidence95: wilson95(value.sessions.size, startedParticipants),
+        occurrenceCount: value.occurrences,
+        affectedCompletionRate,
+        unaffectedParticipants: unaffected.length,
+        unaffectedCompletionRate,
+        completionDifferencePp: unaffectedCompletionRate === null ? null : affectedCompletionRate - unaffectedCompletionRate,
+        recoveredParticipants,
+        recoveryRate: value.sessions.size ? Math.round(recoveredParticipants / value.sessions.size * 100) : 0,
+      };
+    });
   }).sort((a, b) => b.prevalencePercent - a.prevalencePercent || b.affectedParticipants - a.affectedParticipants || a.label.localeCompare(b.label, "ru"));
 
   return { recordedSessions: total, journeySegments, metrics, scenarioMetrics, issueMetrics };

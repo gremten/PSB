@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calculateResearchSummary } from "./research-summary";
 import { buildSessionEventsCsv, buildSessionMarkdownReport, buildStarlSessionExport, STARL_EXPORT_SCHEMA_VERSION } from "./session-export";
 import type { SessionSnapshot, TrackedEvent } from "./types";
 
@@ -63,12 +64,13 @@ describe("STARL session export", () => {
       result: { completed: true, journeySegment: "completed_with_exploration", completionSupportedByEventSequence: true },
       learning: { status: "evidence_only_requires_interpretation" },
     });
-    expect(result.analysisContract.timeBasis).toBe("task_run_only");
+    expect(result.analysisContract.timeBasis).toBe("participant_capture_time_with_server_fallback");
     expect(result.analysisPrompt.text).toContain("просмотр и копирование данных карты");
     expect(result.analysisPrompt.text).toContain("не вычисляй общее время сессии");
     expect(result.starlRecords[0].situation).not.toHaveProperty("sessionStartedAt");
     expect(result.events[0]).not.toHaveProperty("elapsedFromSessionStartMs");
     expect(result.events[0].elapsedFromScenarioStartMs).toBe(1_000);
+    expect(result.events[0].capturedAt).toBe(result.events[0].timestamp);
     expect(result.starlRecords[0].learning.signals).toContainEqual({ code: "opened_category_explanation", evidenceEventIds: [3] });
     expect(result.starlRecords[0].action.firstInteraction).toMatchObject({
       eventId: 1,
@@ -91,7 +93,8 @@ describe("STARL session export", () => {
   });
 
   it("builds a human-readable Russian Markdown report", () => {
-    const markdown = buildSessionMarkdownReport(snapshot, "2026-09-15T11:00:00.000Z");
+    const researchSummary = calculateResearchSummary([snapshot.session], snapshot.taskRuns, snapshot.events);
+    const markdown = buildSessionMarkdownReport(snapshot, "2026-09-15T11:00:00.000Z", researchSummary);
     expect(markdown).toContain("# Отчёт о юзабилити-тесте");
     expect(markdown).toContain("Участник: **P-01**");
     expect(markdown).toContain("## Сценарий 1.");
@@ -103,6 +106,11 @@ describe("STARL session export", () => {
     expect(markdown).toContain("С допустимым изучением: **1 из 1** — **100%**");
     expect(markdown).toContain("Вход в кешбек через бейдж у общей суммы: **1 из 1** запусков — **100%**");
     expect(markdown).toContain("### Самые частые действия, влияющие на прохождение");
+    expect(markdown).toContain("### Стандартные метрики по сценариям");
+    expect(markdown).toContain("95% ДИ");
+    expect(markdown).toContain("## Как интерпретировать метрики в кейсе");
+    expect(markdown).toContain("описательная связь, а не доказательство причинности");
+    expect(markdown).toContain("https://www.nngroup.com/articles/usability-metrics/");
     expect(markdown).toContain("## Инструкция для анализа нейросетью");
     expect(markdown).not.toContain('"scenarioCode"');
   });

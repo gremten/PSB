@@ -23,6 +23,10 @@ function duration(milliseconds: number) {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function confidenceLabel(range: { lower: number; upper: number } | null) {
+  return range ? `95% ДИ ${range.lower}–${range.upper}%` : "95% ДИ —";
+}
+
 function shortDate(value: string) {
   return new Date(value).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
@@ -177,19 +181,21 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
           <div className={styles.scenarioSummaryGrid}>{researchSummary.scenarioMetrics.map((scenario) => <article className={styles.scenarioSummary} key={scenario.code}>
             <div className={styles.scenarioSummaryHeader}><div><small>{scenario.code}</small><h4>{scenario.title}</h4></div><strong>{scenario.completedParticipants}/{scenario.startedParticipants}</strong></div>
             <div className={styles.metricGrid}>
-              <div className={styles.stat}><span>Task completion</span><strong>{scenario.completionRate}%</strong><small className={styles.summaryDenominator}>{scenario.completedParticipants} из {scenario.startedParticipants} начавших</small></div>
+              <div className={styles.stat}><span>Task completion</span><strong>{scenario.completionRate}%</strong><small className={styles.summaryDenominator}>{scenario.completedParticipants} из {scenario.startedParticipants} начавших · {confidenceLabel(scenario.completionConfidence95)}</small></div>
               <div className={styles.stat}><span>Без помощи / с помощью</span><strong>{scenario.unaidedCompletionRate}% / {scenario.aidedCompletionRate}%</strong></div>
-              <div className={styles.stat}><span>Error-free completion</span><strong>{scenario.errorFreeCompletionRate}%</strong><small className={styles.summaryDenominator}>из завершивших</small></div>
-              <div className={styles.stat}><span>Direct path</span><strong>{scenario.directPathRate}%</strong><small className={styles.summaryDenominator}>без ошибок, изучения и лишних тапов</small></div>
-              <div className={styles.stat}><span>Успешный первый клик</span><strong>{scenario.firstClickSuccessRate}%</strong></div>
+              <div className={styles.stat}><span>Error-free completion</span><strong>{scenario.errorFreeCompletionRate}%</strong><small className={styles.summaryDenominator}>из завершивших · {confidenceLabel(scenario.errorFreeConfidence95)}</small></div>
+              <div className={styles.stat}><span>Direct path</span><strong>{scenario.directPathRate}%</strong><small className={styles.summaryDenominator}>без отклонений · {confidenceLabel(scenario.directPathConfidence95)}</small></div>
+              <div className={styles.stat}><span>Успешный первый клик</span><strong>{scenario.firstClickSuccessRate}%</strong><small className={styles.summaryDenominator}>{confidenceLabel(scenario.firstClickConfidence95)}</small></div>
               <div className={styles.stat}><span>Время median / P75</span><strong>{scenario.medianCompletionTimeMs === null ? "—" : duration(scenario.medianCompletionTimeMs)} / {scenario.p75CompletionTimeMs === null ? "—" : duration(scenario.p75CompletionTimeMs)}</strong></div>
               <div className={styles.stat}><span>Лишние тапы median / P75</span><strong>{scenario.medianExcessTaps ?? "—"} / {scenario.p75ExcessTaps ?? "—"}</strong></div>
-              <div className={styles.stat}><span>SEQ median</span><strong>{scenario.seqMedian ?? "—"} / 7</strong><small className={styles.summaryDenominator}>{scenario.seqResponseCount} ответов · {scenario.seqPositiveRate}% поставили 5–7</small></div>
+              <div className={styles.stat}><span>SEQ mean / median</span><strong>{scenario.seqMean ?? "—"} / {scenario.seqMedian ?? "—"}</strong><small className={styles.summaryDenominator}>{scenario.seqResponseCount} ответов · 5–7: {scenario.seqPositiveRate}% · {confidenceLabel(scenario.seqPositiveConfidence95)}</small></div>
+              <div className={styles.stat}><span>В процессе / исключено</span><strong>{scenario.inProgressParticipants} / {scenario.excludedParticipants}</strong><small className={styles.summaryDenominator}>исключённые попытки не входят в проценты</small></div>
             </div>
             {scenario.dropoffs.length > 0 && <div className={styles.dropoffList}><strong>Где остановились</strong>{scenario.dropoffs.map((dropoff) => <span key={dropoff.stage}>{dropoff.label}: {dropoff.count} из {dropoff.total} · {dropoff.percent}%</span>)}</div>}
           </article>)}</div>
           <h3 className={styles.summaryHeading}>Проблемные точки</h3>
-          {researchSummary.issueMetrics.length ? <div className={styles.sessionTableWrap}><table className={styles.metrics}><thead><tr><th>Сценарий</th><th>Действие</th><th>Участники</th><th>Распространённость</th><th>Повторов</th></tr></thead><tbody>{researchSummary.issueMetrics.map((issue) => <tr key={`${issue.scenarioCode}:${issue.semanticId}`}><td>{issue.scenarioTitle}</td><td title={issue.semanticId}>{issue.label}</td><td>{issue.affectedParticipants} из {issue.startedParticipants}</td><td>{issue.prevalencePercent}%</td><td>{issue.occurrenceCount}</td></tr>)}</tbody></table></div> : <div className={styles.empty}>Ошибочных действий пока нет</div>}
+          <p className={styles.build}>Связь с completion описательная: она показывает, что произошло в этой выборке, но сама по себе не доказывает причинность.</p>
+          {researchSummary.issueMetrics.length ? <div className={styles.sessionTableWrap}><table className={styles.metrics}><thead><tr><th>Сценарий</th><th>Действие</th><th>Участники</th><th>Распространённость</th><th>Completion: с проблемой / без</th><th>Вернулись</th><th>Повторов</th></tr></thead><tbody>{researchSummary.issueMetrics.map((issue) => <tr key={`${issue.scenarioCode}:${issue.semanticId}`}><td>{issue.scenarioTitle}</td><td title={issue.semanticId}>{issue.label}</td><td>{issue.affectedParticipants} из {issue.startedParticipants}</td><td>{issue.prevalencePercent}%<small className={styles.summaryDenominator}>{confidenceLabel(issue.prevalenceConfidence95)}</small></td><td>{issue.affectedCompletionRate}% / {issue.unaffectedCompletionRate === null ? "—" : `${issue.unaffectedCompletionRate}%`}<small className={styles.summaryDenominator}>{issue.completionDifferencePp === null ? "нет группы сравнения" : `${issue.completionDifferencePp > 0 ? "+" : ""}${issue.completionDifferencePp} п.п.`}</small></td><td>{issue.recoveredParticipants} · {issue.recoveryRate}%</td><td>{issue.occurrenceCount}</td></tr>)}</tbody></table></div> : <div className={styles.empty}>Ошибочных действий пока нет</div>}
         </> : <div className={styles.empty}>Нет данных для саммари</div>)}
       </section>
 

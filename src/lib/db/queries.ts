@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getInteractiveScenario, getTask, interactiveScenarios } from "@/config/test-scenarios";
 import { eventBus } from "@/lib/events";
+import { sortTrackedEvents, trackedEventTime } from "@/lib/testing/event-time";
 import { aggregateTaskMetrics, calculateTaskMetrics } from "@/lib/testing/metrics";
 import { sanitizeMetadata } from "@/lib/testing/metadata";
 import { calculateResearchSummary } from "@/lib/testing/research-summary";
@@ -316,7 +317,7 @@ export async function recordParticipantEvent(input: {
   // The click that starts recording races the start request over the network.
   // It belongs to the gate, never to the newly created scenario run.
   if (input.eventName === "tap" && isScenarioGateTarget(input.target ?? input.action)) return null;
-  const runRow = await getDatabase().first<ActiveParticipantRunRow>(`
+  let runRow = await getDatabase().first<ActiveParticipantRunRow>(`
     SELECT tr.id, tr.session_id sessionId, tr.task_code taskCode, tr.started_at startedAt,
       tr.ended_at endedAt, tr.result, tr.was_aided wasAided, tr.ease_score easeScore,
       tr.ease_reason easeReason, tr.moderator_note moderatorNote, tr.corrupted_reason corruptedReason,
@@ -324,12 +325,35 @@ export async function recordParticipantEvent(input: {
     FROM task_runs tr JOIN sessions s ON s.id = tr.session_id
     WHERE s.id = ? AND s.started_at IS NOT NULL AND s.ended_at IS NULL AND tr.ended_at IS NULL
     ORDER BY tr.started_at DESC LIMIT 1`, [input.sessionId]);
+  const lateTerminalTapScenario = input.eventName === "tap" && input.target ? ({
+    "cashback.success.close": "CASHBACK_CONNECT",
+    "cashback.success.drag": "CASHBACK_CONNECT",
+    "cashback.next_month.success.close": "CASHBACK_NEXT",
+    "cashback.next_month.success.drag": "CASHBACK_NEXT",
+  } as Partial<Record<string, string>>)[input.target] : undefined;
+  if ((!runRow || (input.scenarioCode !== undefined && input.scenarioCode !== runRow.taskCode))
+    && lateTerminalTapScenario && input.scenarioCode === lateTerminalTapScenario) {
+    const completedRun = await getDatabase().first<ActiveParticipantRunRow>(`
+      SELECT tr.id, tr.session_id sessionId, tr.task_code taskCode, tr.started_at startedAt,
+        tr.ended_at endedAt, tr.result, tr.was_aided wasAided, tr.ease_score easeScore,
+        tr.ease_reason easeReason, tr.moderator_note moderatorNote, tr.corrupted_reason corruptedReason,
+        s.created_at sessionCreatedAt, s.started_at sessionStartedAt, s.last_seen_at sessionLastSeenAt
+      FROM task_runs tr JOIN sessions s ON s.id = tr.session_id
+      WHERE s.id = ? AND tr.task_code = ? AND tr.ended_at IS NOT NULL AND tr.result IN ('unaided', 'aided')
+      ORDER BY tr.ended_at DESC LIMIT 1`, [input.sessionId, lateTerminalTapScenario]);
+    const endedAt = completedRun?.endedAt ? new Date(completedRun.endedAt).getTime() : 0;
+    if (completedRun && Math.abs(Date.now() - endedAt) <= 10_000) runRow = completedRun;
+  }
   if (!runRow) return null;
   if ((runRow.sessionLastSeenAt ?? runRow.sessionStartedAt ?? runRow.sessionCreatedAt) < presenceCutoff()) {
     await expireDisconnectedSessions(input.sessionId);
     return null;
   }
   if (input.scenarioCode !== undefined && input.scenarioCode !== runRow.taskCode) return null;
+  if (runRow.endedAt) {
+    const metadata = { ...input.metadata, scenarioVerdict: "correct" };
+    return insertEvent({ sessionId: input.sessionId, taskRunId: runRow.id, type: input.eventName, screen: input.screen, action: input.action, target: input.target, metadata });
+  }
   await getDatabase().run("UPDATE sessions SET last_seen_at = ? WHERE id = ? AND ended_at IS NULL", [now(), input.sessionId]);
   const capturedAt = Number(input.metadata?.clientTimeMs);
   const scenario = getInteractiveScenario(runRow.taskCode);
@@ -337,9 +361,12 @@ export async function recordParticipantEvent(input: {
   const prior = scenario && affectsScenarioProgress
     ? (await getDatabase().all<EventRow>(`${eventSelect} WHERE task_run_id = ? AND type IN ('tap', 'action', 'product_state_change') ORDER BY id`, [runRow.id])).map(asEvent)
     : [];
+  const priorAtCapture = Number.isFinite(capturedAt)
+    ? prior.filter((event) => trackedEventTime(event) <= capturedAt)
+    : prior;
   const metadata = { ...input.metadata };
   if (scenario && input.eventName === "tap" && input.target) {
-    metadata.scenarioVerdict = classifyScenarioTap(scenario.code, prior, input.target, metadata, input.screen);
+    metadata.scenarioVerdict = classifyScenarioTap(scenario.code, sortTrackedEvents(priorAtCapture), input.target, metadata, input.screen);
   }
   const event = await insertEvent({
     sessionId: input.sessionId,
@@ -350,7 +377,7 @@ export async function recordParticipantEvent(input: {
     target: input.target,
     metadata,
   });
-  if (scenario && affectsScenarioProgress && scenarioProgress(scenario.code, [...prior, event]).completed) {
+  if (scenario && affectsScenarioProgress && scenarioProgress(scenario.code, sortTrackedEvents([...prior, event])).completed) {
     await finishParticipantScenario(asTaskRun(runRow), capturedAt);
   }
   return event;
@@ -517,6 +544,6 @@ export async function getResearchSummary() {
   await expireDisconnectedSessions();
   const sessions = await getDatabase().all<SessionRow>(`${sessionSelect} WHERE started_at IS NOT NULL ORDER BY created_at`);
   const runs = (await getDatabase().all<TaskRunRow>(`${taskSelect} ORDER BY started_at`)).map(asTaskRun);
-  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE type = 'tap' ORDER BY id`)).map(asEvent);
+  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE type IN ('tap', 'task_started', 'task_finished') ORDER BY id`)).map(asEvent);
   return calculateResearchSummary(sessions, runs, events);
 }
