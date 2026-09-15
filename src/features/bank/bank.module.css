@@ -48,7 +48,7 @@
 .bankHeader::before,
 .bankHeader::after {
   position: absolute;
-  inset: 0 0 -8px;
+  inset: 0 0 -4px;
   z-index: -1;
   border-radius: 0 0 20px 20px;
   background: rgb(255 255 255 / 0.01%);
@@ -941,7 +941,7 @@
 .checkboxSelected { border-color: var(--action-primary); background: var(--action-primary); }
 .checkbox img { width: 16px; height: 16px; }
 .categoryActionBar {
-  position: absolute;
+  position: fixed;
   right: 0;
   bottom: 0;
   left: 0;

@@ -175,8 +175,6 @@ html[data-telegram-mini-app="true"][data-telegram-fullscreen="true"] .telegram-d
 .participant-route-surface {
   min-height: 100%;
   isolation: isolate;
-  backface-visibility: hidden;
-  transform: translateZ(0);
   animation: participant-route-ready 160ms ease-out both;
 }
 @keyframes participant-route-ready {
