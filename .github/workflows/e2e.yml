@@ -60,9 +60,10 @@ jobs:
         # The native better-sqlite3 build is the one thing that can die silently mid-suite,
         # so prove it works before the browser starts.
         run: |
+          # Creating a session answers 201; anything outside 2xx means the database is unusable.
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$PSB_E2E_BASE_URL/api/testing/sessions" \
             -H 'Content-Type: application/json' -d '{"participantName":"CI-smoke"}')
-          if [ "$code" != "200" ]; then
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
             echo "Session API answered $code"
             cat "$RUNNER_TEMP/dev-server.log"
             exit 1
