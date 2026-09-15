@@ -43,6 +43,26 @@ export async function waitForRoute(driver: WebDriver, path: string, timeout = DE
   await driver.wait(async () => new URL(await driver.getCurrentUrl()).pathname === path, timeout, `Never navigated to ${path}`);
 }
 
+/** Drags a handle downward the way a thumb dismisses a bottom sheet. */
+export async function dragDown(driver: WebDriver, trackId: string, distance: number, steps = 6) {
+  const handle = await waitForTrack(driver, trackId);
+  // One uninterrupted chain: a pointer released between chains cancels the drag.
+  const actions = driver.actions({ async: false }).move({ origin: handle }).press().pause(50);
+  for (let step = 1; step <= steps; step += 1) {
+    actions.move({ origin: handle, y: Math.round((distance * step) / steps) }).pause(20);
+  }
+  await actions.release().perform();
+}
+
+/** Scrolls the participant surface, which the instrumentation records as a scroll, never as a tap. */
+export async function scrollParticipantContent(driver: WebDriver, deltaY: number) {
+  await driver.executeScript(`
+    const content = document.querySelector(".participant-content");
+    if (content) content.scrollTop = Math.max(0, content.scrollTop + arguments[0]);
+  `, deltaY);
+  await driver.sleep(500);
+}
+
 export async function isPresent(driver: WebDriver, trackId: string) {
   return (await driver.findElements(track(trackId))).length > 0;
 }
