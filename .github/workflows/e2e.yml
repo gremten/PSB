@@ -17,8 +17,6 @@ jobs:
     env:
       # The suite logs in with this secret; the dev server below runs with the same one.
       MODERATOR_SECRET: ci-e2e-secret
-      # Research data goes to a throwaway file instead of the repository's data/ directory.
-      PSB_DB_PATH: ${{ runner.temp }}/psb-e2e.sqlite
       PSB_E2E_BASE_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: "1"
 
@@ -38,6 +36,9 @@ jobs:
         run: google-chrome --version
 
       - name: Start the app
+        # Research data goes to a throwaway file instead of the repository's data/ directory.
+        env:
+          PSB_DB_PATH: ${{ runner.temp }}/psb-e2e.sqlite
         run: |
           npm run dev > "$RUNNER_TEMP/dev-server.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/dev-server.pid"
