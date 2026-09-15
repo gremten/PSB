@@ -6,7 +6,7 @@ import type { DatabaseAdapter } from "./types";
 let database: Database.Database;
 let adapter: DatabaseAdapter;
 vi.mock("./index", () => ({ getDatabase: () => adapter }));
-import { assignParticipantScenario, beginParticipantScenario, createParticipantSession, deleteSession, endSession, getFullSessionSnapshot, getParticipantScenarioStatus, getSession, getSessionSnapshot, heartbeatSession, leaveParticipantScenario, listSessions, recordParticipantEvent } from "./queries";
+import { assignParticipantScenario, beginParticipantScenario, createParticipantSession, deleteSession, endSession, getFullSessionSnapshot, getParticipantScenarioStatus, getSession, getSessionSnapshot, heartbeatSession, leaveParticipantScenario, listSessions, recordParticipantEaseScore, recordParticipantEvent } from "./queries";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -42,6 +42,18 @@ describe("independent participant session lifecycle", () => {
     await leaveParticipantScenario(session.id);
     expect(await getSession(session.id)).toBeNull();
     expect(database.prepare("SELECT id FROM task_runs WHERE session_id = ?").all(session.id)).toHaveLength(0);
+  });
+
+  it("rejects delayed events from outside the active scenario and stores one SEQ response", async () => {
+    const session = await createParticipantSession("Boundary");
+    await assignParticipantScenario(session.id, "CARD_COPY");
+    await beginParticipantScenario(session.id, Date.now());
+    expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: null, eventName: "tap", action: "home.savings.open" })).toBeNull();
+    expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CASHBACK_CONNECT", eventName: "tap", action: "home.cashback.open" })).toBeNull();
+    expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CARD_COPY", eventName: "tap", action: "home.account.open", target: "home.account.open" })).not.toBeNull();
+    database.prepare("UPDATE task_runs SET ended_at = ?, result = 'unaided' WHERE session_id = ?").run(new Date().toISOString(), session.id);
+    expect((await recordParticipantEaseScore(session.id, 6)).easeScore).toBe(6);
+    await expect(recordParticipantEaseScore(session.id, 5)).rejects.toThrow("Нет завершённого сценария без оценки");
   });
 
   it("completes each of the three flows separately and ends only after all three", async () => {

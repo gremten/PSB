@@ -19,6 +19,7 @@ import { getDatabase } from "./index";
 
 type SessionRow = Omit<ResearchSession, "variant"> & { variant: CashbackVariant };
 type TaskRunRow = Omit<TaskRun, "wasAided"> & { wasAided: number };
+type ActiveParticipantRunRow = TaskRunRow & { sessionCreatedAt: string; sessionStartedAt: string; sessionLastSeenAt: string | null };
 type EventRow = Omit<TrackedEvent, "metadata"> & { metadata: string };
 
 function now() {
@@ -176,8 +177,8 @@ export async function createParticipantSession(participantName: string) {
   return (await getSession(id))!;
 }
 
-export async function getParticipantScenarioStatus(id: string) {
-  await expireDisconnectedSessions(id);
+export async function getParticipantScenarioStatus(id: string, expire = true) {
+  if (expire) await expireDisconnectedSessions(id);
   const session = await getSession(id);
   if (!session) return null;
   const runs = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id = ? ORDER BY started_at`, [id])).map(asTaskRun);
@@ -190,6 +191,19 @@ export async function getParticipantScenarioStatus(id: string) {
   };
 }
 
+export async function recordParticipantEaseScore(id: string, easeScore: number) {
+  if (!Number.isInteger(easeScore) || easeScore < 1 || easeScore > 7) throw new Error("Оценка должна быть от 1 до 7");
+  const session = await getSession(id);
+  if (!session) throw new Error("Сессия не найдена");
+  const run = await getDatabase().first<TaskRunRow>(`${taskSelect}
+    WHERE session_id = ? AND ended_at IS NOT NULL AND result IN ('unaided', 'aided') AND ease_score IS NULL
+    ORDER BY ended_at DESC LIMIT 1`, [id]);
+  if (!run) throw new Error("Нет завершённого сценария без оценки");
+  const update = await getDatabase().run("UPDATE task_runs SET ease_score = ? WHERE id = ? AND ease_score IS NULL", [easeScore, run.id]);
+  if (update.changes === 0) throw new Error("Оценка уже сохранена");
+  return asTaskRun({ ...run, easeScore });
+}
+
 export async function assignParticipantScenario(id: string, code: string) {
   if (!getInteractiveScenario(code)) throw new Error("Неизвестный сценарий");
   const snapshot = await getSessionSnapshot(id);
@@ -200,10 +214,10 @@ export async function assignParticipantScenario(id: string, code: string) {
     throw new Error("Сначала подключите кешбэк в предыдущем сценарии");
   }
   await getDatabase().run("UPDATE sessions SET assigned_scenario = ? WHERE id = ? AND ended_at IS NULL", [code, id]);
-  return getParticipantScenarioStatus(id);
+  return getParticipantScenarioStatus(id, false);
 }
 
-export async function beginParticipantScenario(id: string) {
+export async function beginParticipantScenario(id: string, clientTimeMs?: number) {
   const snapshot = await getSessionSnapshot(id);
   if (!snapshot || snapshot.session.endedAt || !snapshot.session.assignedScenario) throw new Error("Сценарий пока не назначен");
   if (snapshot.taskRuns.some((run) => !run.endedAt)) throw new Error("Сценарий уже начат");
@@ -217,8 +231,8 @@ export async function beginParticipantScenario(id: string) {
   ]);
   if (!await getTaskRun(runId)) throw new Error("Сценарий больше не назначен");
   if (!snapshot.session.startedAt) await insertEvent({ sessionId: id, type: "session_started", screen: "/", action: "participant.session.started" });
-  await insertEvent({ sessionId: id, taskRunId: runId, type: "task_started", screen: "/", action: code });
-  return getParticipantScenarioStatus(id);
+  await insertEvent({ sessionId: id, taskRunId: runId, type: "task_started", screen: "/", action: code, metadata: Number.isFinite(clientTimeMs) ? { clientTimeMs } : undefined });
+  return getParticipantScenarioStatus(id, false);
 }
 
 export async function leaveParticipantScenario(id: string) {
@@ -258,6 +272,11 @@ async function insertEvent(input: {
 }) {
   const db = getDatabase();
   const timestamp = now();
+  const metadata = sanitizeMetadata(input.metadata);
+  const type = input.type.slice(0, 64);
+  const screen = input.screen?.slice(0, 128) ?? null;
+  const action = input.action?.slice(0, 160) ?? null;
+  const target = input.target?.slice(0, 160) ?? null;
   const result = await db.run(`
       INSERT INTO events (session_id, task_run_id, timestamp, type, screen, action, target, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -265,28 +284,29 @@ async function insertEvent(input: {
       input.sessionId,
       input.taskRunId ?? null,
       timestamp,
-      input.type.slice(0, 64),
-      input.screen?.slice(0, 128) ?? null,
-      input.action?.slice(0, 160) ?? null,
-      input.target?.slice(0, 160) ?? null,
-      JSON.stringify(sanitizeMetadata(input.metadata)),
+      type,
+      screen,
+      action,
+      target,
+      JSON.stringify(metadata),
     ]);
-  if (input.screen && (input.type === "screen_view" || input.type === "navigation")) {
+  const controlChanged = Boolean(input.screen && (input.type === "screen_view" || input.type === "navigation"));
+  if (controlChanged && input.screen) {
     await db.run("UPDATE research_control SET current_screen = ?, updated_at = ? WHERE session_id = ?", [
       input.screen.slice(0, 128), timestamp, input.sessionId,
     ]);
   }
-  const row = await db.first<EventRow>(`${eventSelect} WHERE id = ?`, [result.lastRowId]);
-  if (!row) throw new Error("Event could not be read after insert");
-  const event = asEvent(row);
+  if (typeof result.lastRowId !== "number") throw new Error("Event id was not returned after insert");
+  const event: TrackedEvent = { id: result.lastRowId, sessionId: input.sessionId, taskRunId: input.taskRunId ?? null, timestamp, type, screen, action, target, metadata };
   eventBus.emit(`session:${input.sessionId}`, event);
-  if (input.screen) await publishControl();
+  if (controlChanged) await publishControl();
   return event;
 }
 
 export async function recordParticipantEvent(input: {
   eventName: string;
   sessionId?: string;
+  scenarioCode?: string | null;
   screen?: string;
   action?: string;
   target?: string;
@@ -296,18 +316,33 @@ export async function recordParticipantEvent(input: {
   // The click that starts recording races the start request over the network.
   // It belongs to the gate, never to the newly created scenario run.
   if (input.eventName === "tap" && isScenarioGateTarget(input.target ?? input.action)) return null;
-  const session = await heartbeatSession(input.sessionId);
-  if (!session?.startedAt || session.endedAt) return null;
-  const runRow = await getDatabase().first<TaskRunRow>(`${taskSelect} WHERE session_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1`, [session.id]);
+  const runRow = await getDatabase().first<ActiveParticipantRunRow>(`
+    SELECT tr.id, tr.session_id sessionId, tr.task_code taskCode, tr.started_at startedAt,
+      tr.ended_at endedAt, tr.result, tr.was_aided wasAided, tr.ease_score easeScore,
+      tr.ease_reason easeReason, tr.moderator_note moderatorNote, tr.corrupted_reason corruptedReason,
+      s.created_at sessionCreatedAt, s.started_at sessionStartedAt, s.last_seen_at sessionLastSeenAt
+    FROM task_runs tr JOIN sessions s ON s.id = tr.session_id
+    WHERE s.id = ? AND s.started_at IS NOT NULL AND s.ended_at IS NULL AND tr.ended_at IS NULL
+    ORDER BY tr.started_at DESC LIMIT 1`, [input.sessionId]);
   if (!runRow) return null;
+  if ((runRow.sessionLastSeenAt ?? runRow.sessionStartedAt ?? runRow.sessionCreatedAt) < presenceCutoff()) {
+    await expireDisconnectedSessions(input.sessionId);
+    return null;
+  }
+  if (input.scenarioCode !== undefined && input.scenarioCode !== runRow.taskCode) return null;
+  await getDatabase().run("UPDATE sessions SET last_seen_at = ? WHERE id = ? AND ended_at IS NULL", [now(), input.sessionId]);
+  const capturedAt = Number(input.metadata?.clientTimeMs);
   const scenario = getInteractiveScenario(runRow.taskCode);
-  const prior = scenario ? (await getDatabase().all<EventRow>(`${eventSelect} WHERE task_run_id = ? ORDER BY id`, [runRow.id])).map(asEvent) : [];
+  const affectsScenarioProgress = input.eventName === "tap" || input.eventName === "action" || input.eventName === "product_state_change";
+  const prior = scenario && affectsScenarioProgress
+    ? (await getDatabase().all<EventRow>(`${eventSelect} WHERE task_run_id = ? AND type IN ('tap', 'action', 'product_state_change') ORDER BY id`, [runRow.id])).map(asEvent)
+    : [];
   const metadata = { ...input.metadata };
   if (scenario && input.eventName === "tap" && input.target) {
     metadata.scenarioVerdict = classifyScenarioTap(scenario.code, prior, input.target, metadata, input.screen);
   }
   const event = await insertEvent({
-    sessionId: session.id,
+    sessionId: input.sessionId,
     taskRunId: runRow.id,
     type: input.eventName,
     screen: input.screen,
@@ -315,17 +350,18 @@ export async function recordParticipantEvent(input: {
     target: input.target,
     metadata,
   });
-  if (scenario && scenarioProgress(scenario.code, [...prior, event]).completed) await finishParticipantScenario(runRow.id);
+  if (scenario && affectsScenarioProgress && scenarioProgress(scenario.code, [...prior, event]).completed) {
+    await finishParticipantScenario(asTaskRun(runRow), capturedAt);
+  }
   return event;
 }
 
-async function finishParticipantScenario(runId: string) {
-  const run = await getTaskRun(runId);
-  if (!run || run.endedAt || !getInteractiveScenario(run.taskCode)) return;
+async function finishParticipantScenario(run: TaskRun, clientTimeMs?: number) {
+  if (run.endedAt || !getInteractiveScenario(run.taskCode)) return;
   const timestamp = now();
-  const update = await getDatabase().run("UPDATE task_runs SET ended_at = ?, result = 'unaided' WHERE id = ? AND ended_at IS NULL", [timestamp, runId]);
+  const update = await getDatabase().run("UPDATE task_runs SET ended_at = ?, result = 'unaided' WHERE id = ? AND ended_at IS NULL", [timestamp, run.id]);
   if (update.changes === 0) return;
-  await insertEvent({ sessionId: run.sessionId, taskRunId: runId, type: "task_finished", action: run.taskCode });
+  await insertEvent({ sessionId: run.sessionId, taskRunId: run.id, type: "task_finished", action: run.taskCode, metadata: Number.isFinite(clientTimeMs) ? { clientTimeMs: Number(clientTimeMs) + 1 } : undefined });
   const completed = await getDatabase().all<{ taskCode: string }>("SELECT task_code taskCode FROM task_runs WHERE session_id = ? AND result IN ('unaided', 'aided')", [run.sessionId]);
   if (interactiveScenarios.every((scenario) => completed.some((item) => item.taskCode === scenario.code))) {
     await getDatabase().run("UPDATE sessions SET ended_at = ?, end_reason = 'all_scenarios_completed', assigned_scenario = NULL WHERE id = ? AND ended_at IS NULL", [timestamp, run.sessionId]);

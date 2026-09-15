@@ -10,9 +10,8 @@ import { GlassToast } from "./glass-toast";
 import { findReplayIndex, interpolateReplayScroll, projectTrackedTap } from "./replay-geometry";
 import { deriveReplayState, recordedEventTime, replayEventTimes, REPLAY_APPLIED, REPLAY_MESSAGE, REPLAY_READY, REPLAY_SCREENS } from "./replay-state";
 
-function eventElapsed(event: TrackedEvent, startedAt: string | null, firstTimestamp: string) {
-  const origin = startedAt ?? firstTimestamp;
-  const milliseconds = Math.max(0, new Date(event.timestamp).getTime() - new Date(origin).getTime());
+function eventElapsed(event: TrackedEvent, firstEvent: TrackedEvent) {
+  const milliseconds = Math.max(0, recordedEventTime(event) - recordedEventTime(firstEvent));
   const minutes = Math.floor(milliseconds / 60_000);
   const seconds = (milliseconds % 60_000) / 1000;
   return `+${String(minutes).padStart(2, "0")}:${seconds.toFixed(1).padStart(4, "0")}`;
@@ -22,19 +21,19 @@ function replayUrl(screen: string) {
   return `${REPLAY_SCREENS.has(screen) ? screen : "/"}?replay=1`;
 }
 
-const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, activeIndex, select, taskCodeByRun }: {
-  events: TrackedEvent[]; times: number[]; startedAt: string | null; activeIndex: number; select: (time: number) => void; taskCodeByRun: Map<string, string>;
+const ReplayTimeline = memo(function ReplayTimeline({ events, times, activeIndex, select, taskCodeByRun }: {
+  events: TrackedEvent[]; times: number[]; activeIndex: number; select: (time: number) => void; taskCodeByRun: Map<string, string>;
 }) {
   return <div className={styles.replayTimeline}>
     {events.map((event, index) => ({ event, index })).filter(({ event }) => event.type !== "scroll").map(({ event, index }) => { const taskCode = event.taskRunId ? taskCodeByRun.get(event.taskRunId) : undefined; const verdict = scenarioVerdictForEvent(event, taskCode); const started = event.type === "task_started"; const finished = event.type === "task_finished"; return <button type="button" className={`${index === activeIndex ? styles.replayEventActive : ""} ${started ? styles.replayScenarioStart : finished ? styles.replayScenarioFinish : ""} ${event.type === "tap" ? verdict === "info" ? styles.replayTapInfo : verdict === "correct" || verdict === "recovery" ? styles.replayTapCorrect : styles.replayTapEvent : ""}`} key={event.id} onClick={() => select(times[index])}>
-      <span>{eventElapsed(event, startedAt, events[0].timestamp)}</span>
+      <span>{eventElapsed(event, events[0])}</span>
       <strong>{started ? "НАЧАЛО" : finished ? "ЗАВЕРШЁН" : event.type}</strong>
       <small>{started || finished ? getTask(taskCode ?? event.action ?? "")?.title ?? taskCode ?? event.action : `${event.screen ?? "—"} · ${event.action ?? event.target ?? "—"}`}</small>
     </button>; })}
   </div>;
 });
 
-export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
+export function SessionReplay({ events, startedAt: _startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
   const taskCodeByRun = useMemo(() => new Map(taskRuns.map((run) => [run.id, run.taskCode])), [taskRuns]);
   const replayEvents = useMemo(() => events.filter((event) => (event.screen || event.type === "tap" || event.type === "task_started" || event.type === "task_finished") && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)))
     .sort((a, b) => recordedEventTime(a) - recordedEventTime(b) || a.id - b.id), [events]);
@@ -163,8 +162,8 @@ export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: Tr
         if (index >= 0) selectEvent(eventTimes[index]);
       }}><option value="" disabled>Перейти к сценарию</option>{taskRuns.map((run) => <option key={run.id} value={run.id}>{getTask(run.taskCode)?.title ?? run.taskCode}</option>)}</select>}
       <input className={styles.replayRange} type="range" min={0} max={Math.max(0, Math.ceil(durationMs))} value={Math.round(playheadMs)} onChange={(event) => { setPlaying(false); setPlayheadMs(Number(event.target.value)); }} aria-label={"Позиция replay по\u00a0времени"} />
-      <p className={styles.replayNow}><strong>{eventElapsed(current, startedAt, replayEvents[0].timestamp)}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
+      <p className={styles.replayNow}><strong>{eventElapsed(current, replayEvents[0])}</strong> · {screen}<br />{current.action ?? current.target ?? current.type} · паузы сокращены</p>
     </div>
-    <ReplayTimeline events={replayEvents} times={eventTimes} startedAt={startedAt} activeIndex={safeIndex} select={selectEvent} taskCodeByRun={taskCodeByRun} />
+    <ReplayTimeline events={replayEvents} times={eventTimes} activeIndex={safeIndex} select={selectEvent} taskCodeByRun={taskCodeByRun} />
   </div>;
 }

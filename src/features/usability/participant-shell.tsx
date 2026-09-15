@@ -27,6 +27,7 @@ interface ScenarioStatus {
   completedScenarios: string[];
   ended: boolean;
   endReason: string | null;
+  completedScenario?: string | null;
 }
 
 const tabs = [
@@ -40,6 +41,7 @@ const tabs = [
 const ROLE_SESSION_KEY = "psb-entry-role-v1";
 const ROLE_CHANGED_EVENT = "psb:entry-role-changed";
 const SESSION_CACHE_CLEARED_PREFIX = "psb-session-router-cache-cleared-v1:";
+const PENDING_EASE_SCORE_KEY = "psb-participant-pending-ease-score-v1";
 const participantRoutes = ["/", "/account", "/card?card=night", "/card?card=orange", "/card?card=salary", "/cashback", "/cashback/categories"];
 const participantAssets = [
   "/figma/home/avatar.svg", "/figma/home/bell.svg", "/figma/home/search.svg", "/figma/icons/back.svg",
@@ -95,13 +97,19 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   const [scenarioStatus, setScenarioStatus] = useState<ScenarioStatus | null>(null);
   const [scenarioError, setScenarioError] = useState("");
   const [completingScenario, setCompletingScenario] = useState(false);
+  const [pendingEaseScenario, setPendingEaseScenario] = useState<string | null>(null);
+  const [easeStateReady, setEaseStateReady] = useState(false);
   const hideTabs = pathname === "/account" || pathname === "/card" || pathname.startsWith("/cashback/categories");
   const preloadImages = useRef<HTMLImageElement[]>([]);
 
   useEffect(() => {
     const begin = () => setCompletingScenario(true);
     const complete = (event: Event) => {
-      setScenarioStatus((event as CustomEvent<ScenarioStatus>).detail);
+      const detail = (event as CustomEvent<ScenarioStatus>).detail;
+      const completedScenario = detail.completedScenario ?? null;
+      if (completedScenario) window.sessionStorage.setItem(PENDING_EASE_SCORE_KEY, completedScenario);
+      setPendingEaseScenario(completedScenario);
+      setScenarioStatus(detail);
       setCompletingScenario(false);
     };
     const fail = () => setCompletingScenario(false);
@@ -113,6 +121,11 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETED, complete);
       window.removeEventListener(PARTICIPANT_SCENARIO_COMPLETION_FAILED, fail);
     };
+  }, []);
+
+  useEffect(() => {
+    setPendingEaseScenario(window.sessionStorage.getItem(PENDING_EASE_SCORE_KEY));
+    setEaseStateReady(true);
   }, []);
 
   useEffect(() => {
@@ -144,25 +157,30 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   }, [participantEntered, replaying, router, scenarioStatus?.assignedScenario, sessionId]);
 
   useEffect(() => {
-    if (!sessionId || replaying || !scenarioStatus?.ended) return;
+    if (!sessionId || replaying || !scenarioStatus?.ended || !easeStateReady || pendingEaseScenario) return;
     const cacheKey = `${SESSION_CACHE_CLEARED_PREFIX}${sessionId}`;
     if (window.sessionStorage.getItem(cacheKey)) return;
     window.sessionStorage.setItem(cacheKey, "1");
     // A hard navigation discards Next's in-memory Router Cache for this research session.
     window.location.replace("/");
-  }, [replaying, scenarioStatus?.ended, sessionId]);
+  }, [easeStateReady, pendingEaseScenario, replaying, scenarioStatus?.ended, sessionId]);
 
   useEffect(() => {
     if (!sessionId || replaying) return;
     let cancelled = false;
+    let pending = false;
     const refresh = async () => {
+      if (pending) return;
+      pending = true;
       try {
         const response = await fetch(`/api/testing/sessions/${encodeURIComponent(sessionId)}/scenario`, { cache: "no-store" });
         if (response.status === 404) {
           if (!cancelled && window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY) === sessionId) {
             window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
+            window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);
             window.dispatchEvent(new Event(PARTICIPANT_SESSION_CHANGED));
             setScenarioStatus(null);
+            setPendingEaseScenario(null);
           }
           return;
         }
@@ -170,12 +188,13 @@ function ShellBody({ children }: { children: React.ReactNode }) {
         const payload = await response.json() as { status: ScenarioStatus };
         if (!cancelled) {
           setScenarioStatus(payload.status);
-          if (!payload.status.activeScenario) setCompletingScenario(false);
+          if (!payload.status.activeScenario && !window.sessionStorage.getItem(PARTICIPANT_COMPLETION_LOCK_KEY)) setCompletingScenario(false);
         }
       } catch { /* Presence and status polling retry without blocking product UI. */ }
+      finally { pending = false; }
     };
     void refresh();
-    const interval = window.setInterval(refresh, 2000);
+    const interval = window.setInterval(refresh, 750);
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [sessionId, replaying]);
 
@@ -201,6 +220,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       window.sessionStorage.setItem(PARTICIPANT_SESSION_KEY, payload.session.id);
       window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
       window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
+      window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);
       window.dispatchEvent(new Event(PARTICIPANT_SESSION_CHANGED));
       resetParticipantState("disconnected");
       enterParticipant();
@@ -216,6 +236,8 @@ function ShellBody({ children }: { children: React.ReactNode }) {
     window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
     window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
     window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
+    window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);
+    setPendingEaseScenario(null);
     resetParticipantState("disconnected");
     enterParticipant();
   };
@@ -225,7 +247,11 @@ function ShellBody({ children }: { children: React.ReactNode }) {
     setSubmitting(true);
     setScenarioError("");
     try {
-      const response = await fetch(`/api/testing/sessions/${encodeURIComponent(sessionId)}/scenario`, { method: "POST" });
+      const response = await fetch(`/api/testing/sessions/${encodeURIComponent(sessionId)}/scenario`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientTimeMs: performance.timeOrigin + performance.now() }),
+      });
       const payload = await response.json() as { status?: ScenarioStatus; error?: string };
       if (!response.ok || !payload.status) throw new Error(payload.error ?? "Не удалось начать сценарий");
       window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
@@ -236,10 +262,28 @@ function ShellBody({ children }: { children: React.ReactNode }) {
     finally { setSubmitting(false); }
   };
 
-  const awaitingScenario = participantEntered && !replaying && Boolean(sessionId) && (completingScenario || !scenarioStatus?.activeScenario);
+  const submitEaseScore = async (easeScore: number) => {
+    if (!sessionId || !pendingEaseScenario || submitting) return;
+    setSubmitting(true);
+    setScenarioError("");
+    try {
+      const response = await fetch(`/api/testing/sessions/${encodeURIComponent(sessionId)}/scenario`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ easeScore }),
+      });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Не удалось сохранить оценку");
+      window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);
+      setPendingEaseScenario(null);
+    } catch (cause) { setScenarioError(cause instanceof Error ? cause.message : "Не удалось сохранить оценку"); }
+    finally { setSubmitting(false); }
+  };
+
+  const awaitingScenario = participantEntered && !replaying && Boolean(sessionId) && (pendingEaseScenario || completingScenario || !scenarioStatus?.activeScenario);
   const assigned = getInteractiveScenario(scenarioStatus?.assignedScenario ?? "");
 
-  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className={`role-gate ${gateStyles.entry}`} aria-labelledby="role-gate-title"><button type="button" className={gateStyles.entrySkip} data-track="participant.session.skip" onClick={skipParticipantSession}>Без сессии</button><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Начать тест</h1><p>Введите псевдоним или код участника — без&nbsp;фамилии и&nbsp;других личных данных.</p><form className="role-gate__form" onSubmit={createParticipantSession}><label htmlFor="participant-name">Псевдоним участника</label><input className={gateStyles.entryInput} id="participant-name" name="participantName" maxLength={32} autoComplete="off" placeholder="Например, P-01" value={participantName} onChange={(event) => setParticipantName(event.target.value)} />{entryError && <p className="role-gate__error" role="alert">{entryError}</p>}<button type="submit" className={gateStyles.entryStart} data-track="participant.session.create" disabled={!participantName.trim() || submitting}>Начать тест</button></form></section> : awaitingScenario ? <section className="role-gate" aria-labelledby="scenario-gate-title"><p className="role-gate__eyebrow">PSB usability test</p><h1 id="scenario-gate-title">{completingScenario ? "Задание завершено" : scenarioStatus?.ended ? scenarioStatus.endReason === "all_scenarios_completed" ? "Тест завершён" : "Сессия завершена" : assigned ? assigned.title : "Ожидаем задание"}</h1><p>{completingScenario ? "Сохраняем результат…" : scenarioStatus?.ended ? "Запись завершена. Спасибо за участие." : assigned ? assigned.prompt : "Модератор выберет следующее задание. Пожалуйста, оставайтесь на этом экране."}</p>{scenarioError && <p className="role-gate__error" role="alert">{scenarioError}</p>}<div className={gateStyles.actions}>{!completingScenario && assigned && !scenarioStatus?.ended && <button type="button" className={gateStyles.start} data-track="participant.scenario.start" disabled={submitting} onClick={() => void startScenario()}>Старт</button>}</div></section> : <div className={`participant-phone ${bankStyles.bankUiRoot}`}><div className="participant-content"><div className="participant-route-surface" key={pathname}>{children}</div></div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
+  return <><TelegramMiniAppBridge /><div className="participant-stage"><div className="telegram-demo-label">Демо-интерфейс</div>{!participantEntered ? <section className={`role-gate ${gateStyles.entry}`} aria-labelledby="role-gate-title"><button type="button" className={gateStyles.entrySkip} data-track="participant.session.skip" onClick={skipParticipantSession}>Без сессии</button><p className="role-gate__eyebrow">PSB usability test</p><h1 id="role-gate-title">Начать тест</h1><p>Введите псевдоним или код участника — без&nbsp;фамилии и&nbsp;других личных данных.</p><form className="role-gate__form" onSubmit={createParticipantSession}><label htmlFor="participant-name">Псевдоним участника</label><input className={gateStyles.entryInput} id="participant-name" name="participantName" maxLength={32} autoComplete="off" placeholder="Например, P-01" value={participantName} onChange={(event) => setParticipantName(event.target.value)} />{entryError && <p className="role-gate__error" role="alert">{entryError}</p>}<button type="submit" className={gateStyles.entryStart} data-track="participant.session.create" disabled={!participantName.trim() || submitting}>Начать тест</button></form></section> : awaitingScenario ? <section className="role-gate" aria-labelledby="scenario-gate-title"><p className="role-gate__eyebrow">PSB usability test</p>{pendingEaseScenario ? <><h1 id="scenario-gate-title">Насколько легко было выполнить задание?</h1><p>Оцените последнее задание: 1 — очень сложно, 7 — очень легко.</p><div className={gateStyles.easeScale} role="group" aria-label="Оценка лёгкости задания от 1 до 7">{[1, 2, 3, 4, 5, 6, 7].map((score) => <button key={score} type="button" data-track={`participant.seq.score.${score}`} disabled={submitting} aria-label={`${score} из 7`} onClick={() => void submitEaseScore(score)}>{score}</button>)}</div><div className={gateStyles.easeLabels}><span>Очень сложно</span><span>Очень легко</span></div></> : <><h1 id="scenario-gate-title">{completingScenario ? "Задание завершено" : scenarioStatus?.ended ? scenarioStatus.endReason === "all_scenarios_completed" ? "Тест завершён" : "Сессия завершена" : assigned ? assigned.title : "Ожидаем задание"}</h1><p>{completingScenario ? "Сохраняем результат…" : scenarioStatus?.ended ? "Запись завершена. Спасибо за участие." : assigned ? assigned.prompt : "Модератор выберет следующее задание. Пожалуйста, оставайтесь на этом экране."}</p></>}{scenarioError && <p className="role-gate__error" role="alert">{scenarioError}</p>}<div className={gateStyles.actions}>{!pendingEaseScenario && !completingScenario && assigned && !scenarioStatus?.ended && <button type="button" className={gateStyles.start} data-track="participant.scenario.start" disabled={submitting} onClick={() => void startScenario()}>Старт</button>}</div></section> : <div className={`participant-phone ${bankStyles.bankUiRoot}`}><div className="participant-content"><div className="participant-route-surface" key={pathname}>{children}</div></div><DemoUnavailableToast />{!hideTabs && <Tabbar items={tabs} pathname={pathname} onUnavailable={showDemoUnavailable} />}</div>}</div></>;
 }
 
 export function ParticipantShell({ children }: { children: React.ReactNode }) {

@@ -1,5 +1,6 @@
 import { interactiveScenarios } from "@/config/test-scenarios";
-import { scenarioVerdictForEvent } from "./scenario-progress";
+import { calculateTaskMetrics } from "./metrics";
+import { scenarioProgress, scenarioVerdictForEvent } from "./scenario-progress";
 import type { ResearchSession, TaskRun, TrackedEvent } from "./types";
 
 export interface ResearchSummaryMetric {
@@ -15,10 +16,80 @@ export interface ResearchSummary {
   recordedSessions: number;
   journeySegments: ResearchSummaryMetric[];
   metrics: ResearchSummaryMetric[];
+  scenarioMetrics: ScenarioResearchMetrics[];
+  issueMetrics: ResearchIssueMetric[];
+}
+
+export interface ScenarioResearchMetrics {
+  code: string;
+  title: string;
+  startedParticipants: number;
+  completedParticipants: number;
+  unaidedParticipants: number;
+  aidedParticipants: number;
+  failedParticipants: number;
+  completionRate: number;
+  unaidedCompletionRate: number;
+  aidedCompletionRate: number;
+  failureRate: number;
+  errorFreeCompletionRate: number;
+  directPathRate: number;
+  firstClickSuccessRate: number;
+  medianCompletionTimeMs: number | null;
+  p75CompletionTimeMs: number | null;
+  medianExcessTaps: number | null;
+  p75ExcessTaps: number | null;
+  seqResponseCount: number;
+  seqMedian: number | null;
+  seqPositiveRate: number;
+  dropoffs: Array<{ stage: number; label: string; count: number; total: number; percent: number }>;
+}
+
+export interface ResearchIssueMetric {
+  scenarioCode: string;
+  scenarioTitle: string;
+  semanticId: string;
+  label: string;
+  affectedParticipants: number;
+  startedParticipants: number;
+  prevalencePercent: number;
+  occurrenceCount: number;
 }
 
 function metric(id: string, label: string, count: number, total: number, denominatorLabel: string): ResearchSummaryMetric {
   return { id, label, count, total, percent: total ? Math.round(count / total * 100) : 0, denominatorLabel };
+}
+
+function median(values: number[]) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function percentile(values: number[], value: number) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const position = (sorted.length - 1) * value;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  return lower === upper ? sorted[lower] : sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+}
+
+const stageLabels: Record<string, string[]> = {
+  CARD_COPY: ["не открыл текущий счёт", "не открыл карту", "не раскрыл данные карты", "не скопировал поле", "не дождался подтверждения копирования"],
+  CASHBACK_CONNECT: ["не открыл кешбэк", "не начал подключение", "не подтвердил три категории", "не закрыл подтверждение подключения"],
+  CASHBACK_NEXT: ["не открыл кешбэк", "не открыл выбор на октябрь", "не подтвердил три категории", "не закрыл подтверждение выбора"],
+};
+
+function issueLabel(id: string) {
+  const labels: Record<string, string> = {
+    "home.savings.open": "Открыл накопительный счёт в сценарии копирования карты",
+    "navigation.back": "Вернулся назад в ожидаемом разделе",
+    "tab.home.open": "Перешёл на главную в ожидаемом разделе",
+    "cashback.categories.confirm": "Попытался подтвердить не три категории",
+  };
+  return labels[id] ?? id;
 }
 
 export function calculateResearchSummary(sessions: ResearchSession[], runs: TaskRun[], events: TrackedEvent[]): ResearchSummary {
@@ -79,5 +150,83 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
     metric("category_help", "Открывали пояснение категории «?»", helpUsers, total, "всех записанных сессий"),
     metric("year_chart", "Переключали график на весь год", yearUsers, total, "всех записанных сессий"),
   ];
-  return { recordedSessions: total, journeySegments, metrics };
+
+  const scenarioMetrics: ScenarioResearchMetrics[] = interactiveScenarios.map((scenario) => {
+    const scenarioRuns = runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code && run.result !== "corrupted");
+    const representatives = [...new Set(scenarioRuns.map((run) => run.sessionId))].map((sessionId) => {
+      const participantRuns = scenarioRuns.filter((run) => run.sessionId === sessionId);
+      return participantRuns.find((run) => run.result === "unaided" || run.result === "aided") ?? participantRuns.at(-1)!;
+    });
+    const calculated = representatives.map((run) => ({
+      run,
+      events: events.filter((event) => event.taskRunId === run.id),
+      metric: calculateTaskMetrics(run, events, scenario),
+    }));
+    const completed = calculated.filter(({ run }) => run.result === "unaided" || run.result === "aided");
+    const started = calculated.length;
+    const completionTimes = completed.flatMap(({ metric: item }) => item.completionTimeMs === null ? [] : [item.completionTimeMs]);
+    const excessTaps = completed.flatMap(({ metric: item }) => item.excessTaps === null ? [] : [item.excessTaps]);
+    const seqScores = completed.flatMap(({ run }) => run.easeScore === null ? [] : [run.easeScore]);
+    const dropoffCounts = new Map<number, number>();
+    calculated.filter(({ run }) => run.result === "failed").forEach(({ events: runEvents }) => {
+      const stage = scenarioProgress(scenario.code, runEvents).stage;
+      dropoffCounts.set(stage, (dropoffCounts.get(stage) ?? 0) + 1);
+    });
+    const rate = (count: number, denominator = started) => denominator ? Math.round(count / denominator * 100) : 0;
+    return {
+      code: scenario.code,
+      title: scenario.title,
+      startedParticipants: started,
+      completedParticipants: completed.length,
+      unaidedParticipants: completed.filter(({ run }) => run.result === "unaided").length,
+      aidedParticipants: completed.filter(({ run }) => run.result === "aided").length,
+      failedParticipants: calculated.filter(({ run }) => run.result === "failed").length,
+      completionRate: rate(completed.length),
+      unaidedCompletionRate: rate(completed.filter(({ run }) => run.result === "unaided").length),
+      aidedCompletionRate: rate(completed.filter(({ run }) => run.result === "aided").length),
+      failureRate: rate(calculated.filter(({ run }) => run.result === "failed").length),
+      errorFreeCompletionRate: rate(completed.filter(({ metric: item }) => item.errorFree).length, completed.length),
+      directPathRate: rate(completed.filter(({ metric: item }) => item.directPath).length, completed.length),
+      firstClickSuccessRate: rate(calculated.filter(({ metric: item }) => item.firstClickCorrect).length, calculated.filter(({ metric: item }) => item.firstClickCorrect !== null).length),
+      medianCompletionTimeMs: median(completionTimes),
+      p75CompletionTimeMs: percentile(completionTimes, 0.75),
+      medianExcessTaps: median(excessTaps),
+      p75ExcessTaps: percentile(excessTaps, 0.75),
+      seqResponseCount: seqScores.length,
+      seqMedian: median(seqScores),
+      seqPositiveRate: rate(seqScores.filter((score) => score >= 5).length, seqScores.length),
+      dropoffs: [...dropoffCounts.entries()].sort(([a], [b]) => a - b).map(([stage, count]) => ({
+        stage,
+        label: stageLabels[scenario.code]?.[stage] ?? `остановился на этапе ${stage}`,
+        count,
+        total: started,
+        percent: rate(count),
+      })),
+    };
+  });
+
+  const issueMetrics: ResearchIssueMetric[] = interactiveScenarios.flatMap((scenario) => {
+    const scenarioRunIds = new Set(runs.filter((run) => recordedIds.has(run.sessionId) && run.taskCode === scenario.code && run.result !== "corrupted").map((run) => run.id));
+    const startedParticipants = new Set(runs.filter((run) => scenarioRunIds.has(run.id)).map((run) => run.sessionId)).size;
+    const grouped = new Map<string, { sessions: Set<string>; occurrences: number }>();
+    events.filter((event) => event.taskRunId && scenarioRunIds.has(event.taskRunId) && verdictFor(event) === "error").forEach((event) => {
+      const semanticId = event.target ?? event.action ?? "unknown";
+      const current = grouped.get(semanticId) ?? { sessions: new Set<string>(), occurrences: 0 };
+      current.sessions.add(event.sessionId);
+      current.occurrences += 1;
+      grouped.set(semanticId, current);
+    });
+    return [...grouped.entries()].map(([semanticId, value]) => ({
+      scenarioCode: scenario.code,
+      scenarioTitle: scenario.title,
+      semanticId,
+      label: issueLabel(semanticId),
+      affectedParticipants: value.sessions.size,
+      startedParticipants,
+      prevalencePercent: startedParticipants ? Math.round(value.sessions.size / startedParticipants * 100) : 0,
+      occurrenceCount: value.occurrences,
+    }));
+  }).sort((a, b) => b.prevalencePercent - a.prevalencePercent || b.affectedParticipants - a.affectedParticipants || a.label.localeCompare(b.label, "ru"));
+
+  return { recordedSessions: total, journeySegments, metrics, scenarioMetrics, issueMetrics };
 }

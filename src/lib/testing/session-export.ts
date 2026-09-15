@@ -4,9 +4,9 @@ import type { ResearchSummary } from "./research-summary";
 import { isScenarioGateTarget, scenarioProgress, scenarioVerdictForEvent, type ScenarioVerdict } from "./scenario-progress";
 import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
-export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v3";
+export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v4";
 
-export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: не вычисляй общее время сессии, поскольку ожидание старта и разговор с модератором не относятся к задаче. Не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
+export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: не вычисляй общее время сессии, поскольку ожидание старта и разговор с модератором не относятся к задаче. Не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -170,6 +170,10 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         completionTimeMs: metrics.completionTimeMs,
         wasAided: run.wasAided,
         easeScore: run.easeScore,
+        firstClickCorrect: metrics.firstClickCorrect,
+        errorFree: metrics.errorFree,
+        directPath: metrics.directPath,
+        excessTaps: metrics.excessTaps,
         deviationFromGoldenTapCount: metrics.deviationFromGoldenPath,
         journeySegment: journeySegment(verdicts, run),
         observedScenarioStage: progress?.stage ?? null,
@@ -204,6 +208,15 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
       name: "STARL",
       dimensions: ["situation", "task", "action", "result", "learning"],
       evidencePolicy: "Situation–Result are derived from durable session data. Learning contains evidence signals, not an invented conclusion.",
+      standardMetrics: {
+        taskCompletion: "completed participants / participants who started the scenario",
+        errorFreeCompletion: "completed runs without an error verdict / completed runs",
+        directPath: "unaided completion with only correct taps and no taps above the approved golden count",
+        firstClickSuccess: "attempts whose first recorded tap is correct / attempts with a recorded tap",
+        completionTime: "median and P75 of successful task-run duration",
+        issuePrevalence: "unique affected participants / unique participants who started that scenario",
+        seq: "Single Ease Question, 1 very difficult to 7 very easy, asked after each successful scenario",
+      },
     },
     analysisContract: {
       timestampFormat: "ISO-8601 UTC",
@@ -217,7 +230,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         null: "non-tap event or unclassified legacy event",
       },
       privacy: "participantCode is the study pseudonym. Event metadata is sanitized at ingestion; banking values, clipboard contents and other personal data are not exported.",
-      automationGuidance: "Use only scenarioStartedAt, scenarioEndedAt, completionTimeMs and elapsedFromScenarioStartMs for timing analysis. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
+      automationGuidance: "Use only scenarioStartedAt, scenarioEndedAt, completionTimeMs and elapsedFromScenarioStartMs for timing analysis. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Use unique participants, not event totals, for issue prevalence. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
     },
     analysisPrompt: {
       language: "ru",
@@ -397,6 +410,31 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
       "",
       ...researchSummary.metrics.map((metric) => `- ${markdownValue(metric.label)}: **${metric.count} из ${metric.total}** ${markdownValue(metric.denominatorLabel)} — **${metric.percent}%**.`),
     );
+    lines.push("", "### Стандартные метрики по сценариям", "");
+    researchSummary.scenarioMetrics.forEach((scenario) => {
+      lines.push(
+        `#### ${markdownValue(scenario.title)}`,
+        "",
+        `- Task completion: **${scenario.completedParticipants} из ${scenario.startedParticipants} — ${scenario.completionRate}%**.`,
+        `- Без помощи: **${scenario.unaidedCompletionRate}%**; с помощью: **${scenario.aidedCompletionRate}%**; неуспешно: **${scenario.failureRate}%**.`,
+        `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших.`,
+        `- Direct path: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов.`,
+        `- Успешный первый клик: **${scenario.firstClickSuccessRate}%** запусков с зафиксированным первым тапом.`,
+        `- Время выполнения: median **${humanDuration(scenario.medianCompletionTimeMs)}**, P75 **${humanDuration(scenario.p75CompletionTimeMs)}**.`,
+        `- Лишние тапы сверх эталонного пути: median **${scenario.medianExcessTaps ?? "—"}**, P75 **${scenario.p75ExcessTaps ?? "—"}**.`,
+        `- SEQ: median **${scenario.seqMedian ?? "—"} из 7**, ответов **${scenario.seqResponseCount}**, оценили лёгкость на 5–7 — **${scenario.seqPositiveRate}%**.`,
+      );
+      if (scenario.dropoffs.length) {
+        lines.push("- Точки схода:", ...scenario.dropoffs.map((dropoff) => `  - ${markdownValue(dropoff.label)} — **${dropoff.count} из ${dropoff.total}, ${dropoff.percent}%**.`));
+      }
+      lines.push("");
+    });
+    lines.push("### Распространённость проблем", "");
+    if (researchSummary.issueMetrics.length) {
+      lines.push(...researchSummary.issueMetrics.map((issue) => `- **${markdownValue(issue.scenarioTitle)}:** ${markdownValue(issue.label)} — затронуло **${issue.affectedParticipants} из ${issue.startedParticipants} участников (${issue.prevalencePercent}%)**; всего повторов: **${issue.occurrenceCount}**.`));
+    } else {
+      lines.push("Ошибочных действий в выборке пока не зафиксировано.");
+    }
   }
 
   report.starlRecords.forEach((record, index) => {

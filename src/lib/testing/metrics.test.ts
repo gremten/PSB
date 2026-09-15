@@ -32,6 +32,8 @@ describe("usability metrics", () => {
     expect(metric.meaningfulSteps).toBe(2);
     expect(metric.deviationFromGoldenPath).toBe(1);
     expect(metric.firstMeaningfulAction).toBe("home.account.open");
+    expect(metric.excessTaps).toBe(0);
+    expect(metric.directPath).toBe(false);
   });
 
   it("excludes corrupted runs from aggregates", () => {
@@ -40,6 +42,10 @@ describe("usability metrics", () => {
     expect(aggregate.includedCount).toBe(1);
     expect(aggregate.corruptedCount).toBe(1);
     expect(aggregate.unaidedCompletionRate).toBe(1);
+    expect(aggregate.completionRate).toBe(1);
+    expect(aggregate.p75CompletionTimeMs).toBe(10_000);
+    expect(aggregate.easeMedian).toBe(6);
+    expect(aggregate.easePositiveRate).toBe(1);
   });
 });
 

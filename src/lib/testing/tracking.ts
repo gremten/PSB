@@ -21,6 +21,7 @@ export async function track(eventName: string, data: TrackData = {}) {
   const sessionId = window.sessionStorage.getItem(PARTICIPANT_SESSION_KEY);
   if (!sessionId) return;
   if (window.sessionStorage.getItem(PARTICIPANT_COMPLETION_LOCK_KEY)) return;
+  const scenarioCode = window.sessionStorage.getItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
   const completingScenario = completionScenarioForAction(data.action);
   const isTerminalAction = Boolean(completingScenario
     && window.sessionStorage.getItem(PARTICIPANT_ACTIVE_SCENARIO_KEY) === completingScenario);
@@ -32,13 +33,13 @@ export async function track(eventName: string, data: TrackData = {}) {
     const response = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, sessionId, ...data, metadata: { ...data.metadata, clientTimeMs: performance.timeOrigin + performance.now() } }),
+      body: JSON.stringify({ eventName, sessionId, scenarioCode, ...data, metadata: { ...data.metadata, clientTimeMs: performance.timeOrigin + performance.now() } }),
       keepalive: true,
     });
     if (!isTerminalAction) return;
     const payload = await response.json().catch(() => null) as { scenarioCompleted?: boolean; status?: unknown } | null;
     if (!response.ok || !payload?.scenarioCompleted || !payload.status) throw new Error("Scenario completion was not confirmed");
-    window.dispatchEvent(new CustomEvent(PARTICIPANT_SCENARIO_COMPLETED, { detail: payload.status }));
+    window.dispatchEvent(new CustomEvent(PARTICIPANT_SCENARIO_COMPLETED, { detail: { ...(payload.status as object), completedScenario: completingScenario } }));
   } catch {
     // Instrumentation must never block the participant flow.
     if (isTerminalAction) {

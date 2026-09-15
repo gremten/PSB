@@ -31,8 +31,8 @@ export function SessionActions({ session, onChanged, actions = "all", showStatus
       ? `Завершена: ${session.endReason === "client_timeout" ? "клиент отключился" : "модератором"}`
       : "Запись идёт · автозавершение через 90 секунд без\u00a0связи с\u00a0клиентом"}</p>}
     <div className={styles.buttonRow}>
-      {actions !== "delete" && !session.endedAt && <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={busy} onClick={() => void mutate("end")}>Завершить сессию</button>}
-      {actions !== "end" && <button type="button" className={`${styles.button} ${styles.danger}`} disabled={busy} onClick={() => void mutate("delete")}>Удалить запись</button>}
+      {actions !== "delete" && !session.endedAt && <button type="button" className={`${styles.button} ${styles.secondary}`} data-track="moderator.session.end" disabled={busy} onClick={() => void mutate("end")}>Завершить сессию</button>}
+      {actions !== "end" && <button type="button" className={`${styles.button} ${styles.danger}`} data-track="moderator.session.delete" disabled={busy} onClick={() => void mutate("delete")}>Удалить запись</button>}
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
   </div>;

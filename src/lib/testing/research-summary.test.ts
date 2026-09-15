@@ -10,7 +10,7 @@ describe("case-study research summary", () => {
   it("counts participants and preserves meaningful denominators", () => {
     const sessions = [session("s1"), session("s2"), session("s3")];
     const runs = [
-      run("r1", "s1", "CASHBACK_CONNECT"), run("r2", "s1", "CARD_COPY"), run("r3", "s1", "CASHBACK_NEXT"),
+      { ...run("r1", "s1", "CASHBACK_CONNECT"), easeScore: 6 }, run("r2", "s1", "CARD_COPY"), run("r3", "s1", "CASHBACK_NEXT"),
       run("r4", "s2", "CASHBACK_CONNECT", null), run("r5", "s3", "CARD_COPY"),
     ];
     const events = [
@@ -34,6 +34,19 @@ describe("case-study research summary", () => {
       journey_explored: 25,
       journey_detour: 25,
       journey_error: 25,
+    });
+    expect(summary.scenarioMetrics.find((item) => item.code === "CASHBACK_CONNECT")).toMatchObject({
+      startedParticipants: 2,
+      completedParticipants: 1,
+      completionRate: 50,
+      firstClickSuccessRate: 100,
+      seqMedian: 6,
+      seqResponseCount: 1,
+    });
+    expect(summary.issueMetrics.find((item) => item.semanticId === "card.block.open")).toMatchObject({
+      affectedParticipants: 1,
+      startedParticipants: 2,
+      prevalencePercent: 50,
     });
   });
 });
