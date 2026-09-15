@@ -67,9 +67,9 @@ describe("independent participant session lifecycle", () => {
     await tap("home.account.open", "/");
     await tap("account.card.salary.open", "/account");
     await tap("card.salary.flip", "/card");
-    await tap("card.salary.number.copy", "/card");
     expect((await getParticipantScenarioStatus(session.id))?.activeScenario).toBe("CARD_COPY");
-    await action("card.copy.toast.closed", "/card");
+    // Copying finishes the flow; hiding the card before the toast fades cannot block it.
+    await tap("card.salary.cvv.copy", "/card");
     expect((await getParticipantScenarioStatus(session.id))?.completedScenarios).toContain("CARD_COPY");
 
     await assignParticipantScenario(session.id, "CASHBACK_CONNECT");

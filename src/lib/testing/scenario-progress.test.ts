@@ -8,10 +8,24 @@ function event(id: number, type: string, action: string, metadata: Record<string
 }
 
 describe("three recorded usability flows", () => {
-  it("finishes card copy only after the copied toast disappears", () => {
-    const steps = [event(1, "tap", "home.account.open"), event(2, "tap", "account.card.salary.open"), event(3, "tap", "card.salary.flip"), event(4, "tap", "card.salary.number.copy")];
-    expect(scenarioProgress("CARD_COPY", steps)).toMatchObject({ stage: 4, completed: false });
-    expect(scenarioProgress("CARD_COPY", [...steps, event(5, "action", "card.copy.toast.closed")]).completed).toBe(true);
+  it("finishes card copy as soon as any field is copied", () => {
+    const steps = [event(1, "tap", "home.account.open"), event(2, "tap", "account.card.salary.open"), event(3, "tap", "card.salary.flip")];
+    expect(scenarioProgress("CARD_COPY", [...steps, event(4, "tap", "card.salary.number.copy")])).toMatchObject({ stage: 4, completed: true });
+    expect(scenarioProgress("CARD_COPY", [...steps, event(4, "tap", "card.salary.cvv.copy")]).completed).toBe(true);
+    // Hiding the details before the toast disappears must not undo the completion.
+    expect(scenarioProgress("CARD_COPY", [...steps, event(4, "tap", "card.salary.expiry.copy"), event(5, "product_state_change", "card.salary.details.hide")]).completed).toBe(true);
+  });
+
+  it("never counts copying a field of any card as an error", () => {
+    const steps = [event(1, "tap", "home.account.open"), event(2, "tap", "account.card.strong.open"), event(3, "tap", "card.night.flip")];
+    expect(classifyScenarioTap("CARD_COPY", steps, "card.night.expiry.copy", {}, "/card")).toBe("correct");
+    const copied = [...steps, event(4, "tap", "card.night.number.copy")];
+    for (const field of ["number", "expiry", "cvv"]) {
+      expect(classifyScenarioTap("CARD_COPY", copied, `card.orange.${field}.copy`, {}, "/card")).toBe("correct");
+      expect(scenarioVerdictForEvent(event(5, "tap", `card.orange.${field}.copy`, { scenarioVerdict: "error" }), "CARD_COPY")).toBe("correct");
+    }
+    expect(classifyScenarioTap("CARD_COPY", copied, "card.night.details.hide", {}, "/card")).toBe("correct");
+    expect(classifyScenarioTap("CARD_COPY", copied, "card.copy.toast.dismiss", {}, "/card")).toBe("correct");
   });
 
   it.each(["CASHBACK_CONNECT", "CASHBACK_NEXT"] as InteractiveScenarioCode[])("requires three categories and accepts either sheet dismissal in %s", (code) => {
@@ -27,6 +41,12 @@ describe("three recorded usability flows", () => {
     const dismissedFirst = [...steps, event(7, "action", `${close}.dismissed`)];
     expect(classifyScenarioTap(code, dismissedFirst, `${close}.close`, {}, "/cashback")).toBe("correct");
     expect(scenarioVerdictForEvent(event(8, "tap", `${close}.close`, { scenarioVerdict: "error" }), code)).toBe("correct");
+    // Every way of closing the final sheet ends the scenario: button, drag, or the
+    // product-state dismissal both of them emit.
+    for (const closer of [event(7, "tap", `${close}.close`), event(7, "tap", `${close}.drag`), event(7, "action", `${close}.dismissed`), event(7, "product_state_change", `${close}.dismissed`)]) {
+      const withDismissal = closer.type === "tap" ? [...steps, closer, event(8, "product_state_change", `${close}.dismissed`)] : [...steps, closer];
+      expect(scenarioProgress(code, withDismissal).completed).toBe(true);
+    }
   });
 
   it("marks a wrong section red, its back navigation as recovery, and ignores scrolling", () => {
