@@ -24,6 +24,11 @@ export function isScenarioInfoTarget(target: string | null | undefined) {
 
 export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string): ScenarioVerdict | null {
   if (event.type !== "tap") return null;
+  const target = event.target ?? event.action;
+  // A sheet dismissal request can reach the server just before its captured click.
+  // These controls exist only after success, so late-arriving taps remain correct.
+  if (taskCode === "CASHBACK_CONNECT" && (target === "cashback.success.close" || target === "cashback.success.drag")) return "correct";
+  if (taskCode === "CASHBACK_NEXT" && (target === "cashback.next_month.success.close" || target === "cashback.next_month.success.drag")) return "correct";
   if (taskCode && taskCode !== "CARD_COPY" && isScenarioInfoTarget(event.target ?? event.action)) return "info";
   const verdict = event.metadata.scenarioVerdict;
   return verdict === "correct" || verdict === "error" || verdict === "recovery" || verdict === "info" ? verdict : null;
@@ -82,6 +87,6 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
     if (match) return selectedCategories.includes(match[1]) || selectedCategories.length < 3 ? "correct" : "error";
     if (target === "cashback.categories.confirm") return metadata.selectedCount === 3 || selectedCategories.length === 3 ? "correct" : "error";
   }
-  if (stage === 3 && (target === `${finish}.close` || target === `${finish}.drag`)) return "correct";
+  if (stage >= 3 && (target === `${finish}.close` || target === `${finish}.drag`)) return "correct";
   return "error";
 }

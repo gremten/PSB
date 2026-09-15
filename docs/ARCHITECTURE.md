@@ -103,6 +103,8 @@ A participant who enters a pseudonym creates one **pending**, unrecorded session
 
 There are exactly three interactive flows: `CARD_COPY` (home account → account card badge → card flip → copy any fake card field → copied toast disappears), `CASHBACK_CONNECT` (home badge/tab → disconnected offer → three current categories → confirm → dismiss home success sheet), and `CASHBACK_NEXT` (home badge/tab → next-month banner on the Cashback page → three October categories → confirm → dismiss Cashback success sheet). Both `Хорошо!` and the existing successful sheet swipe count as valid dismissal. The next-month flow is assignable only after first cashback connection. The moderator can choose card/connection in either order, shows a check mark on completed flows, and never creates a participant session. After all three runs finish, the session ends with `all_scenarios_completed` but recordings are retained.
 
+Success-sheet dismissal tracking is tolerant of network reordering: the dismissal action may reach the server before the capture-phase tap by a few milliseconds. A late `cashback.success.close|drag` or `cashback.next_month.success.close|drag` tap remains correct after the scenario reaches its completed stage, and replay/metrics reclassify matching historical taps as correct even if their stored legacy verdict was `error`.
+
 A visible client sends a heartbeat every 15 seconds. After 90 seconds without presence, even a pending session ends at its last presence time. Replay sends neither heartbeat nor events. The moderator may still view/export, explicitly end, or explicitly delete a session.
 
 Details and tests are in `docs/session-lifecycle.md` and `src/lib/db/session-lifecycle.test.ts`.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { InteractiveScenarioCode } from "@/config/test-scenarios";
 import type { TrackedEvent } from "./types";
-import { classifyScenarioTap, scenarioProgress } from "./scenario-progress";
+import { classifyScenarioTap, scenarioProgress, scenarioVerdictForEvent } from "./scenario-progress";
 
 function event(id: number, type: string, action: string, metadata: Record<string, unknown> = {}): TrackedEvent {
   return { id, sessionId: "session", taskRunId: "run", timestamp: new Date(id * 1000).toISOString(), type, screen: "/", action, target: action, metadata };
@@ -24,6 +24,9 @@ describe("three recorded usability flows", () => {
     expect(scenarioProgress(code, steps).completed).toBe(false);
     expect(scenarioProgress(code, [...steps, event(7, "tap", `${close}.close`)]).completed).toBe(true);
     expect(scenarioProgress(code, [...steps, event(7, "action", `${close}.dismissed`)]).completed).toBe(true);
+    const dismissedFirst = [...steps, event(7, "action", `${close}.dismissed`)];
+    expect(classifyScenarioTap(code, dismissedFirst, `${close}.close`, {}, "/cashback")).toBe("correct");
+    expect(scenarioVerdictForEvent(event(8, "tap", `${close}.close`, { scenarioVerdict: "error" }), code)).toBe("correct");
   });
 
   it("marks a wrong section red, its back navigation as recovery, and ignores scrolling", () => {
