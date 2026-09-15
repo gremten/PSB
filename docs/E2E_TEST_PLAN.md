@@ -1,6 +1,6 @@
 # E2E test plan (ChromeDriver)
 
-Status: group B is implemented in `e2e/card-copy.e2e.ts` and runs green; the remaining groups are still specifications.
+Status: groups B, C and D are implemented in `e2e/card-copy.e2e.ts` and `e2e/cashback.e2e.ts` and run green; groups A, E and F are still specifications.
 
 The suite drives a real Chrome through ChromeDriver against the Docker Compose dev stack, so it exercises the participant UI, the instrumentation, and the SQLite-backed research data in one pass. It is a black-box check of the contracts in [`ARCHITECTURE.md`](ARCHITECTURE.md): it must never reach into React state, and it must not become a second source of truth for visual fidelity.
 
@@ -52,14 +52,14 @@ Golden path: `home.cashback.open` / `cashback.tab.open` → `cashback.connect.st
 
 | ID | Case | Steps | Expected |
 |---|---|---|---|
-| C1 | Golden path with the button | Select three categories, confirm, tap `cashback.success.close` | The sheet fades out and the run ends as `unaided` |
-| C2 | **Golden path with the drag** | Dismiss the sheet by dragging the handle down ≥ 80 px | The run ends exactly as in C1; the drag is not recorded as an error |
-| C3 | Short drag does not dismiss | Drag the handle ~30 px and release | The sheet snaps back, the scenario stays open, and no completion is recorded |
-| C4 | Confirming fewer than three fails | Select two categories, tap `cashback.categories.confirm` | The confirmation is refused with in-screen feedback; the tap is `error`; the screen does not navigate |
-| C5 | Fourth category is refused | Select four categories | The fourth toggle is refused and counted as `error`; the selection stays at three |
-| C6 | Deselect and reselect | Toggle a category off, then pick another | Both taps are `correct`; the final three are what gets confirmed |
-| C7 | FAQ is informational | Tap a category `…faq.open` | The tap is `info` (neither correct nor error) and the selection does not change |
-| C8 | Benefit tiles are demo-only | On the disconnected screen, tap a `cashback.benefit.*.open` tile | Demo-unavailable feedback appears; no navigation and no product-state change |
+| C1 | Entry by the balance badge, closed by the button ✅ | `home.cashback.open` → `cashback.connect.start` → three categories → `cashback.categories.confirm` → home sheet → `cashback.success.close` | The run ends as `unaided` with exactly the seven golden taps, no error, and the ease-score question |
+| C2 | Entry by the tabbar, closed by a drag ✅ | Same flow through `cashback.tab.open`, dismissed by dragging the handle ≥ 80 px | The run ends as `unaided`, the sheet is gone, and the ease-score question is offered |
+| C3 | Short drag does not dismiss ✅ | Drag the handle 30 px and release | The sheet stays, the run stays open, and the button still finishes it |
+| C4 | Confirming fewer than three fails ✅ | Select two categories, confirm | The tap is `error`, the screen does not navigate, and the run stays open |
+| C5 | Fourth category is refused ✅ | Select a fourth category | The tap is `error` and exactly three rows stay pressed |
+| C6 | **Scrolling to study a screen is not a wrong click** ✅ | Scroll home, the offer screen and the category list during the flow | Scrolls are recorded as `scroll` events, never as taps; the run completes with no error verdict |
+| C7 | FAQ is informational | Tap a category `…faq.open` | The tap is `info` and the selection does not change |
+| C8 | Benefit tiles are demo-only | Tap a `cashback.benefit.*.open` tile | Demo feedback appears; no navigation, no product-state change |
 
 ## D. Scenario 3 — CASHBACK_NEXT
 
@@ -67,12 +67,14 @@ Golden path: open cashback → `cashback.next_month.categories.open` → three t
 
 | ID | Case | Steps | Expected |
 |---|---|---|---|
-| D1 | Golden path with the button | Confirm three October categories, tap `cashback.next_month.success.close` | The run ends as `unaided` and the confirmed banner names October |
-| D2 | **Golden path with the drag** | Dismiss the confirmation sheet by dragging ≥ 80 px | The run ends exactly as in D1 |
-| D3 | Confirmed selection is display-only | After D1, tap the confirmed next-month banner | The picker does not reopen; no entry action is emitted |
+| D1 | Entry by the tabbar, closed by the button ✅ | `cashback.tab.open` → `cashback.next_month.categories.open` → three categories → confirm → `cashback.next_month.success.close` | The run ends as `unaided` with exactly the seven golden taps, no error, and the ease-score question |
+| D2 | Entry by the balance badge, closed by a drag ✅ | Same flow through `home.cashback.open`, dismissed by dragging the handle ≥ 80 px | The run ends as `unaided` and the sheet is gone |
+| D3 | Confirmed selection is display-only | Tap the confirmed next-month banner afterwards | The picker does not reopen; no entry action is emitted |
 | D4 | Sheet appears once | Reload `/cashback` after dismissing | The confirmation sheet does not return; the URL marker is cleared |
 | D5 | Period segment is informational | Tap `cashback.period.year`, then `cashback.period.month` | Both are `info`; the annual chart opens at its rightmost scroll position |
 | D6 | Tabbar stubs are guarded | Tap the `/payment`, `/chat`, `/more` tabs mid-scenario | Demo feedback appears, the route does not change, and the scenario is not disturbed |
+
+Note on the flow description: confirming next-month categories returns to `/cashback` with its own confirmation overlay, not to home. Home only owns the connection success sheet from scenario 2.
 
 ## E. Moderator surface
 
