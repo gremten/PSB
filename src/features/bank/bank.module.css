@@ -941,6 +941,7 @@
 .categoryScreen .faqIcon { width: 24px; height: 24px; }
 .checkbox { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--border-primary); border-radius: 8px; background: var(--bg-elevated); }
 .checkboxSelected { border-color: var(--action-primary); background: var(--action-primary); }
+.checkboxDisabled { border-color: rgb(233 240 243 / 12%); background: rgb(36 42 51 / 52%); opacity: .72; }
 .checkbox img { width: 16px; height: 16px; }
 .categoryActionBar {
   position: fixed;

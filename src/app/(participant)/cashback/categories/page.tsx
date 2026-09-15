@@ -134,7 +134,7 @@ export default function CashbackCategoriesPage() {
                   <span className={styles.categoryIcon}><Image src={category.image} alt="" width={32} height={32} /></span>
                   <span><span className={styles.categoryName}>{category.title}</span><span className={styles.categoryDescription}>{category.description}</span></span>
                   <span className={styles.categoryFaqPlaceholder} aria-hidden="true" />
-                  <span className={`${styles.checkbox} ${active ? styles.checkboxSelected : ""}`}>{active && <Image src="/figma/icons/check.svg" alt="" width={16} height={16} />}</span>
+                  <span className={`${styles.checkbox} ${active ? styles.checkboxSelected : ""} ${selectionDisabled ? styles.checkboxDisabled : ""}`}>{active && <Image src="/figma/icons/check.svg" alt="" width={16} height={16} />}</span>
                 </button>
                 <button type="button" className={styles.categoryFaqButton} onClick={showDemoUnavailable} data-track={`cashback.category.${category.id}.faq.open`} aria-label={`Подробнее о категории ${category.title}`}>
                   <Image className={styles.faqIcon} src="/figma/icons/faq.svg" alt="" width={24} height={24} />
