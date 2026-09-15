@@ -1331,8 +1331,6 @@
 
 .addProductCard {
   width: 160px;
-  height: 150px;
-  border-radius: 16px;
 }
 
 .addProductCard > img {
