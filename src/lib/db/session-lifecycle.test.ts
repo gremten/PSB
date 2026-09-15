@@ -32,6 +32,8 @@ describe("independent participant session lifecycle", () => {
     expect((await getParticipantScenarioStatus(session.id))?.assignedScenario).toBe("CARD_COPY");
     await beginParticipantScenario(session.id);
     expect((await getParticipantScenarioStatus(session.id))?.activeScenario).toBe("CARD_COPY");
+    expect(await recordParticipantEvent({ sessionId: session.id, eventName: "tap", action: "participant.scenario.start", target: "participant.scenario.start" })).toBeNull();
+    expect((await getSessionSnapshot(session.id))?.events.some((event) => event.target === "participant.scenario.start")).toBe(false);
   });
 
   it("leaves an empty pending test without a recording", async () => {

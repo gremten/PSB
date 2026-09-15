@@ -14,6 +14,10 @@ const cardFlip = /^card\.(night|orange|salary)\.flip$/;
 const cardCopy = /^card\.(night|orange|salary)\.(number|expiry|cvv)\.copy$/;
 const categoryToggle = /^cashback\.category\.([a-z]+)\.toggle$/;
 
+export function isScenarioGateTarget(target: string | null | undefined) {
+  return target === "participant.scenario.start";
+}
+
 export function scenarioProgress(code: InteractiveScenarioCode, events: TrackedEvent[]): ScenarioProgress {
   let stage = 0;
   let selectedCategories: string[] = [];

@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/moderator/moderator.module.css";
 import { getTask } from "@/config/test-scenarios";
+import { isScenarioGateTarget } from "@/lib/testing/scenario-progress";
 import type { TaskRun, TrackedEvent } from "@/lib/testing/types";
 import { isDemoMissclick } from "@/lib/testing/session-metrics";
 import { GlassToast } from "./glass-toast";
@@ -39,7 +40,7 @@ const ReplayTimeline = memo(function ReplayTimeline({ events, times, startedAt, 
 });
 
 export function SessionReplay({ events, startedAt, taskRuns = [] }: { events: TrackedEvent[]; startedAt: string | null; taskRuns?: TaskRun[] }) {
-  const replayEvents = useMemo(() => events.filter((event) => event.screen || event.type === "tap")
+  const replayEvents = useMemo(() => events.filter((event) => (event.screen || event.type === "tap") && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)))
     .sort((a, b) => recordedEventTime(a) - recordedEventTime(b) || a.id - b.id), [events]);
   const eventTimes = useMemo(() => replayEventTimes(replayEvents), [replayEvents]);
   const durationMs = eventTimes.at(-1) ?? 0;

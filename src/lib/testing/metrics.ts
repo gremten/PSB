@@ -1,4 +1,5 @@
 import type { UsabilityTask } from "@/config/test-scenarios";
+import { isScenarioGateTarget } from "./scenario-progress";
 import type { TaskRun, TrackedEvent } from "./types";
 
 const meaningfulTypes = new Set(["tap", "action", "navigation", "product_state_change"]);
@@ -23,7 +24,7 @@ export function calculateTaskMetrics(
   events: TrackedEvent[],
   task: UsabilityTask | { goldenStepCount: number | null; metricMode?: string } | null,
 ): TaskMetrics {
-  const relevant = events.filter((event) => event.taskRunId === run.id);
+  const relevant = events.filter((event) => event.taskRunId === run.id && !(event.type === "tap" && isScenarioGateTarget(event.target ?? event.action)));
   const meaningful = relevant.filter((event) => meaningfulTypes.has(event.type));
   const steps = task && "metricMode" in task && task.metricMode === "taps" ? relevant.filter((event) => event.type === "tap") : meaningful;
   const golden = task?.goldenStepCount ?? null;

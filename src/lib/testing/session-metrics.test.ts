@@ -36,4 +36,14 @@ describe("moderator missclick metric", () => {
     expect(metrics.scenarioErrorCount).toBe(1);
     expect(metrics.recoveryCount).toBe(1);
   });
+
+  it("does not count a raced scenario Start tap as a click or error", () => {
+    const time = Date.parse("2026-01-01T00:00:01.000Z");
+    const start = event(2, "tap", "participant.scenario.start", "participant.scenario.start", time);
+    start.metadata.scenarioVerdict = "error";
+    const metrics = calculateSessionInteractionMetrics(session, [start], time + 100);
+    expect(metrics.tapCount).toBe(0);
+    expect(metrics.scenarioErrorCount).toBe(0);
+    expect(metrics.missclickCount).toBe(0);
+  });
 });

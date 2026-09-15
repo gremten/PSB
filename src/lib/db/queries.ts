@@ -4,7 +4,7 @@ import { eventBus } from "@/lib/events";
 import { aggregateTaskMetrics, calculateTaskMetrics } from "@/lib/testing/metrics";
 import { sanitizeMetadata } from "@/lib/testing/metadata";
 import { presenceCutoff } from "@/lib/testing/session-presence";
-import { classifyScenarioTap, scenarioProgress } from "@/lib/testing/scenario-progress";
+import { classifyScenarioTap, isScenarioGateTarget, scenarioProgress } from "@/lib/testing/scenario-progress";
 import type {
   CashbackVariant,
   ResearchSession,
@@ -282,6 +282,9 @@ export async function recordParticipantEvent(input: {
   metadata?: Record<string, unknown>;
 }) {
   if (!input.sessionId) return null;
+  // The click that starts recording races the start request over the network.
+  // It belongs to the gate, never to the newly created scenario run.
+  if (input.eventName === "tap" && isScenarioGateTarget(input.target ?? input.action)) return null;
   const session = await heartbeatSession(input.sessionId);
   if (!session?.startedAt || session.endedAt) return null;
   const runRow = await getDatabase().first<TaskRunRow>(`${taskSelect} WHERE session_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1`, [session.id]);
