@@ -1,0 +1,83 @@
+name: E2E
+
+on:
+  push:
+  pull_request:
+
+# A new commit on the same ref makes the previous browser run pointless.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: ChromeDriver suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # The suite logs in with this secret; the dev server below runs with the same one.
+      MODERATOR_SECRET: ci-e2e-secret
+      # Research data goes to a throwaway file instead of the repository's data/ directory.
+      PSB_DB_PATH: ${{ runner.temp }}/psb-e2e.sqlite
+      PSB_E2E_BASE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Report the browser under test
+        # GitHub-hosted Ubuntu images ship Chrome; Selenium Manager resolves the matching driver.
+        run: google-chrome --version
+
+      - name: Start the app
+        run: |
+          npm run dev > "$RUNNER_TEMP/dev-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/dev-server.pid"
+
+      - name: Wait for the app
+        run: |
+          for _ in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' "$PSB_E2E_BASE_URL/")" = "200" ]; then
+              echo "App is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App never became ready"
+          cat "$RUNNER_TEMP/dev-server.log"
+          exit 1
+
+      - name: Check the research database
+        # The native better-sqlite3 build is the one thing that can die silently mid-suite,
+        # so prove it works before the browser starts.
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$PSB_E2E_BASE_URL/api/testing/sessions" \
+            -H 'Content-Type: application/json' -d '{"participantName":"CI-smoke"}')
+          if [ "$code" != "200" ]; then
+            echo "Session API answered $code"
+            cat "$RUNNER_TEMP/dev-server.log"
+            exit 1
+          fi
+
+      - name: Run the e2e suite
+        run: npm run test:e2e
+
+      - name: Stop the app
+        if: always()
+        run: kill "$(cat "$RUNNER_TEMP/dev-server.pid")" 2>/dev/null || true
+
+      - name: Upload the server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-server-log
+          path: ${{ runner.temp }}/dev-server.log
+          if-no-files-found: ignore
