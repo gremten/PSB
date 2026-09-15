@@ -25,10 +25,10 @@ type CardGesture = { pointerId: number; startX: number; startY: number; cardInde
 function CardFront({ type, ending, logo, mir, hidden }: { type: CardType; ending: string; logo: string; mir: string; hidden: boolean }) {
   return (
     <div aria-hidden={hidden} className={`${styles.flipFace} ${styles.flipFront} ${type === "orange" ? styles.flipFrontOrange : styles.flipFrontNight}`}>
-      <Image className={styles.flipLogo} src={logo} alt="" width={213} height={213} unoptimized />
-      <span className={styles.flipMir}><Image src={mir} alt="МИР" width={83} height={23} unoptimized /></span>
+      <Image className={styles.flipLogo} src={logo} alt="" width={213} height={213} loading="eager" decoding="sync" unoptimized />
+      <span className={styles.flipMir}><Image src={mir} alt="МИР" width={83} height={23} loading="eager" decoding="sync" unoptimized /></span>
       <span className={`${styles.flipEnding} ${type === "orange" ? styles.flipEndingDark : ""}`}>*{ending}</span>
-      <span className={styles.flipBadge}><Image src="/figma/card/show.svg" alt="" width={16} height={16} />Данные карты</span>
+      <span className={styles.flipBadge}><Image src="/figma/card/show.svg" alt="" width={16} height={16} loading="eager" decoding="sync" unoptimized />Данные карты</span>
     </div>
   );
 }
@@ -38,7 +38,7 @@ function CardField({ label, value, dataTrack, onCopy, wide = false, interactive 
     <label className={`${styles.flipField} ${wide ? styles.flipFieldWide : ""}`}>
       <span>{label}</span>
       <button type="button" tabIndex={interactive ? 0 : -1} data-track={dataTrack} onClick={(event) => { event.stopPropagation(); onCopy(); }}>
-        <strong>{value}</strong><Image src="/figma/card/copy.svg" alt="Скопировать" width={16} height={16} />
+        <strong>{value}</strong><Image src="/figma/card/copy.svg" alt="Скопировать" width={16} height={16} loading="eager" decoding="sync" unoptimized />
       </button>
     </label>
   );
@@ -55,7 +55,7 @@ function CardBack({ type, data, onCopy, onHide, visible }: { type: CardType; dat
         </div>
       </div>
       <button type="button" tabIndex={visible ? 0 : -1} className={styles.flipBadge} data-track={`card.${type}.details.hide`} onClick={(event) => { event.stopPropagation(); onHide(); }}>
-        <Image src="/figma/card/hide.svg" alt="" width={16} height={16} />Скрыть
+        <Image src="/figma/card/hide.svg" alt="" width={16} height={16} loading="eager" decoding="sync" unoptimized />Скрыть
       </button>
     </div>
   );

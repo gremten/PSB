@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFullSessionSnapshot } from "@/lib/db/queries";
+import { getFullSessionSnapshot, getResearchSummary } from "@/lib/db/queries";
 import { requireModeratorResponse } from "@/lib/moderator-api";
 import { buildSessionEventsCsv, buildSessionMarkdownReport, buildStarlSessionExport } from "@/lib/testing/session-export";
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="psb-${safeCode}-events.csv"`, "Cache-Control": "no-store" } });
   }
   if (request.nextUrl.searchParams.get("format") === "md") {
-    const markdown = buildSessionMarkdownReport(snapshot);
+    const markdown = buildSessionMarkdownReport(snapshot, undefined, await getResearchSummary());
     return new NextResponse(markdown, { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="psb-${safeCode}-report.md"`, "Cache-Control": "no-store" } });
   }
 

@@ -98,6 +98,11 @@ describe("STARL session export", () => {
     expect(markdown).toContain("открыл кешбек через бейдж рядом с общей суммой");
     expect(markdown).toContain("**Изучение.** [Событие №3]");
     expect(markdown).toContain("Общее время сессии намеренно не рассчитывается");
+    expect(markdown).toContain("## Интерпретация результатов участника");
+    expect(markdown).toContain("Завершено **1 из 1** начатых сценариев — **100%**");
+    expect(markdown).toContain("С допустимым изучением: **1 из 1** — **100%**");
+    expect(markdown).toContain("Вход в кешбек через бейдж у общей суммы: **1 из 1** запусков — **100%**");
+    expect(markdown).toContain("### Самые частые действия, влияющие на прохождение");
     expect(markdown).toContain("## Инструкция для анализа нейросетью");
     expect(markdown).not.toContain('"scenarioCode"');
   });

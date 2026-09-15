@@ -1,5 +1,6 @@
 import { getTask, interactiveScenarios, type InteractiveScenarioCode } from "@/config/test-scenarios";
 import { calculateTaskMetrics } from "./metrics";
+import type { ResearchSummary } from "./research-summary";
 import { isScenarioGateTarget, scenarioProgress, scenarioVerdictForEvent, type ScenarioVerdict } from "./scenario-progress";
 import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
@@ -298,10 +299,35 @@ const screenLabels: Record<string, string> = {
   "/cashback/categories": "Выбор категорий кешбека",
 };
 
-export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString()) {
+function percent(count: number, total: number) {
+  return total ? Math.round(count / total * 100) : 0;
+}
+
+export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString(), researchSummary?: ResearchSummary) {
   const report = buildStarlSessionExport(snapshot, generatedAt);
   const startedScenarios = report.coverage.filter((item) => item.status !== "not_started").length;
   const completedScenarios = report.coverage.filter((item) => item.status === "completed").length;
+  const completedRecords = report.starlRecords.filter((record) => record.result.completed);
+  const allInteractions = report.starlRecords.flatMap((record) => record.action.interactionNarrative);
+  const errorInteractions = allInteractions.filter((interaction) => interaction.verdict === "error");
+  const infoInteractions = allInteractions.filter((interaction) => interaction.verdict === "info");
+  const cashbackEntries = report.starlRecords
+    .filter((record) => record.scenarioCode === "CASHBACK_CONNECT" || record.scenarioCode === "CASHBACK_NEXT")
+    .map((record) => record.action.interactionNarrative.find((interaction) => interaction.semanticId === "home.cashback.open" || interaction.semanticId === "cashback.tab.open"))
+    .filter((interaction) => interaction !== undefined);
+  const badgeEntries = cashbackEntries.filter((interaction) => interaction.semanticId === "home.cashback.open").length;
+  const tabEntries = cashbackEntries.filter((interaction) => interaction.semanticId === "cashback.tab.open").length;
+  const ranked = (interactions: typeof allInteractions) => {
+    const counts = new Map<string, number>();
+    interactions.forEach((interaction) => counts.set(interaction.semanticLabel, (counts.get(interaction.semanticLabel) ?? 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru")).slice(0, 3);
+  };
+  const journeyCounts = Object.fromEntries([
+    "ideal",
+    "completed_with_exploration",
+    "completed_with_errors",
+    "detour_recovered",
+  ].map((segment) => [segment, completedRecords.filter((record) => record.result.journeySegment === segment).length]));
   const lines = [
     "# Отчёт о юзабилити-тесте",
     "",
@@ -322,7 +348,56 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
     "- **Ошибка** — действие не относится к активному сценарию.",
     "- **Возврат** — участник вернулся после отклонения от маршрута.",
     "- **Изучение** — допустимо исследовал интерфейс, не совершив ошибку.",
+    "",
+    "## Интерпретация результатов участника",
+    "",
+    "> Это описательная интерпретация зафиксированных действий, а не статистический вывод о всех пользователях.",
+    "",
+    `- Завершено **${completedScenarios} из ${startedScenarios}** начатых сценариев — **${percent(completedScenarios, startedScenarios)}%**.`,
+    `- Идеально, без отклонений: **${journeyCounts.ideal ?? 0} из ${completedRecords.length}** завершённых — **${percent(journeyCounts.ideal ?? 0, completedRecords.length)}%**.`,
+    `- С допустимым изучением: **${journeyCounts.completed_with_exploration ?? 0} из ${completedRecords.length}** — **${percent(journeyCounts.completed_with_exploration ?? 0, completedRecords.length)}%**.`,
+    `- С ошибками: **${journeyCounts.completed_with_errors ?? 0} из ${completedRecords.length}** — **${percent(journeyCounts.completed_with_errors ?? 0, completedRecords.length)}%**.`,
+    `- С уходом от маршрута и возвратом: **${journeyCounts.detour_recovered ?? 0} из ${completedRecords.length}** — **${percent(journeyCounts.detour_recovered ?? 0, completedRecords.length)}%**.`,
   ];
+
+  if (cashbackEntries.length) {
+    lines.push(
+      `- Вход в кешбек через бейдж у общей суммы: **${badgeEntries} из ${cashbackEntries.length}** запусков — **${percent(badgeEntries, cashbackEntries.length)}%**.`,
+      `- Вход через вкладку «Выгода»: **${tabEntries} из ${cashbackEntries.length}** запусков — **${percent(tabEntries, cashbackEntries.length)}%**.`,
+    );
+  }
+
+  lines.push("", "### Самые частые действия, влияющие на прохождение", "");
+  if (errorInteractions.length) {
+    lines.push("**Ошибочные действия:**", "");
+    ranked(errorInteractions).forEach(([label, count]) => lines.push(`- ${markdownValue(label)} — **${count}**, или **${percent(count, errorInteractions.length)}%** всех ошибочных нажатий участника.`));
+  } else {
+    lines.push("Ошибочных действий не зафиксировано.");
+  }
+  lines.push("");
+  if (infoInteractions.length) {
+    lines.push("**Дополнительное изучение:**", "");
+    ranked(infoInteractions).forEach(([label, count]) => lines.push(`- ${markdownValue(label)} — **${count}**, или **${percent(count, infoInteractions.length)}%** исследовательских нажатий участника.`));
+  } else {
+    lines.push("Дополнительного изучения интерфейса не зафиксировано.");
+  }
+
+  if (researchSummary) {
+    lines.push(
+      "",
+      "## Контекст всей выборки на момент выгрузки",
+      "",
+      `В расчёт вошло **${researchSummary.recordedSessions}** записанных сессий. Все проценты ниже сопровождаются числителем и знаменателем, чтобы их можно было корректно использовать в кейсе.`,
+      "",
+      "### Как пользователи проходили завершённые сценарии",
+      "",
+      ...researchSummary.journeySegments.map((metric) => `- ${markdownValue(metric.label)}: **${metric.count} из ${metric.total}** ${markdownValue(metric.denominatorLabel)} — **${metric.percent}%**.`),
+      "",
+      "### Популярные продуктовые метрики",
+      "",
+      ...researchSummary.metrics.map((metric) => `- ${markdownValue(metric.label)}: **${metric.count} из ${metric.total}** ${markdownValue(metric.denominatorLabel)} — **${metric.percent}%**.`),
+    );
+  }
 
   report.starlRecords.forEach((record, index) => {
     const evidence = record.action.chronologicalEvidence;
