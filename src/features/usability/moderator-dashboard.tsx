@@ -143,7 +143,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
 
       {snapshot && observed ? <>
         <section className={styles.card}>
-          <div className="row-between"><div><p className={styles.build}>выбранная запись</p><h2>{snapshot.session.participantCode}</h2></div><Link className={styles.button} href={`/moderator/sessions/${snapshot.session.id}`}>Открыть replay</Link></div>
+          <div className="row-between"><div><p className={styles.build}>выбранная запись</p><h2>{snapshot.session.participantCode}</h2></div>{activeRun ? <span className={styles.build}>Replay будет доступен после завершения текущего сценария</span> : <Link className={styles.button} href={`/moderator/sessions/${snapshot.session.id}`}>Открыть replay</Link>}</div>
           <SessionActions key={snapshot.session.id} session={snapshot.session} onChanged={(deleted) => {
             if (deleted) {
               selectionRequest.current++;

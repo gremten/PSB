@@ -11,7 +11,7 @@ export interface UsabilityTask {
 }
 
 export const interactiveScenarios = [
-  { code: "CARD_COPY", title: "Просмотр и копирование данных карты", prompt: "Найдите данные любой карты вашего текущего счёта и скопируйте нужное поле.", startRoute: "/", successCondition: "Участник копирует любое поле раскрытой карты; сценарий завершается после закрытия уведомления «Скопировано».", goldenStepCount: 4, metricMode: "taps" },
+  { code: "CARD_COPY", title: "Просмотр и копирование данных карты", prompt: "Выберите любую карту вашего текущего счёта и скопируйте любые данные с неё.", startRoute: "/", successCondition: "Участник копирует любое поле раскрытой карты; сценарий завершается после закрытия уведомления «Скопировано».", goldenStepCount: 4, metricMode: "taps" },
   { code: "CASHBACK_CONNECT", title: "Первое подключение кешбэка", prompt: "Подключите кешбэк и выберите три категории на этот месяц.", startRoute: "/", successCondition: "Участник выбирает ровно три категории, подключает кешбэк и закрывает подтверждение кнопкой или свайпом.", goldenStepCount: 7, metricMode: "taps" },
   { code: "CASHBACK_NEXT", title: "Категории на следующий месяц", prompt: "Выберите три категории кешбэка на октябрь.", startRoute: "/", successCondition: "Участник выбирает ровно три категории на октябрь, подтверждает выбор и закрывает подтверждение кнопкой или свайпом.", goldenStepCount: 7, metricMode: "taps" },
 ] as const;
