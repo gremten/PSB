@@ -41,6 +41,7 @@ export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string):
   // These controls exist only after success, so late-arriving taps remain correct.
   if (taskCode === "CASHBACK_CONNECT" && (target === "cashback.success.close" || target === "cashback.success.drag")) return "correct";
   if (taskCode === "CASHBACK_NEXT" && (target === "cashback.next_month.success.close" || target === "cashback.next_month.success.drag")) return "correct";
+  // Backward compatibility for recordings made before the savings card was removed.
   if (taskCode === "CARD_COPY" && target === "home.savings.open") return "error";
   // Copying any field of any card is the goal of the card flow, never an error.
   if (taskCode === "CARD_COPY" && target && cardCopy.test(target)) return "correct";
@@ -87,6 +88,7 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
     : ["/", "/cashback", "/cashback/categories", code === "CASHBACK_CONNECT" ? "/" : "/cashback"][Math.min(stage, 3)];
   if (target === "navigation.back" || target === "tab.home.open") return screen !== expectedScreen ? "recovery" : "error";
   if (code === "CARD_COPY") {
+    // The live control no longer exists; retain its historical verdict for old exports/replay.
     if (target === "home.savings.open") return "error";
     // Copying any field of any card is the goal of this flow, never an error.
     if (cardCopy.test(target)) return "correct";

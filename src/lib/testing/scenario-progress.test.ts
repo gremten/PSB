@@ -59,7 +59,7 @@ describe("three recorded usability flows", () => {
     expect(scenarioProgress("CARD_COPY", [...before, event(2, "screen_view", "/cashback")]).stage).toBe(1);
   });
 
-  it("treats the savings account as an off-path error during card copy", () => {
+  it("keeps the removed savings-account event readable as a historical off-path error", () => {
     const savingsTap = event(1, "tap", "home.savings.open", { scenarioVerdict: "info" });
     expect(classifyScenarioTap("CARD_COPY", [], "home.savings.open", {}, "/")).toBe("error");
     expect(scenarioVerdictForEvent(savingsTap, "CARD_COPY")).toBe("error");

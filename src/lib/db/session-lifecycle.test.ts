@@ -48,7 +48,7 @@ describe("independent participant session lifecycle", () => {
     const session = await createParticipantSession("Boundary");
     await assignParticipantScenario(session.id, "CARD_COPY");
     await beginParticipantScenario(session.id, Date.now());
-    expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: null, eventName: "tap", action: "home.savings.open" })).toBeNull();
+    expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: null, eventName: "tap", action: "home.product.add" })).toBeNull();
     expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CASHBACK_CONNECT", eventName: "tap", action: "home.cashback.open" })).toBeNull();
     expect(await recordParticipantEvent({ sessionId: session.id, scenarioCode: "CARD_COPY", eventName: "tap", action: "home.account.open", target: "home.account.open" })).not.toBeNull();
     database.prepare("UPDATE task_runs SET ended_at = ?, result = 'unaided' WHERE session_id = ?").run(new Date().toISOString(), session.id);

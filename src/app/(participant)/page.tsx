@@ -140,7 +140,7 @@ export default function HomePage() {
           <p className={styles.balanceCaption}>Всего на&nbsp;счетах</p>
           <div className={styles.balanceRow}>
             <div className={styles.balanceGroup}>
-              <p className={styles.balance}>{productState.accountsHidden ? <CensorBubbles variant="balance" /> : <>12 281 488,<span className={styles.kopecks}>65</span> ₽</>}</p>
+              <p className={styles.balance}>{productState.accountsHidden ? <CensorBubbles variant="balance" /> : <>11 726 777,<span className={styles.kopecks}>61</span> ₽</>}</p>
               <Link className={styles.cashbackBadge} href="/cashback" data-track="home.cashback.open">
                 <span>{productState.cashbackConnected ? "1 200" : "0"}</span>
                 <Image src="/figma/home/cashback.svg" alt="" width={16} height={16} />
@@ -162,13 +162,6 @@ export default function HomePage() {
                 <span className={styles.accountAmount}>{productState.accountsHidden ? <CensorBubbles variant="account" /> : <>11 726 777,<span className={styles.kopecks}>61</span> ₽</>}</span>
               </span>
             </Link>
-            <button className={styles.accountCard} data-track="home.savings.open" onClick={showDemoUnavailable}>
-              <span className={styles.accountBadge}>ставка 5%</span>
-              <span>
-                <span className={styles.accountName}>Накопительный *1401</span>
-                <span className={styles.accountAmount}>{productState.accountsHidden ? <CensorBubbles variant="account" /> : <>554 711,<span className={styles.kopecks}>04</span> ₽</>}</span>
-              </span>
-            </button>
             <button className={`${styles.accountCard} ${styles.addProductCard}`} data-track="home.product.add" onClick={showDemoUnavailable}>
               <Image src="/figma/home/add-product.svg" alt="" width={32} height={32} />
               <span className={styles.addProductLabel}>Добавить</span>

@@ -42,7 +42,7 @@ Golden path: `home.account.open` → `account.card.*.open` → `card.*.flip` →
 | B3 | **Any field completes, not only the number** (regression) ✅ | Copy the expiry as the first copy, then repeat with the CVV | Each completes the scenario and is recorded `correct`; no `error` appears in the run |
 | B4 | **Any card completes** (regression) ✅ | Switch to another card, flip it, copy a field there | The copy is `correct` and completes the run regardless of which card it came from |
 | B5 | Repeated copies are never errors | Covered by unit tests in `scenario-progress.test.ts`: the live flow ends at the first copy, so a second copy is only reachable after the run is closed | Any later copy classifies as `correct` |
-| B6 | Savings detour is an error ✅ | Tap `home.savings.open` before `home.account.open` | The tap is `error`, the run stays open, and the participant stays on home |
+| B6 | Removed savings event stays backward-readable ✅ | Covered by the legacy-event unit test in `scenario-progress.test.ts` | Old `home.savings.open` recordings remain `error`; the current home UI cannot emit the event |
 | B7 | Back from a detour is recovery ✅ | Open the cashback tab, then return with `tab.home.open` | The detour is `error`, the return is `recovery` |
 | B8 | Clipboard holds fake data only ✅ | Copy the number and read the recorded events | No card value and no clipboard field appear anywhere in the session events |
 

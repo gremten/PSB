@@ -53,7 +53,7 @@ function semanticLabel(id: string | null | undefined) {
   if (!id) return "событие без семантической метки";
   const labels: Record<string, string> = {
     "home.account.open": "открыл текущий счёт",
-    "home.savings.open": "открыл накопительный счёт",
+    "home.savings.open": "открыл накопительный счёт в старой версии интерфейса",
     "home.cashback.open": "открыл кешбек через бейдж рядом с общей суммой",
     "cashback.tab.open": "открыл кешбек через вкладку «Выгода»",
     "cashback.connect.start": "начал первое подключение кешбека",
