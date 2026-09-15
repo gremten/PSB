@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSessionEventsCsv, buildStarlSessionExport, STARL_EXPORT_SCHEMA_VERSION } from "./session-export";
+import { buildSessionEventsCsv, buildSessionMarkdownReport, buildStarlSessionExport, STARL_EXPORT_SCHEMA_VERSION } from "./session-export";
 import type { SessionSnapshot, TrackedEvent } from "./types";
 
 const event = (id: number, type: string, target: string, verdict?: string): TrackedEvent => ({
@@ -88,5 +88,17 @@ describe("STARL session export", () => {
     expect(csv).toContain('"semanticLabel"');
     expect(csv).toContain('"исследование интерфейса — не ошибка"');
     expect(csv).not.toContain('"elapsedSessionMs"');
+  });
+
+  it("builds a human-readable Russian Markdown report", () => {
+    const markdown = buildSessionMarkdownReport(snapshot, "2026-09-15T11:00:00.000Z");
+    expect(markdown).toContain("# Отчёт о юзабилити-тесте");
+    expect(markdown).toContain("Участник: **P-01**");
+    expect(markdown).toContain("## Сценарий 1.");
+    expect(markdown).toContain("открыл кешбек через бейдж рядом с общей суммой");
+    expect(markdown).toContain("**Изучение.** [Событие №3]");
+    expect(markdown).toContain("Общее время сессии намеренно не рассчитывается");
+    expect(markdown).toContain("## Инструкция для анализа нейросетью");
+    expect(markdown).not.toContain('"scenarioCode"');
   });
 });

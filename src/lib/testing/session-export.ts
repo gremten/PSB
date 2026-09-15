@@ -253,3 +253,135 @@ export function buildSessionEventsCsv(snapshot: SessionSnapshot) {
   ];
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
 }
+
+function markdownValue(value: unknown) {
+  return String(value ?? "—").replace(/([\\`*_{}\[\]<>#|])/g, "\\$1");
+}
+
+function humanDuration(milliseconds: number | null) {
+  if (milliseconds === null) return "не зафиксировано";
+  const seconds = milliseconds / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1).replace(".", ",")} сек`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes} мин ${(seconds % 60).toFixed(1).replace(".", ",")} сек`;
+}
+
+function elapsedLabel(milliseconds: number | null) {
+  if (milliseconds === null) return "время неизвестно";
+  const seconds = milliseconds / 1000;
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${(seconds % 60).toFixed(1).padStart(4, "0").replace(".", ",")}`;
+}
+
+const resultLabels: Record<string, string> = {
+  unaided: "завершён самостоятельно",
+  aided: "завершён с помощью модератора",
+  failed: "не завершён",
+  corrupted: "запись повреждена",
+  running: "ещё выполняется",
+};
+
+const journeyLabels: Record<string, string> = {
+  ideal: "идеальное прохождение без отклонений",
+  completed_with_exploration: "завершено с допустимым изучением интерфейса",
+  completed_with_errors: "завершено с ошибочными действиями",
+  detour_recovered: "участник отклонился от маршрута и вернулся",
+  incomplete: "сценарий не завершён",
+  failed: "сценарий завершился неуспешно",
+  corrupted: "данных недостаточно из-за повреждения записи",
+};
+
+const screenLabels: Record<string, string> = {
+  "/": "Главная",
+  "/account": "Счёт",
+  "/card": "Карта",
+  "/cashback": "Выгода",
+  "/cashback/categories": "Выбор категорий кешбека",
+};
+
+export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString()) {
+  const report = buildStarlSessionExport(snapshot, generatedAt);
+  const startedScenarios = report.coverage.filter((item) => item.status !== "not_started").length;
+  const completedScenarios = report.coverage.filter((item) => item.status === "completed").length;
+  const lines = [
+    "# Отчёт о юзабилити-тесте",
+    "",
+    "> Человекочитаемая версия записи. Выводы ниже основаны только на зафиксированных событиях; ожидание старта и разговор с модератором во время сценариев не учитываются.",
+    "",
+    "## Кратко",
+    "",
+    `- Участник: **${markdownValue(snapshot.session.participantCode)}**`,
+    `- Сборка: **${markdownValue(snapshot.session.buildId)}**`,
+    `- Сформировано: **${markdownValue(generatedAt)}**`,
+    `- Начато сценариев: **${startedScenarios} из ${report.coverage.length}**`,
+    `- Завершено сценариев: **${completedScenarios} из ${report.coverage.length}**`,
+    "- Общее время сессии намеренно не рассчитывается. Ниже указано только время внутри каждого запущенного сценария.",
+    "",
+    "### Как читать отметки",
+    "",
+    "- **Верно** — ожидаемый шаг к цели.",
+    "- **Ошибка** — действие не относится к активному сценарию.",
+    "- **Возврат** — участник вернулся после отклонения от маршрута.",
+    "- **Изучение** — допустимо исследовал интерфейс, не совершив ошибку.",
+  ];
+
+  report.starlRecords.forEach((record, index) => {
+    const evidence = record.action.chronologicalEvidence;
+    const screens = evidence
+      .filter((event) => event.type === "screen_view" && event.screen)
+      .map((event) => screenLabels[event.screen ?? ""] ?? event.screen ?? "Неизвестный экран")
+      .filter((screen, screenIndex, all) => screenIndex === 0 || screen !== all[screenIndex - 1]);
+    const scrollCount = evidence.filter((event) => event.type === "scroll").length;
+    const result = record.result.taskResult ?? "running";
+
+    lines.push(
+      "",
+      `## Сценарий ${index + 1}. ${markdownValue(record.task.title)}`,
+      "",
+      `**Задание участнику:** ${markdownValue(record.task.participantPrompt ?? "Описание не задано")}`,
+      "",
+      `- Результат: **${resultLabels[result] ?? markdownValue(result)}**.`,
+      `- Время выполнения: **${humanDuration(record.result.completionTimeMs)}**.`,
+      `- Характер прохождения: **${journeyLabels[record.result.journeySegment] ?? markdownValue(record.result.journeySegment)}**.`,
+      `- Действия: **${record.action.counts.correctTaps} верных**, **${record.action.counts.errorTaps} ошибочных**, **${record.action.counts.recoveryTaps} возвратов**, **${record.action.counts.informationalTaps} исследовательских**.`,
+      `- Скроллы: **${scrollCount}** зафиксированных движений. Они не считаются ошибками или шагами.`,
+      `- Путь по экранам: ${screens.length ? screens.map((screen) => `**${markdownValue(screen)}**`).join(" → ") : "не зафиксирован"}.`,
+      "",
+      "### Хронология действий",
+      "",
+    );
+
+    if (record.action.interactionNarrative.length === 0) {
+      lines.push("Зафиксированных нажатий нет.");
+    } else {
+      record.action.interactionNarrative.forEach((interaction, interactionIndex) => {
+        const verdict = interaction.verdict === "correct" ? "Верно"
+          : interaction.verdict === "error" ? "Ошибка"
+            : interaction.verdict === "recovery" ? "Возврат"
+              : interaction.verdict === "info" ? "Изучение" : "Без оценки";
+        const screen = interaction.screen ? screenLabels[interaction.screen] ?? interaction.screen : "экран не определён";
+        lines.push(`${interactionIndex + 1}. **${elapsedLabel(interaction.elapsedFromScenarioStartMs)}** — участник ${markdownValue(interaction.semanticLabel)} на экране «${markdownValue(screen)}». **${verdict}.** [Событие №${interaction.eventId}]`);
+      });
+    }
+
+    lines.push("", "### Фактический итог", "");
+    if (record.result.completed) {
+      lines.push(`Сценарий завершён. Последовательность событий ${record.result.completionSupportedByEventSequence ? "подтверждает достижение целевого состояния" : "не позволяет однозначно подтвердить целевое состояние"}.`);
+    } else {
+      lines.push("Сценарий не имеет подтверждённого завершения. Его нельзя включать в показатель успешности как завершённый.");
+    }
+    if (record.result.moderatorNote) lines.push(`Заметка модератора: ${markdownValue(record.result.moderatorNote)}`);
+    if (record.result.corruptedReason) lines.push(`Причина повреждения записи: ${markdownValue(record.result.corruptedReason)}`);
+  });
+
+  lines.push(
+    "",
+    "## Инструкция для анализа нейросетью",
+    "",
+    ...STARL_ANALYSIS_PROMPT_RU.split("\n").map((line) => `> ${line}`),
+    "",
+    "При формулировании выводов необходимо ссылаться на номера событий из хронологии и отдельно обозначать наблюдения, интерпретации и рекомендации.",
+    "",
+  );
+
+  return `\uFEFF${lines.join("\n")}`;
+}
