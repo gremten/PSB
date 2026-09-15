@@ -3,7 +3,7 @@ import { calculateTaskMetrics } from "./metrics";
 import { isScenarioGateTarget, scenarioProgress, scenarioVerdictForEvent, type ScenarioVerdict } from "./scenario-progress";
 import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
-export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v1";
+export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v2";
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -78,7 +78,6 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         participantCode: snapshot.session.participantCode,
         productVariantAtSessionStart: snapshot.session.variant,
         buildId: snapshot.session.buildId,
-        sessionStartedAt: snapshot.session.startedAt,
         scenarioStartedAt: run.startedAt,
         observedStartScreen: runEvents.find((event) => event.type === "screen_view")?.screen ?? task?.startRoute ?? null,
       },
@@ -156,6 +155,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     analysisContract: {
       timestampFormat: "ISO-8601 UTC",
       durationUnit: "milliseconds",
+      timeBasis: "task_run_only",
       verdicts: {
         correct: "expected scenario tap",
         error: "tap unrelated to the active scenario",
@@ -164,7 +164,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
         null: "non-tap event or unclassified legacy event",
       },
       privacy: "participantCode is the study pseudonym. Event metadata is sanitized at ingestion; banking values, clipboard contents and other personal data are not exported.",
-      automationGuidance: "Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
+      automationGuidance: "Use only scenarioStartedAt, scenarioEndedAt, completionTimeMs and elapsedFromScenarioStartMs for timing analysis. Session timestamps are audit context only: never calculate or aggregate total session duration because waiting and moderator discussion are outside the task. Aggregate only records with result.completed=true; keep corrupted and incomplete records visible but outside success-rate denominators; cite eventId values for qualitative claims.",
     },
     coverage,
     starlRecords,
@@ -172,7 +172,7 @@ export function buildStarlSessionExport(snapshot: SessionSnapshot, generatedAt =
     taskRuns: snapshot.taskRuns,
     events: snapshot.events.map((event) => ({
       ...event,
-      elapsedFromSessionStartMs: elapsedMs(event.timestamp, snapshot.session.startedAt),
+      elapsedFromScenarioStartMs: elapsedMs(event.timestamp, snapshot.taskRuns.find((run) => run.id === event.taskRunId)?.startedAt),
       semanticId: semanticId(event),
       scenarioVerdict: scenarioVerdictForEvent(event, snapshot.taskRuns.find((run) => run.id === event.taskRunId)?.taskCode),
     })),
@@ -187,10 +187,10 @@ function csvCell(value: unknown) {
 export function buildSessionEventsCsv(snapshot: SessionSnapshot) {
   const runs = new Map(snapshot.taskRuns.map((run) => [run.id, run]));
   const rows = [
-    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedSessionMs", "elapsedTaskMs", "semanticId", "scenarioVerdict"],
+    ["id", "timestamp", "type", "screen", "action", "target", "taskRunId", "metadata", "schemaVersion", "participantCode", "variant", "buildId", "taskCode", "taskResult", "elapsedTaskMs", "semanticId", "scenarioVerdict"],
     ...snapshot.events.map((event) => {
       const run = event.taskRunId ? runs.get(event.taskRunId) : undefined;
-      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event.timestamp, snapshot.session.startedAt), elapsedMs(event.timestamp, run?.startedAt), semanticId(event), scenarioVerdictForEvent(event, run?.taskCode)];
+      return [event.id, event.timestamp, event.type, event.screen, event.action, event.target, event.taskRunId, event.metadata, STARL_EXPORT_SCHEMA_VERSION, snapshot.session.participantCode, snapshot.session.variant, snapshot.session.buildId, run?.taskCode, run?.result, elapsedMs(event.timestamp, run?.startedAt), semanticId(event), scenarioVerdictForEvent(event, run?.taskCode)];
     }),
   ];
   return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateSessionInteractionMetrics } from "./session-metrics";
-import type { ResearchSession, TrackedEvent } from "./types";
+import type { ResearchSession, TaskRun, TrackedEvent } from "./types";
 
 const session: ResearchSession = {
   id: "session-1", participantCode: "P-01", variant: "disconnected", createdAt: "2026-01-01T00:00:00.000Z",
@@ -68,5 +68,14 @@ describe("moderator missclick metric", () => {
     expect(metrics.meaningfulSteps).toBe(0);
     expect(metrics.scenarioErrorCount).toBe(0);
     expect(metrics.missclickCount).toBe(0);
+  });
+
+  it("counts only active scenario time and excludes waiting between scenarios", () => {
+    const runs: TaskRun[] = [
+      { id: "run-1", sessionId: session.id, taskCode: "CARD_COPY", startedAt: "2026-01-01T00:00:10.000Z", endedAt: "2026-01-01T00:00:20.000Z", result: "unaided", wasAided: false, easeScore: null, easeReason: null, moderatorNote: null, corruptedReason: null },
+      { id: "run-2", sessionId: session.id, taskCode: "CASHBACK_CONNECT", startedAt: "2026-01-01T00:05:00.000Z", endedAt: "2026-01-01T00:05:08.000Z", result: "unaided", wasAided: false, easeScore: null, easeReason: null, moderatorNote: null, corruptedReason: null },
+    ];
+    const metrics = calculateSessionInteractionMetrics({ ...session, endedAt: "2026-01-01T00:05:08.000Z" }, [], Date.parse("2026-01-01T00:05:08.000Z"), runs);
+    expect(metrics.durationMs).toBe(18_000);
   });
 });

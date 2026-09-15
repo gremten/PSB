@@ -57,8 +57,11 @@ export function calculateSessionInteractionMetrics(session: ResearchSession, eve
   const meaningful = scenarioEvents.filter((event) => meaningfulTypes.has(event.type));
   const screens = events.flatMap((event) => event.screen ? [event.screen] : []);
   const last = events.at(-1) ?? null;
-  const startedAt = session.startedAt ? new Date(session.startedAt).getTime() : new Date(session.createdAt).getTime();
-  const lastObservedAt = session.endedAt ? new Date(session.endedAt).getTime() : last ? Math.max(new Date(last.timestamp).getTime(), nowMs) : nowMs;
+  const activeScenarioDurationMs = taskRuns.reduce((total, run) => {
+    const startedAt = new Date(run.startedAt).getTime();
+    const endedAt = run.endedAt ? new Date(run.endedAt).getTime() : nowMs;
+    return total + (Number.isFinite(startedAt) && Number.isFinite(endedAt) ? Math.max(0, endedAt - startedAt) : 0);
+  }, 0);
   const missclickCount = countDemoMissclicks(events, verdictFor);
   const scenarioErrorCount = scenarioEvents.filter((event) => verdictFor(event) === "error").length;
   const correctTapCount = scenarioEvents.filter((event) => verdictFor(event) === "correct").length;
@@ -77,7 +80,7 @@ export function calculateSessionInteractionMetrics(session: ResearchSession, eve
     return tap.screen === event.screen && tap.target === event.target && Math.abs(tapTime - actionTime) < 500;
   })).length;
   return {
-    durationMs: Math.max(0, lastObservedAt - startedAt),
+    durationMs: activeScenarioDurationMs,
     eventCount: events.length,
     tapCount: scenarioEvents.filter((event) => event.type === "tap").length,
     meaningfulSteps: meaningful.length,

@@ -63,6 +63,10 @@ describe("STARL session export", () => {
       result: { completed: true, journeySegment: "completed_with_exploration", completionSupportedByEventSequence: true },
       learning: { status: "evidence_only_requires_interpretation" },
     });
+    expect(result.analysisContract.timeBasis).toBe("task_run_only");
+    expect(result.starlRecords[0].situation).not.toHaveProperty("sessionStartedAt");
+    expect(result.events[0]).not.toHaveProperty("elapsedFromSessionStartMs");
+    expect(result.events[0].elapsedFromScenarioStartMs).toBe(1_000);
     expect(result.starlRecords[0].learning.signals).toContainEqual({ code: "opened_category_explanation", evidenceEventIds: [3] });
   });
 
@@ -72,5 +76,7 @@ describe("STARL session export", () => {
     expect(csv).toContain(`"${STARL_EXPORT_SCHEMA_VERSION}"`);
     expect(csv).toContain('"CASHBACK_CONNECT","unaided"');
     expect(csv).toContain('"home.cashback.open","correct"');
+    expect(csv).toContain('"elapsedTaskMs"');
+    expect(csv).not.toContain('"elapsedSessionMs"');
   });
 });
