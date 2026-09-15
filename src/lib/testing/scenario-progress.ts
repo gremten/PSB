@@ -72,8 +72,11 @@ export function scenarioProgress(code: InteractiveScenarioCode, events: TrackedE
           ? selectedCategories.filter((id) => id !== match[1])
           : selectedCategories.length < 3 ? [...selectedCategories, match[1]] : selectedCategories;
       } else if (action === "cashback.categories.confirm" && (event.metadata.selectedCount === 3 || selectedCategories.length === 3)) stage = 3;
-    } else if (stage === 3 && ((event.type === "tap" && action === `${finish}.close`)
-      || ((event.type === "action" || event.type === "product_state_change") && action === `${finish}.dismissed`))) stage = 4;
+    // Only the dismissal ends the flow. The closing tap precedes it by the sheet's 200 ms
+    // animation, and finishing on the tap would let the participant gate replace the screen
+    // before the sheet could clear its own product state.
+    } else if (stage === 3 && (event.type === "action" || event.type === "product_state_change")
+      && action === `${finish}.dismissed`) stage = 4;
   }
   return { stage, selectedCategories, completed: stage === 4 };
 }

@@ -36,7 +36,8 @@ describe("three recorded usability flows", () => {
     steps.push(event(5, "tap", "cashback.category.taxi.toggle"));
     steps.push(event(6, "tap", "cashback.categories.confirm", { selectedCount: 3 }));
     expect(scenarioProgress(code, steps).completed).toBe(false);
-    expect(scenarioProgress(code, [...steps, event(7, "tap", `${close}.close`)]).completed).toBe(true);
+    // The closing tap only precedes the dismissal; the dismissal is what ends the flow.
+    expect(scenarioProgress(code, [...steps, event(7, "tap", `${close}.close`)]).completed).toBe(false);
     expect(scenarioProgress(code, [...steps, event(7, "action", `${close}.dismissed`)]).completed).toBe(true);
     const dismissedFirst = [...steps, event(7, "action", `${close}.dismissed`)];
     expect(classifyScenarioTap(code, dismissedFirst, `${close}.close`, {}, "/cashback")).toBe("correct");
@@ -47,6 +48,8 @@ describe("three recorded usability flows", () => {
       const withDismissal = closer.type === "tap" ? [...steps, closer, event(8, "product_state_change", `${close}.dismissed`)] : [...steps, closer];
       expect(scenarioProgress(code, withDismissal).completed).toBe(true);
     }
+    // Whichever of the pair reaches the server first, the run still ends exactly once.
+    expect(scenarioProgress(code, [...steps, event(7, "action", `${close}.dismissed`), event(8, "tap", `${close}.close`)]).completed).toBe(true);
   });
 
   it("marks a wrong section red, its back navigation as recovery, and ignores scrolling", () => {
