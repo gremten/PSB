@@ -59,11 +59,11 @@ describe("three recorded usability flows", () => {
     expect(scenarioProgress("CARD_COPY", [...before, event(2, "screen_view", "/cashback")]).stage).toBe(1);
   });
 
-  it("keeps the removed savings-account event readable as a historical off-path error", () => {
-    const savingsTap = event(1, "tap", "home.savings.open", { scenarioVerdict: "info" });
+  it("keeps the removed secondary-account event readable as a historical off-path error", () => {
+    const removedAccountTap = event(1, "tap", "home.savings.open", { scenarioVerdict: "info" });
     expect(classifyScenarioTap("CARD_COPY", [], "home.savings.open", {}, "/")).toBe("error");
-    expect(scenarioVerdictForEvent(savingsTap, "CARD_COPY")).toBe("error");
-    expect(scenarioProgress("CARD_COPY", [savingsTap]).stage).toBe(0);
+    expect(scenarioVerdictForEvent(removedAccountTap, "CARD_COPY")).toBe("error");
+    expect(scenarioProgress("CARD_COPY", [removedAccountTap]).stage).toBe(0);
   });
 
   it("classifies category help and chart period changes as informational", () => {

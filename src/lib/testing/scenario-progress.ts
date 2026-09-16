@@ -41,7 +41,7 @@ export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string):
   // These controls exist only after success, so late-arriving taps remain correct.
   if (taskCode === "CASHBACK_CONNECT" && (target === "cashback.success.close" || target === "cashback.success.drag")) return "correct";
   if (taskCode === "CASHBACK_NEXT" && (target === "cashback.next_month.success.close" || target === "cashback.next_month.success.drag")) return "correct";
-  // Backward compatibility for recordings made before the savings card was removed.
+  // Backward compatibility for recordings made before the secondary account card was removed.
   if (taskCode === "CARD_COPY" && target === "home.savings.open") return "error";
   // Copying any field of any card is the goal of the card flow, never an error.
   if (taskCode === "CARD_COPY" && target && cardCopy.test(target)) return "correct";

@@ -116,7 +116,7 @@ const stageLabels: Record<string, string[]> = {
 
 function issueLabel(id: string) {
   const labels: Record<string, string> = {
-    "home.savings.open": "Открыл накопительный счёт в старой версии сценария копирования карты",
+    "home.savings.open": "Тапнул удалённый элемент главного экрана в старой записи",
     "navigation.back": "Вернулся назад в ожидаемом разделе",
     "tab.home.open": "Перешёл на главную в ожидаемом разделе",
     "cashback.categories.confirm": "Попытался подтвердить не три категории",
