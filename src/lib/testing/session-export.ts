@@ -7,7 +7,7 @@ import type { SessionSnapshot, TaskRun, TrackedEvent } from "./types";
 
 export const STARL_EXPORT_SCHEMA_VERSION = "psb.usability.starl.v5";
 
-export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Попытка выбрать четвёртую категорию после достижения лимита трёх — это limit discovery: допустимое исследование ограничения, а не ошибка. Отдельно оцени идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: они основаны на времени касания участника с серверным fallback; не вычисляй общее время сессии. Учитывай размер выборки и 95% доверительные интервалы, не называй описательную связь ошибки с completion причинной и не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
+export const STARL_ANALYSIS_PROMPT_RU = `Проанализируй приложенную выгрузку юзабилити-теста по методике STARL (Situation, Task, Action, Result, Learning). Исследовались три сценария: просмотр и копирование данных карты; первое подключение кешбэка; выбор категорий кешбэка на октябрь как следующий месяц. Для каждого сценария восстанови хронологию только по action.interactionNarrative и action.chronologicalEvidence, отделяя observation от inference и recommendation и ссылаясь на evidenceEventIds. correct — ожидаемый шаг, error — действие вне активного сценария, recovery — возврат из неверного раздела, info — допустимое исследование интерфейса, а не ошибка; скроллы ошибками не являются. Тапы по нереализованным вкладкам прототипа вроде tab.chat.unavailable или tab.payments.unavailable во время активного задания считать ошибкой/отклонением сценария, потому что участник ушёл не к цели, но не превращать это автоматически в дефект дизайна вкладки или рекомендацию реализовать раздел: это ограничение прототипа и навигационный detour. Попытка выбрать четвёртую категорию после достижения лимита трёх — это limit discovery: допустимое исследование ограничения, а не ошибка. Тап по «?» категории — info-исследование или возможный случайный тап; не делай вывод, что иконки категорий непонятны, без повторяемого паттерна, комментариев участника или дополнительных evidence. Отдельно оцени completion, идеальное прохождение, прохождение с исследованием, уход в другой раздел с возвратом, ошибки и восстановление, способ входа в кешбек через бейдж у суммы или таббар и время каждого сценария. Используй готовые result.firstClickCorrect, result.errorFree, result.directPath, result.excessTaps и result.easeScore; не подменяй распространённость проблемы долей событий — для групповой оценки нужен процент уникальных затронутых участников от начавших сценарий. Direct path называй чистым маршрутом: это не «справились с путём», а завершение без ошибок, recovery, info-исследования и лишних тапов. Низкий direct path не интерпретируй автоматически как проблему поиска входа: если first-click success и completion высокие, это скорее сигнал про исследование интерфейса, лишние тапы или перебор внутри сценария. Не предлагай рандомизировать порядок CASHBACK_CONNECT и CASHBACK_NEXT как дефолтную рекомендацию: в этом исследовании порядок продуктово обусловлен — сначала первое подключение кешбэка, затем выбор категорий на следующий месяц; эффект обучения здесь ожидаемый и должен описываться как часть естественного пользовательского пути, а не как методологический дефект. Для времени используй только completionTimeMs и elapsedFromScenarioStartMs: они основаны на времени касания участника с серверным fallback; не вычисляй общее время сессии. Учитывай размер выборки и 95% доверительные интервалы, не называй описательную связь ошибки с completion причинной и не делай выводов о банковских значениях или личных данных. Сначала дай факты по каждому сценарию, затем общие паттерны, продуктовые выводы и приоритизированные рекомендации.`;
 
 const expectedPaths: Record<InteractiveScenarioCode, Array<{ step: number; purpose: string; acceptedSemanticIds: string[] }>> = {
   CARD_COPY: [
@@ -358,6 +358,16 @@ function rankByLabel<T>(items: T[], labelFor: (item: T) => string, limit = 5) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru")).slice(0, limit);
 }
 
+function directPathInterpretation(scenario: ResearchSummary["scenarioMetrics"][number]) {
+  if (scenario.startedParticipants === 0) return "сценарий ещё не начинали";
+  if (scenario.directPathRate >= 75) return "большинство завершивших справляется чистым маршрутом — без ошибок, изучения и лишних тапов";
+  if (scenario.firstClickSuccessRate >= 75 && scenario.completionRate >= 90) {
+    return "низкий чистый маршрут здесь не равен проблеме поиска входа: первый клик и completion высокие, значит стоит смотреть на исследовательские действия, лишние тапы и перебор внутри сценария";
+  }
+  if (scenario.firstClickSuccessRate < 75) return "есть сигнал проверить первую точку входа и понятность стартового шага";
+  return "стоит разбирать лишние тапы, info/recovery/error-события и replay, не делая причинный вывод только по чистому маршруту";
+}
+
 export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], researchSummary: ResearchSummary, generatedAt = new Date().toISOString()) {
   const reports = snapshots.map((snapshot) => buildStarlSessionExport(snapshot, generatedAt));
   const records = reports.flatMap((report) => report.starlRecords);
@@ -418,7 +428,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     `- Участников с начатой записью: **${participantCount}**.`,
     `- Все три сценария завершили: **${allScenariosMetric?.count ?? 0} из ${allScenariosMetric?.total ?? participantCount} участников — ${allScenariosMetric?.percent ?? 0}%**.`,
     mostProblematicScenario
-      ? `- Самый проблемный сценарий сейчас: **${markdownValue(mostProblematicScenario.title)}** — завершили **${mostProblematicScenario.completedParticipants} из ${mostProblematicScenario.startedParticipants} участников (${mostProblematicScenario.completionRate}%)**, direct path **${mostProblematicScenario.directPathRate}%**, error-free **${mostProblematicScenario.errorFreeCompletionRate}%**.`
+      ? `- Самый проблемный сценарий сейчас: **${markdownValue(mostProblematicScenario.title)}** — завершили **${mostProblematicScenario.completedParticipants} из ${mostProblematicScenario.startedParticipants} участников (${mostProblematicScenario.completionRate}%)**, чистый маршрут **${mostProblematicScenario.directPathRate}%**, error-free **${mostProblematicScenario.errorFreeCompletionRate}%**.`
       : "- Самый проблемный сценарий пока не определяется: нет начатых сценариев.",
     topIssue
       ? `- Самая частая проблема: **${markdownValue(topIssue.scenarioTitle)} · ${markdownValue(topIssue.label)}** — затронула **${topIssue.affectedParticipants} из ${topIssue.startedParticipants} участников (${topIssue.prevalencePercent}%; 95% ДИ ${confidenceText(topIssue.prevalenceConfidence95)})**.`
@@ -426,7 +436,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     "",
     "### Completion по сценариям",
     "",
-    ...sortedScenarioMetrics.map((scenario) => `- **${markdownValue(scenario.title)}:** завершили **${scenario.completedParticipants} из ${scenario.startedParticipants} участников — ${scenario.completionRate}%**; direct path **${scenario.directPathRate}%**, first-click success **${scenario.firstClickSuccessRate}%**, SEQ **${scenario.seqMean ?? "—"} из 7**.`),
+    ...sortedScenarioMetrics.map((scenario) => `- **${markdownValue(scenario.title)}:** завершили **${scenario.completedParticipants} из ${scenario.startedParticipants} участников — ${scenario.completionRate}%**; чистый маршрут **${scenario.directPathRate}%**, first-click success **${scenario.firstClickSuccessRate}%**, SEQ **${scenario.seqMean ?? "—"} из 7**. Интерпретация: ${directPathInterpretation(scenario)}.`),
     "",
     "### Качество завершённых сценариев",
     "",
@@ -454,7 +464,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     "",
     `- Главная верхнеуровневая метрика — не сумма запусков сценариев (${completedRuns} из ${startedRuns}), а **сколько участников прошли все три задачи** и где конкретно проседает каждый сценарий.`,
     mostProblematicScenario
-      ? `- Первый фокус для разбора — **${markdownValue(mostProblematicScenario.title)}**, потому что он сейчас ниже остальных по связке completion/direct path/error-free.`
+      ? `- Первый фокус для разбора — **${markdownValue(mostProblematicScenario.title)}**, потому что он сейчас ниже остальных по связке completion/чистый маршрут/error-free. Важно: ${directPathInterpretation(mostProblematicScenario)}.`
       : "- Первый фокус для разбора появится после первых начатых сценариев.",
     `- Доля прохождений с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**. Эти действия показывают любопытство или проверку правил, но не считаются ошибками.`,
     `- Доля прохождений с уходом в другой раздел и возвратом: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**. Это хороший сигнал для анализа навигационной уверенности.`,
@@ -473,7 +483,8 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
       `- Median/P75 task time: **${humanDuration(scenario.medianCompletionTimeMs)} / ${humanDuration(scenario.p75CompletionTimeMs)}**.`,
       `- SEQ mean/median: **${scenario.seqMean ?? "—"} / ${scenario.seqMedian ?? "—"} из 7**, ответов **${scenario.seqResponseCount}**, доля оценок 5–7 — **${scenario.seqPositiveRate}%**; 95% ДИ **${confidenceText(scenario.seqPositiveConfidence95)}**.`,
       `- First-click success: **${scenario.firstClickSuccessRate}%**; 95% ДИ **${confidenceText(scenario.firstClickConfidence95)}**.`,
-      `- Direct path: **${scenario.directPathRate}%** завершивших; 95% ДИ **${confidenceText(scenario.directPathConfidence95)}**.`,
+      `- Чистый маршрут: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов; 95% ДИ **${confidenceText(scenario.directPathConfidence95)}**.`,
+      `- Интерпретация чистого маршрута: ${directPathInterpretation(scenario)}.`,
       `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших; 95% ДИ **${confidenceText(scenario.errorFreeConfidence95)}**.`,
       `- Excess taps median/P75: **${scenario.medianExcessTaps ?? "—"} / ${scenario.p75ExcessTaps ?? "—"}**.`,
       `- В процессе / исключено из расчётов: **${scenario.inProgressParticipants} / ${scenario.excludedParticipants}**.`,
@@ -502,6 +513,14 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
   ].filter((metric): metric is NonNullable<typeof metric> => Boolean(metric)).forEach((metric) => {
     lines.push(`- ${markdownValue(metric.label)}: **${metric.count} из ${metric.total}** ${markdownValue(metric.denominatorLabel)} — **${metric.percent}%**.`);
   });
+  lines.push(
+    "",
+    "### Важные рамки интерпретации паттернов",
+    "",
+    "- Тапы по нереализованным вкладкам прототипа (`tab.chat.unavailable`, `tab.payments.unavailable` и похожие) во время активного задания остаются ошибкой сценария: участник ушёл от цели. Но это не самостоятельное доказательство дефекта дизайна вкладки и не рекомендация «реализовать раздел» — это навигационный detour внутри ограниченного прототипа.",
+    "- Сценарии «первое подключение кешбэка» и «категории на следующий месяц» намеренно идут в продуктовой последовательности. Второй кешбэк-сценарий должен быть легче, потому что пользователь уже познакомился с механикой; это ожидаемый learning effect естественного пути, а не повод по умолчанию рандомизировать порядок.",
+    "- Нажатие на `?` у категории считается допустимым исследованием или возможным случайным тапом. Само по себе оно не доказывает, что иконки категорий непонятны; для такого вывода нужны повторяемость на большей выборке, комментарии участника или другие подтверждающие события.",
+  );
 
   lines.push("", "### Ошибки и исследование интерфейса", "");
   if (errorInteractions.length) {
@@ -587,6 +606,9 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     "- `error` — действие вне активного сценария.",
     "- `info` — допустимое исследование интерфейса, не ошибка.",
     "- `scroll` — не ошибка и не шаг сценария.",
+    "- Нереализованная вкладка прототипа во время активной задачи — ошибка сценария/отход от цели, но не автоматический дизайн-дефект этой вкладки.",
+    "- Порядок кешбэк-сценариев продуктовый: сначала первое подключение, затем выбор категорий на следующий месяц. Не рекомендовать рандомизацию этого порядка без отдельной исследовательской задачи.",
+    "- Тап по `?` категории — info или возможный мисклик; не считать его доказательством непонятной иконки без дополнительного подтверждения.",
     "- Ожидание модератора, объяснение задания и паузы до кнопки «Старт» не входят в task time.",
     "- Observation — только то, что есть в событиях; inference — осторожная интерпретация; recommendation — продуктовая рекомендация с указанием основания.",
     "- не делать причинные выводы без достаточных данных и отдельной проверки.",
@@ -709,7 +731,7 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
         `- Task completion: **${scenario.completedParticipants} из ${scenario.startedParticipants} — ${scenario.completionRate}%**; 95% ДИ **${completionCi}**.`,
         `- Без помощи: **${scenario.unaidedCompletionRate}%**; с помощью: **${scenario.aidedCompletionRate}%**; неуспешно: **${scenario.failureRate}%**.`,
         `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших; 95% ДИ **${errorFreeCi}**.`,
-        `- Direct path: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов; 95% ДИ **${directPathCi}**.`,
+        `- Чистый маршрут: **${scenario.directPathRate}%** завершивших прошли без ошибок, изучения, возвратов и лишних тапов; 95% ДИ **${directPathCi}**.`,
         `- Успешный первый клик: **${scenario.firstClickSuccessRate}%** запусков с зафиксированным первым тапом; 95% ДИ **${firstClickCi}**.`,
         `- Время выполнения: median **${humanDuration(scenario.medianCompletionTimeMs)}**, P75 **${humanDuration(scenario.p75CompletionTimeMs)}**.`,
         `- Лишние тапы сверх эталонного пути: median **${scenario.medianExcessTaps ?? "—"}**, P75 **${scenario.p75ExcessTaps ?? "—"}**.`,
@@ -787,7 +809,7 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
     "## Как интерпретировать метрики в кейсе",
     "",
     "- **Effectiveness:** Task completion, error-free completion и успешный первый клик показывают, смог ли участник достичь цели и насколько хорошо интерфейс направил первое действие.",
-    "- **Efficiency:** task time, direct path и лишние тапы показывают цену достижения цели. Время считается только внутри сценария по моментам действий участника.",
+    "- **Efficiency:** task time, чистый маршрут/directPath и лишние тапы показывают цену достижения цели. Время считается только внутри сценария по моментам действий участника.",
     "- **Satisfaction:** SEQ — самостоятельная субъективная оценка лёгкости сразу после задания; она дополняет, но не заменяет наблюдаемое поведение.",
     "- **Проблемы:** распространённость считается по уникальным участникам. Количество повторных кликов лишь показывает интенсивность проблемы.",
     "- **Неопределённость:** рядом с бинарными долями указан Wilson 95% ДИ. При небольшой выборке он закономерно широк, поэтому выводы следует формулировать как наблюдения этой выборки и проверять на следующей итерации.",
