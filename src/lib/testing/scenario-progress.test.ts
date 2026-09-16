@@ -59,6 +59,18 @@ describe("three recorded usability flows", () => {
     expect(scenarioProgress("CARD_COPY", [...before, event(2, "screen_view", "/cashback")]).stage).toBe(1);
   });
 
+  it("treats returning to the expected card-copy path as recovery instead of a second error", () => {
+    const before = [
+      event(1, "tap", "home.account.open"),
+      event(2, "screen_view", "/account"),
+      event(3, "tap", "navigation.back", { scenarioVerdict: "error" }),
+      event(4, "screen_view", "/"),
+    ];
+    const storedReplayTap = event(5, "tap", "home.account.open", { scenarioVerdict: "error" });
+    expect(classifyScenarioTap("CARD_COPY", before, "home.account.open", {}, "/")).toBe("recovery");
+    expect(scenarioVerdictForEvent(storedReplayTap, "CARD_COPY")).toBe("recovery");
+  });
+
   it("keeps the removed secondary-account event readable as a historical off-path error", () => {
     const removedAccountTap = event(1, "tap", "home.savings.open", { scenarioVerdict: "info" });
     expect(classifyScenarioTap("CARD_COPY", [], "home.savings.open", {}, "/")).toBe("error");

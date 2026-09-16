@@ -43,6 +43,8 @@ export function scenarioVerdictForEvent(event: TrackedEvent, taskCode?: string):
   if (taskCode === "CASHBACK_NEXT" && (target === "cashback.next_month.success.close" || target === "cashback.next_month.success.drag")) return "correct";
   // Backward compatibility for recordings made before the secondary account card was removed.
   if (taskCode === "CARD_COPY" && target === "home.savings.open") return "error";
+  if (taskCode === "CARD_COPY" && event.metadata.scenarioVerdict === "error" && target === "home.account.open") return "recovery";
+  if (taskCode === "CARD_COPY" && event.metadata.scenarioVerdict === "error" && target && cardBadge.test(target)) return "recovery";
   // Copying any field of any card is the goal of the card flow, never an error.
   if (taskCode === "CARD_COPY" && target && cardCopy.test(target)) return "correct";
   // Reinterpret both new explicit limit attempts and their historical stored
@@ -97,6 +99,8 @@ export function classifyScenarioTap(code: InteractiveScenarioCode, events: Track
     // Copying any field of any card is the goal of this flow, never an error.
     if (cardCopy.test(target)) return "correct";
     if (stage === 0 && target === "home.account.open") return "correct";
+    if (stage > 0 && screen === "/" && target === "home.account.open") return "recovery";
+    if (stage > 1 && screen === "/account" && cardBadge.test(target)) return "recovery";
     if (stage === 1 && cardBadge.test(target)) return "correct";
     if (stage === 2 && (cardFlip.test(target) || /^card\.[^.]+\.select$/.test(target))) return "correct";
     if (stage >= 3 && (cardFlip.test(target) || /^card\.[^.]+\.select$/.test(target) || /^card\.[^.]+\.details\.hide$/.test(target) || target === "card.copy.toast.dismiss")) return "correct";
