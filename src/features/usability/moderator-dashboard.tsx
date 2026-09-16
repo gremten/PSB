@@ -54,6 +54,19 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   const selectionRequest = useRef(0);
   const seenMissclick = useRef({ sessionId: initialSnapshot?.session.id ?? null, id: initialSnapshot?.events.filter(isDemoMissclick).at(-1)?.id ?? 0 });
   const selectedId = snapshot?.session.id;
+  const sortedScenarioMetrics = useMemo(() => {
+    if (!researchSummary) return [];
+    const scenarioOrder = new Map<string, number>(interactiveScenarios.map((scenario, index) => [scenario.code, index]));
+    return [...researchSummary.scenarioMetrics].sort((a, b) => {
+      const aStarted = a.startedParticipants > 0 ? 1 : 0;
+      const bStarted = b.startedParticipants > 0 ? 1 : 0;
+      return bStarted - aStarted
+        || a.completionRate - b.completionRate
+        || a.directPathRate - b.directPathRate
+        || a.errorFreeCompletionRate - b.errorFreeCompletionRate
+        || (scenarioOrder.get(a.code) ?? 99) - (scenarioOrder.get(b.code) ?? 99);
+    });
+  }, [researchSummary]);
 
   const openSession = useCallback(async (id: string) => {
     const requestNumber = ++selectionRequest.current;
@@ -177,8 +190,8 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
           <div className={styles.metricGrid}>{researchSummary.journeySegments.map((metric) => <div className={styles.stat} key={metric.id}><span>{metric.label}</span><strong>{metric.count} из {metric.total} · {metric.percent}%</strong><small className={styles.summaryDenominator}>{metric.denominatorLabel}</small></div>)}</div>
           <h3 className={styles.summaryHeading}>Поведение участников</h3>
           <div className={styles.metricGrid}>{researchSummary.metrics.map((metric) => <div className={styles.stat} key={metric.id}><span>{metric.label}</span><strong>{metric.count} из {metric.total} · {metric.percent}%</strong><small className={styles.summaryDenominator}>{metric.denominatorLabel}</small></div>)}</div>
-          <h3 className={styles.summaryHeading}>Метрики по сценариям</h3>
-          <div className={styles.scenarioSummaryGrid}>{researchSummary.scenarioMetrics.map((scenario) => <article className={styles.scenarioSummary} key={scenario.code}>
+          <h3 className={styles.summaryHeading}>Метрики по сценариям — сначала проблемные</h3>
+          <div className={styles.scenarioSummaryGrid}>{sortedScenarioMetrics.map((scenario) => <article className={styles.scenarioSummary} key={scenario.code}>
             <div className={styles.scenarioSummaryHeader}><div><small>{scenario.code}</small><h4>{scenario.title}</h4></div><strong>{scenario.completedParticipants}/{scenario.startedParticipants}</strong></div>
             <div className={styles.metricGrid}>
               <div className={styles.stat}><span>Task completion</span><strong>{scenario.completionRate}%</strong><small className={styles.summaryDenominator}>{scenario.completedParticipants} из {scenario.startedParticipants} начавших · {confidenceLabel(scenario.completionConfidence95)}</small></div>

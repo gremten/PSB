@@ -373,6 +373,20 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
   const detourMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_detour");
   const errorMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_error");
   const behaviorMetric = (id: string) => researchSummary.metrics.find((metric) => metric.id === id);
+  const allScenariosMetric = behaviorMetric("all_scenarios_completed");
+  const scenarioOrder = new Map<string, number>(interactiveScenarios.map((scenario, index) => [scenario.code, index]));
+  const sortedScenarioMetrics = [...researchSummary.scenarioMetrics].sort((a, b) => {
+    const aStarted = a.startedParticipants > 0 ? 1 : 0;
+    const bStarted = b.startedParticipants > 0 ? 1 : 0;
+    return bStarted - aStarted
+      || a.completionRate - b.completionRate
+      || a.directPathRate - b.directPathRate
+      || a.errorFreeCompletionRate - b.errorFreeCompletionRate
+      || (scenarioOrder.get(a.code) ?? 99) - (scenarioOrder.get(b.code) ?? 99);
+  });
+  const startedScenarioMetrics = sortedScenarioMetrics.filter((scenario) => scenario.startedParticipants > 0);
+  const mostProblematicScenario = startedScenarioMetrics[0] ?? null;
+  const topIssue = researchSummary.issueMetrics[0] ?? null;
   const participantCount = researchSummary.recordedSessions;
   const lines = [
     "# Общее MD-саммари PSB usability test",
@@ -402,12 +416,24 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
 
   lines.push(
     `- Участников с начатой записью: **${participantCount}**.`,
-    `- Начато сценариев: **${startedRuns}**.`,
-    `- Завершено сценариев: **${completedRuns} из ${startedRuns} — ${percent(completedRuns, startedRuns)}%**.`,
-    `- Идеальных завершённых прохождений: **${idealMetric?.count ?? 0} из ${idealMetric?.total ?? 0} — ${idealMetric?.percent ?? 0}%**.`,
-    `- Завершений с ошибками: **${errorMetric?.count ?? 0} из ${errorMetric?.total ?? 0} — ${errorMetric?.percent ?? 0}%**.`,
-    `- Завершений с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**.`,
-    `- Уходили в другой раздел и возвращались: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**.`,
+    `- Все три сценария завершили: **${allScenariosMetric?.count ?? 0} из ${allScenariosMetric?.total ?? participantCount} участников — ${allScenariosMetric?.percent ?? 0}%**.`,
+    mostProblematicScenario
+      ? `- Самый проблемный сценарий сейчас: **${markdownValue(mostProblematicScenario.title)}** — завершили **${mostProblematicScenario.completedParticipants} из ${mostProblematicScenario.startedParticipants} участников (${mostProblematicScenario.completionRate}%)**, direct path **${mostProblematicScenario.directPathRate}%**, error-free **${mostProblematicScenario.errorFreeCompletionRate}%**.`
+      : "- Самый проблемный сценарий пока не определяется: нет начатых сценариев.",
+    topIssue
+      ? `- Самая частая проблема: **${markdownValue(topIssue.scenarioTitle)} · ${markdownValue(topIssue.label)}** — затронула **${topIssue.affectedParticipants} из ${topIssue.startedParticipants} участников (${topIssue.prevalencePercent}%; 95% ДИ ${confidenceText(topIssue.prevalenceConfidence95)})**.`
+      : "- Частых ошибочных проблем пока не видно: ошибочные действия в начатых сценариях не зафиксированы.",
+    "",
+    "### Completion по сценариям",
+    "",
+    ...sortedScenarioMetrics.map((scenario) => `- **${markdownValue(scenario.title)}:** завершили **${scenario.completedParticipants} из ${scenario.startedParticipants} участников — ${scenario.completionRate}%**; direct path **${scenario.directPathRate}%**, first-click success **${scenario.firstClickSuccessRate}%**, SEQ **${scenario.seqMean ?? "—"} из 7**.`),
+    "",
+    "### Качество завершённых сценариев",
+    "",
+    `- Идеально без ошибок и лишних действий: **${idealMetric?.count ?? 0} из ${idealMetric?.total ?? 0} завершённых сценариев — ${idealMetric?.percent ?? 0}%**.`,
+    `- Нормально, но с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**.`,
+    `- С уходом в другой раздел и возвратом: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**.`,
+    `- С ошибками, которые могли мешать сценарию: **${errorMetric?.count ?? 0} из ${errorMetric?.total ?? 0} — ${errorMetric?.percent ?? 0}%**.`,
     "",
     "### Ключевые проблемные места",
     "",
@@ -426,7 +452,10 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     "",
     "### Главные UX-выводы",
     "",
-    `- Completion rate по всем запускам сценариев сейчас **${percent(completedRuns, startedRuns)}%**; приоритет — смотреть не только факт завершения, но и долю direct path, first-click success и excess taps по каждому сценарию.`,
+    `- Главная верхнеуровневая метрика — не сумма запусков сценариев (${completedRuns} из ${startedRuns}), а **сколько участников прошли все три задачи** и где конкретно проседает каждый сценарий.`,
+    mostProblematicScenario
+      ? `- Первый фокус для разбора — **${markdownValue(mostProblematicScenario.title)}**, потому что он сейчас ниже остальных по связке completion/direct path/error-free.`
+      : "- Первый фокус для разбора появится после первых начатых сценариев.",
     `- Доля прохождений с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**. Эти действия показывают любопытство или проверку правил, но не считаются ошибками.`,
     `- Доля прохождений с уходом в другой раздел и возвратом: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**. Это хороший сигнал для анализа навигационной уверенности.`,
     "- Все выводы ниже являются описательными наблюдениями этой выборки. Причинность нельзя утверждать без дополнительной проверки.",
@@ -435,7 +464,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
     "",
   );
 
-  researchSummary.scenarioMetrics.forEach((scenario) => {
+  sortedScenarioMetrics.forEach((scenario) => {
     lines.push(
       `### ${markdownValue(scenario.title)} (${scenario.code})`,
       "",

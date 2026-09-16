@@ -135,6 +135,10 @@ describe("STARL session export", () => {
     expect(markdown).toContain("## 5. STARL-блок и prompt для AI-анализа");
     expect(markdown.indexOf("## 1. Общее резюме исследования")).toBeLessThan(markdown.indexOf("## 4. Детализация по участникам"));
     expect(markdown).toContain("Участников с начатой записью: **1**");
+    expect(markdown).toContain("Все три сценария завершили:");
+    expect(markdown).toContain("### Completion по сценариям");
+    expect(markdown).toContain("Самый проблемный сценарий");
+    expect(markdown).toContain("### Качество завершённых сценариев");
     expect(markdown).toContain("Completion rate: **1 из 1 — 100%**");
     expect(markdown).toContain("Первый вход в кешбэк через бейдж у общей суммы");
     expect(markdown).toContain("### P-01");
