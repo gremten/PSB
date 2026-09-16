@@ -49,6 +49,10 @@ function semanticId(event: TrackedEvent) {
   return event.target ?? event.action;
 }
 
+function isHiddenLegacySemanticId(id: string | null | undefined) {
+  return id === "home.savings.open";
+}
+
 function semanticLabel(id: string | null | undefined, event?: TrackedEvent) {
   if (!id) return "событие без семантической метки";
   const labels: Record<string, string> = {
@@ -373,7 +377,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
   const records = reports.flatMap((report) => report.starlRecords);
   const completedRecords = records.filter((record) => record.result.completed);
   const interactions = records.flatMap((record) => record.action.interactionNarrative.map((interaction) => ({ ...interaction, scenarioCode: record.scenarioCode, scenarioTitle: record.task.title, participantCode: record.situation.participantCode })));
-  const errorInteractions = interactions.filter((interaction) => interaction.verdict === "error");
+  const errorInteractions = interactions.filter((interaction) => interaction.verdict === "error" && !isHiddenLegacySemanticId(interaction.semanticId));
   const infoInteractions = interactions.filter((interaction) => interaction.verdict === "info");
   const recoveryInteractions = interactions.filter((interaction) => interaction.verdict === "recovery");
   const startedRuns = records.length;
@@ -558,7 +562,7 @@ export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], res
       const infoCount = record.action.counts.informationalTaps;
       const recoveryCount = record.action.counts.recoveryTaps;
       const correctCount = record.action.counts.correctTaps;
-      const firstError = record.action.interactionNarrative.find((interaction) => interaction.verdict === "error");
+      const firstError = record.action.interactionNarrative.find((interaction) => interaction.verdict === "error" && !isHiddenLegacySemanticId(interaction.semanticId));
       const firstInfo = record.action.interactionNarrative.find((interaction) => interaction.verdict === "info");
       const screens = record.action.chronologicalEvidence
         .filter((event) => event.type === "screen_view" && event.screen)
@@ -630,7 +634,7 @@ export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedA
   const completedScenarios = report.coverage.filter((item) => item.status === "completed").length;
   const completedRecords = report.starlRecords.filter((record) => record.result.completed);
   const allInteractions = report.starlRecords.flatMap((record) => record.action.interactionNarrative);
-  const errorInteractions = allInteractions.filter((interaction) => interaction.verdict === "error");
+  const errorInteractions = allInteractions.filter((interaction) => interaction.verdict === "error" && !isHiddenLegacySemanticId(interaction.semanticId));
   const infoInteractions = allInteractions.filter((interaction) => interaction.verdict === "info");
   const cashbackEntries = report.starlRecords
     .filter((record) => record.scenarioCode === "CASHBACK_CONNECT" || record.scenarioCode === "CASHBACK_NEXT")

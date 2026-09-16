@@ -114,6 +114,8 @@ const stageLabels: Record<string, string[]> = {
   CASHBACK_NEXT: ["не открыл кешбэк", "не открыл выбор на октябрь", "не подтвердил три категории", "не закрыл подтверждение выбора"],
 };
 
+const hiddenLegacyIssueIds = new Set(["home.savings.open"]);
+
 function issueLabel(id: string) {
   const labels: Record<string, string> = {
     "home.savings.open": "Тапнул удалённый элемент главного экрана в старой записи",
@@ -262,7 +264,10 @@ export function calculateResearchSummary(sessions: ResearchSession[], runs: Task
     const recoveredSessionIds = new Set(events.filter((event) => event.taskRunId && scenarioRunIds.has(event.taskRunId) && verdictFor(event) === "recovery").map((event) => event.sessionId));
     const startedParticipants = startedSessionIds.size;
     const grouped = new Map<string, { sessions: Set<string>; occurrences: number }>();
-    events.filter((event) => event.taskRunId && scenarioRunIds.has(event.taskRunId) && verdictFor(event) === "error").forEach((event) => {
+    events.filter((event) => {
+      if (!event.taskRunId || !scenarioRunIds.has(event.taskRunId) || verdictFor(event) !== "error") return false;
+      return !hiddenLegacyIssueIds.has(event.target ?? event.action ?? "unknown");
+    }).forEach((event) => {
       const semanticId = event.target ?? event.action ?? "unknown";
       const current = grouped.get(semanticId) ?? { sessions: new Set<string>(), occurrences: 0 };
       current.sessions.add(event.sessionId);
