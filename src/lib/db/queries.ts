@@ -92,6 +92,25 @@ export async function getFullSessionSnapshot(id: string): Promise<SessionSnapsho
   return { session, taskRuns, events };
 }
 
+export async function getRecordedSessionSnapshots(): Promise<SessionSnapshot[]> {
+  await expireDisconnectedSessions();
+  const sessions = await getDatabase().all<SessionRow>(`${sessionSelect} WHERE started_at IS NOT NULL ORDER BY created_at`);
+  if (!sessions.length) return [];
+  const ids = sessions.map((session) => session.id);
+  const placeholders = ids.map(() => "?").join(",");
+  const taskRows = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id IN (${placeholders}) ORDER BY started_at`, ids)).map(asTaskRun);
+  const eventRows = (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id IN (${placeholders}) ORDER BY id`, ids)).map(asEvent);
+  const taskRunsBySession = new Map<string, TaskRun[]>();
+  const eventsBySession = new Map<string, TrackedEvent[]>();
+  taskRows.forEach((run) => taskRunsBySession.set(run.sessionId, [...(taskRunsBySession.get(run.sessionId) ?? []), run]));
+  eventRows.forEach((event) => eventsBySession.set(event.sessionId, [...(eventsBySession.get(event.sessionId) ?? []), event]));
+  return sessions.map((session) => ({
+    session,
+    taskRuns: taskRunsBySession.get(session.id) ?? [],
+    events: eventsBySession.get(session.id) ?? [],
+  }));
+}
+
 export async function getResearchState(): Promise<ResearchSessionState> {
   const row = await getDatabase().first<{
         sessionId: string | null;

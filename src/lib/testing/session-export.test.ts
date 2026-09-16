@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateResearchSummary } from "./research-summary";
-import { buildSessionEventsCsv, buildSessionMarkdownReport, buildStarlSessionExport, STARL_EXPORT_SCHEMA_VERSION } from "./session-export";
+import { buildAllSessionsMarkdownReport, buildSessionEventsCsv, buildSessionMarkdownReport, buildStarlSessionExport, STARL_EXPORT_SCHEMA_VERSION } from "./session-export";
 import type { SessionSnapshot, TrackedEvent } from "./types";
 
 const event = (id: number, type: string, target: string, verdict?: string): TrackedEvent => ({
@@ -122,5 +122,31 @@ describe("STARL session export", () => {
     expect(markdown).toContain("https://www.nngroup.com/articles/usability-metrics/");
     expect(markdown).toContain("## Инструкция для анализа нейросетью");
     expect(markdown).not.toContain('"scenarioCode"');
+  });
+
+  it("builds a general Markdown report from aggregate to participant details", () => {
+    const researchSummary = calculateResearchSummary([snapshot.session], snapshot.taskRuns, snapshot.events);
+    const markdown = buildAllSessionsMarkdownReport([snapshot], researchSummary, "2026-09-15T11:00:00.000Z");
+    expect(markdown).toContain("# Общее MD-саммари PSB usability test");
+    expect(markdown).toContain("## 1. Общее резюме исследования");
+    expect(markdown).toContain("## 2. Метрики по сценариям");
+    expect(markdown).toContain("## 3. Поведенческие паттерны");
+    expect(markdown).toContain("## 4. Детализация по участникам");
+    expect(markdown).toContain("## 5. STARL-блок и prompt для AI-анализа");
+    expect(markdown.indexOf("## 1. Общее резюме исследования")).toBeLessThan(markdown.indexOf("## 4. Детализация по участникам"));
+    expect(markdown).toContain("Участников с начатой записью: **1**");
+    expect(markdown).toContain("Completion rate: **1 из 1 — 100%**");
+    expect(markdown).toContain("Первый вход в кешбэк через бейдж у общей суммы");
+    expect(markdown).toContain("### P-01");
+    expect(markdown).toContain("Где исследовал интерфейс: открыл пояснение категории");
+    expect(markdown).toContain("не делать причинные выводы без достаточных данных");
+    expect(markdown).not.toContain('"events"');
+  });
+
+  it("returns a valid general Markdown report for an empty sample", () => {
+    const researchSummary = calculateResearchSummary([], [], []);
+    const markdown = buildAllSessionsMarkdownReport([], researchSummary, "2026-09-15T11:00:00.000Z");
+    expect(markdown).toContain("Записанных сессий пока нет");
+    expect(markdown).toContain("## 5. STARL-блок и prompt для AI-анализа");
   });
 });

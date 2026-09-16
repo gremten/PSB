@@ -170,7 +170,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
       </> : <section className={styles.card}><div className={styles.empty}>Выберите запись участника, чтобы увидеть метрики и&nbsp;клики.</div></section>}
 
       <section className={styles.card}>
-        <div className="row-between"><div><h2>Саммари по сессиям</h2><p className={styles.build}>Доли считаются по участникам, а не по количеству событий.</p></div><button type="button" className={`${styles.button} ${styles.secondary}`} onClick={() => void toggleResearchSummary()}>{summaryOpen ? "Скрыть саммари" : "Открыть саммари"}</button></div>
+        <div className="row-between"><div><h2>Саммари по сессиям</h2><p className={styles.build}>Доли считаются по участникам, а не по количеству событий.</p></div><div className={styles.buttonRow}><Link className={styles.button} data-track="moderator.sessions.export_summary.md" href="/api/moderator/sessions/export-summary?format=md">Скачать общее MD-саммари</Link><button type="button" className={`${styles.button} ${styles.secondary}`} onClick={() => void toggleResearchSummary()}>{summaryOpen ? "Скрыть саммари" : "Открыть саммари"}</button></div></div>
         {summaryOpen && (summaryLoading ? <div className={styles.empty}>Считаем показатели…</div> : researchSummary ? <>
           <p className={styles.summaryTotal}>Записанных сессий: <strong>{researchSummary.recordedSessions}</strong></p>
           <h3 className={styles.summaryHeading}>Качество завершённых сценариев</h3>

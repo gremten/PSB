@@ -345,6 +345,234 @@ function percent(count: number, total: number) {
   return total ? Math.round(count / total * 100) : 0;
 }
 
+function confidenceText(range: { lower: number; upper: number } | null) {
+  return range ? `${range.lower}–${range.upper}%` : "—";
+}
+
+function rankByLabel<T>(items: T[], labelFor: (item: T) => string, limit = 5) {
+  const counts = new Map<string, number>();
+  items.forEach((item) => {
+    const label = labelFor(item);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru")).slice(0, limit);
+}
+
+export function buildAllSessionsMarkdownReport(snapshots: SessionSnapshot[], researchSummary: ResearchSummary, generatedAt = new Date().toISOString()) {
+  const reports = snapshots.map((snapshot) => buildStarlSessionExport(snapshot, generatedAt));
+  const records = reports.flatMap((report) => report.starlRecords);
+  const completedRecords = records.filter((record) => record.result.completed);
+  const interactions = records.flatMap((record) => record.action.interactionNarrative.map((interaction) => ({ ...interaction, scenarioCode: record.scenarioCode, scenarioTitle: record.task.title, participantCode: record.situation.participantCode })));
+  const errorInteractions = interactions.filter((interaction) => interaction.verdict === "error");
+  const infoInteractions = interactions.filter((interaction) => interaction.verdict === "info");
+  const recoveryInteractions = interactions.filter((interaction) => interaction.verdict === "recovery");
+  const startedRuns = records.length;
+  const completedRuns = completedRecords.length;
+  const idealMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_ideal");
+  const exploredMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_explored");
+  const detourMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_detour");
+  const errorMetric = researchSummary.journeySegments.find((metric) => metric.id === "journey_error");
+  const behaviorMetric = (id: string) => researchSummary.metrics.find((metric) => metric.id === id);
+  const participantCount = researchSummary.recordedSessions;
+  const lines = [
+    "# Общее MD-саммари PSB usability test",
+    "",
+    "> Групповой отчёт по всем записанным участникам. Сначала показана общая картина исследования, затем сценарии, паттерны и детализация по участникам. Pending-сессии без нажатия «Старт» не включены.",
+    "",
+    `- Сформировано: **${markdownValue(generatedAt)}**`,
+    `- Версия схемы: **${STARL_EXPORT_SCHEMA_VERSION}**`,
+    "- Общее время сессий намеренно не рассчитывается: в метрики входит только время внутри каждого сценария.",
+    "- Банковские значения, данные карт, clipboard contents и чувствительные metadata не экспортируются.",
+    "",
+    "## 1. Общее резюме исследования",
+    "",
+  ];
+
+  if (!snapshots.length) {
+    lines.push(
+      "Записанных сессий пока нет. Отчёт сформирован корректно, но метрики появятся после того, как хотя бы один участник нажмёт «Старт» и начнёт сценарий.",
+      "",
+      "## 5. STARL-блок и prompt для AI-анализа",
+      "",
+      ...STARL_ANALYSIS_PROMPT_RU.split("\n").map((line) => `> ${line}`),
+      "",
+    );
+    return `\uFEFF${lines.join("\n")}`;
+  }
+
+  lines.push(
+    `- Участников с начатой записью: **${participantCount}**.`,
+    `- Начато сценариев: **${startedRuns}**.`,
+    `- Завершено сценариев: **${completedRuns} из ${startedRuns} — ${percent(completedRuns, startedRuns)}%**.`,
+    `- Идеальных завершённых прохождений: **${idealMetric?.count ?? 0} из ${idealMetric?.total ?? 0} — ${idealMetric?.percent ?? 0}%**.`,
+    `- Завершений с ошибками: **${errorMetric?.count ?? 0} из ${errorMetric?.total ?? 0} — ${errorMetric?.percent ?? 0}%**.`,
+    `- Завершений с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**.`,
+    `- Уходили в другой раздел и возвращались: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**.`,
+    "",
+    "### Ключевые проблемные места",
+    "",
+  );
+
+  if (researchSummary.issueMetrics.length) {
+    researchSummary.issueMetrics.slice(0, 5).forEach((issue) => {
+      const comparison = issue.unaffectedCompletionRate === null ? "группы сравнения нет" : `completion без проблемы — ${issue.unaffectedCompletionRate}%, разница ${issue.completionDifferencePp! > 0 ? "+" : ""}${issue.completionDifferencePp} п.п.`;
+      lines.push(`- **${markdownValue(issue.scenarioTitle)}:** ${markdownValue(issue.label)} — **${issue.affectedParticipants} из ${issue.startedParticipants} участников (${issue.prevalencePercent}%; 95% ДИ ${confidenceText(issue.prevalenceConfidence95)})**; completion с проблемой — **${issue.affectedCompletionRate}%**, ${comparison}; повторов — **${issue.occurrenceCount}**.`);
+    });
+  } else {
+    lines.push("- Ошибочных действий в начатых сценариях пока не зафиксировано.");
+  }
+
+  lines.push(
+    "",
+    "### Главные UX-выводы",
+    "",
+    `- Completion rate по всем запускам сценариев сейчас **${percent(completedRuns, startedRuns)}%**; приоритет — смотреть не только факт завершения, но и долю direct path, first-click success и excess taps по каждому сценарию.`,
+    `- Доля прохождений с допустимым исследованием интерфейса: **${exploredMetric?.count ?? 0} из ${exploredMetric?.total ?? 0} — ${exploredMetric?.percent ?? 0}%**. Эти действия показывают любопытство или проверку правил, но не считаются ошибками.`,
+    `- Доля прохождений с уходом в другой раздел и возвратом: **${detourMetric?.count ?? 0} из ${detourMetric?.total ?? 0} — ${detourMetric?.percent ?? 0}%**. Это хороший сигнал для анализа навигационной уверенности.`,
+    "- Все выводы ниже являются описательными наблюдениями этой выборки. Причинность нельзя утверждать без дополнительной проверки.",
+    "",
+    "## 2. Метрики по сценариям",
+    "",
+  );
+
+  researchSummary.scenarioMetrics.forEach((scenario) => {
+    lines.push(
+      `### ${markdownValue(scenario.title)} (${scenario.code})`,
+      "",
+      `- Completion rate: **${scenario.completedParticipants} из ${scenario.startedParticipants} — ${scenario.completionRate}%**; 95% ДИ **${confidenceText(scenario.completionConfidence95)}**.`,
+      `- Без помощи / с помощью / неуспешно: **${scenario.unaidedCompletionRate}% / ${scenario.aidedCompletionRate}% / ${scenario.failureRate}%**.`,
+      `- Median/P75 task time: **${humanDuration(scenario.medianCompletionTimeMs)} / ${humanDuration(scenario.p75CompletionTimeMs)}**.`,
+      `- SEQ mean/median: **${scenario.seqMean ?? "—"} / ${scenario.seqMedian ?? "—"} из 7**, ответов **${scenario.seqResponseCount}**, доля оценок 5–7 — **${scenario.seqPositiveRate}%**; 95% ДИ **${confidenceText(scenario.seqPositiveConfidence95)}**.`,
+      `- First-click success: **${scenario.firstClickSuccessRate}%**; 95% ДИ **${confidenceText(scenario.firstClickConfidence95)}**.`,
+      `- Direct path: **${scenario.directPathRate}%** завершивших; 95% ДИ **${confidenceText(scenario.directPathConfidence95)}**.`,
+      `- Error-free completion: **${scenario.errorFreeCompletionRate}%** завершивших; 95% ДИ **${confidenceText(scenario.errorFreeConfidence95)}**.`,
+      `- Excess taps median/P75: **${scenario.medianExcessTaps ?? "—"} / ${scenario.p75ExcessTaps ?? "—"}**.`,
+      `- В процессе / исключено из расчётов: **${scenario.inProgressParticipants} / ${scenario.excludedParticipants}**.`,
+    );
+    if (scenario.dropoffs.length) {
+      lines.push("- Drop-off stages:");
+      scenario.dropoffs.forEach((dropoff) => lines.push(`  - ${markdownValue(dropoff.label)} — **${dropoff.count} из ${dropoff.total}, ${dropoff.percent}%**.`));
+    }
+    const issues = researchSummary.issueMetrics.filter((issue) => issue.scenarioCode === scenario.code);
+    if (issues.length) {
+      lines.push("- Issue prevalence:");
+      issues.slice(0, 3).forEach((issue) => lines.push(`  - ${markdownValue(issue.label)} — **${issue.affectedParticipants} из ${issue.startedParticipants}, ${issue.prevalencePercent}%**; 95% ДИ **${confidenceText(issue.prevalenceConfidence95)}**.`));
+    }
+    lines.push("");
+  });
+
+  lines.push("## 3. Поведенческие паттерны", "");
+  [
+    behaviorMetric("cashback_badge_first"),
+    behaviorMetric("cashback_tab_first"),
+    behaviorMetric("year_chart"),
+    behaviorMetric("category_help"),
+    behaviorMetric("category_limit"),
+    behaviorMetric("recovered"),
+    behaviorMetric("explored"),
+  ].filter((metric): metric is NonNullable<typeof metric> => Boolean(metric)).forEach((metric) => {
+    lines.push(`- ${markdownValue(metric.label)}: **${metric.count} из ${metric.total}** ${markdownValue(metric.denominatorLabel)} — **${metric.percent}%**.`);
+  });
+
+  lines.push("", "### Ошибки и исследование интерфейса", "");
+  if (errorInteractions.length) {
+    lines.push("**Ошибочные действия:**");
+    rankByLabel(errorInteractions, (interaction) => `${interaction.scenarioTitle}: ${interaction.semanticLabel}`).forEach(([label, count]) => lines.push(`- ${markdownValue(label)} — **${count}**.`));
+  } else {
+    lines.push("Ошибочных действий не зафиксировано.");
+  }
+  lines.push("");
+  if (infoInteractions.length) {
+    lines.push("**Исследовательские действия:**");
+    rankByLabel(infoInteractions, (interaction) => `${interaction.scenarioTitle}: ${interaction.semanticLabel}`).forEach(([label, count]) => lines.push(`- ${markdownValue(label)} — **${count}**.`));
+  } else {
+    lines.push("Исследовательских действий не зафиксировано.");
+  }
+  if (recoveryInteractions.length) {
+    lines.push("", "**Возвраты после отклонений:**");
+    rankByLabel(recoveryInteractions, (interaction) => `${interaction.scenarioTitle}: ${interaction.semanticLabel}`).forEach(([label, count]) => lines.push(`- ${markdownValue(label)} — **${count}**.`));
+  }
+
+  lines.push("", "## 4. Детализация по участникам", "");
+  reports.forEach((report) => {
+    const started = report.starlRecords.length;
+    const completed = report.starlRecords.filter((record) => record.result.completed).length;
+    lines.push(
+      `### ${markdownValue(report.session.participantCode)}`,
+      "",
+      `- Сборка: **${markdownValue(report.session.buildId)}**.`,
+      `- Сценариев начато/завершено: **${started} / ${completed}**.`,
+      "- Общее время сессии не используется; ниже указано только время внутри сценариев.",
+      "",
+    );
+    report.starlRecords.forEach((record) => {
+      const errorCount = record.action.counts.errorTaps;
+      const infoCount = record.action.counts.informationalTaps;
+      const recoveryCount = record.action.counts.recoveryTaps;
+      const correctCount = record.action.counts.correctTaps;
+      const firstError = record.action.interactionNarrative.find((interaction) => interaction.verdict === "error");
+      const firstInfo = record.action.interactionNarrative.find((interaction) => interaction.verdict === "info");
+      const screens = record.action.chronologicalEvidence
+        .filter((event) => event.type === "screen_view" && event.screen)
+        .map((event) => screenLabels[event.screen ?? ""] ?? event.screen ?? "Неизвестный экран")
+        .filter((screen, index, all) => index === 0 || screen !== all[index - 1]);
+      lines.push(
+        `#### ${markdownValue(record.task.title)}`,
+        "",
+        `- Результат: **${resultLabels[record.result.taskResult ?? "running"] ?? markdownValue(record.result.taskResult ?? "running")}**.`,
+        `- Время: **${humanDuration(record.result.completionTimeMs)}**.`,
+        `- SEQ: **${record.result.easeScore ?? "—"} из 7**.`,
+        `- Тип прохождения: **${journeyLabels[record.result.journeySegment] ?? markdownValue(record.result.journeySegment)}**.`,
+        `- Правильно / ошибки / возвраты / изучение: **${correctCount} / ${errorCount} / ${recoveryCount} / ${infoCount}**.`,
+        `- Путь экранов: ${screens.length ? screens.map((screen) => `**${markdownValue(screen)}**`).join(" → ") : "не зафиксирован"}.`,
+        `- Что сделал верно: ${correctCount ? "прошёл ожидаемые шаги сценария по зелёным событиям." : "верные шаги не зафиксированы."}`,
+        `- Где ошибся: ${firstError ? `${markdownValue(firstError.semanticLabel)} на экране «${markdownValue(firstError.screen ? screenLabels[firstError.screen] ?? firstError.screen : "экран не определён")}» [событие №${firstError.eventId}].` : "ошибочных действий нет."}`,
+        `- Где исследовал интерфейс: ${firstInfo ? `${markdownValue(firstInfo.semanticLabel)} [событие №${firstInfo.eventId}].` : "исследовательских действий нет."}`,
+        `- Краткая интерпретация: ${record.result.completed ? "цель сценария достигнута" : "цель сценария не подтверждена"}; ${errorCount ? "были действия вне маршрута" : "ошибок не зафиксировано"}; ${infoCount ? "были допустимые исследования интерфейса" : "без дополнительного исследования"}.`,
+        "",
+      );
+    });
+  });
+
+  lines.push(
+    "## 5. STARL-блок и prompt для AI-анализа",
+    "",
+    "### Цель исследования",
+    "",
+    "Проверить, насколько участники понимают и выполняют три ключевых сценария банковского прототипа: копирование данных карты, первое подключение кешбэка и выбор категорий кешбэка на октябрь как следующий месяц.",
+    "",
+    "### Идеальные сценарии",
+    "",
+  );
+  interactiveScenarios.forEach((scenario) => {
+    lines.push(`- **${markdownValue(scenario.title)}:** ${markdownValue(scenario.prompt)}`);
+    const path = expectedPaths[scenario.code];
+    if (path) path.forEach((step) => lines.push(`  - Шаг ${step.step}: ${markdownValue(step.purpose)}.`));
+  });
+  lines.push(
+    "",
+    "### Правила интерпретации",
+    "",
+    "- `correct` — ожидаемый шаг сценария.",
+    "- `recovery` — возврат после отклонения от маршрута.",
+    "- `error` — действие вне активного сценария.",
+    "- `info` — допустимое исследование интерфейса, не ошибка.",
+    "- `scroll` — не ошибка и не шаг сценария.",
+    "- Ожидание модератора, объяснение задания и паузы до кнопки «Старт» не входят в task time.",
+    "- Observation — только то, что есть в событиях; inference — осторожная интерпретация; recommendation — продуктовая рекомендация с указанием основания.",
+    "- не делать причинные выводы без достаточных данных и отдельной проверки.",
+    "",
+    "### Prompt для дальнейшего AI-анализа",
+    "",
+    ...STARL_ANALYSIS_PROMPT_RU.split("\n").map((line) => `> ${line}`),
+    "",
+    "При анализе этого общего отчёта сначала опиши агрегированные факты, затем различия между сценариями, затем паттерны поведения и только после этого рекомендации. Ссылайся на участников и номера событий из детализации, если делаешь качественный вывод.",
+    "",
+  );
+
+  return `\uFEFF${lines.join("\n")}`;
+}
+
 export function buildSessionMarkdownReport(snapshot: SessionSnapshot, generatedAt = new Date().toISOString(), researchSummary?: ResearchSummary) {
   const report = buildStarlSessionExport(snapshot, generatedAt);
   const startedScenarios = report.coverage.filter((item) => item.status !== "not_started").length;
