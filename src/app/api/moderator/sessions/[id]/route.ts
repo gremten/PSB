@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assignParticipantScenario, deleteSession, endSession, getAggregateMetrics, getSessionSnapshot } from "@/lib/db/queries";
+import { assignParticipantScenario, deleteSession, endSession, getSessionSnapshot } from "@/lib/db/queries";
 import { apiError, requireModeratorResponse } from "@/lib/moderator-api";
 
 export const runtime = "nodejs";
@@ -9,8 +9,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const unauthorized = requireModeratorResponse(request);
   if (unauthorized) return unauthorized;
   const { id } = await context.params;
-  const snapshot = await getSessionSnapshot(id, 2000);
-  return snapshot ? NextResponse.json({ snapshot, metrics: await getAggregateMetrics() }, { headers: { "Cache-Control": "no-store" } }) : NextResponse.json({ error: "Not found" }, { status: 404 });
+  const afterParam = request.nextUrl.searchParams.get("after");
+  const after = afterParam === null ? undefined : Number(afterParam);
+  const snapshot = await getSessionSnapshot(id, 2000, after !== undefined && Number.isFinite(after) ? after : undefined);
+  return snapshot ? NextResponse.json({ snapshot }, { headers: { "Cache-Control": "no-store" } }) : NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {

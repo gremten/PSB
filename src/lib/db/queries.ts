@@ -73,12 +73,18 @@ export async function getTaskRun(id: string): Promise<TaskRun | null> {
   return row ? asTaskRun(row) : null;
 }
 
-export async function getSessionSnapshot(id: string, eventLimit = 500): Promise<SessionSnapshot | null> {
+/**
+ * `afterEventId`, when given, returns only events newer than that id (for live polling that
+ * already holds everything up to it) instead of re-reading the whole bounded window every time.
+ */
+export async function getSessionSnapshot(id: string, eventLimit = 500, afterEventId?: number): Promise<SessionSnapshot | null> {
   await expireDisconnectedSessions(id);
   const session = await getSession(id);
   if (!session) return null;
   const taskRuns = (await getDatabase().all<TaskRunRow>(`${taskSelect} WHERE session_id = ? ORDER BY started_at`, [id])).map(asTaskRun);
-  const events = (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id = ? ORDER BY id DESC LIMIT ?`, [id, eventLimit])).reverse().map(asEvent);
+  const events = typeof afterEventId === "number"
+    ? (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id = ? AND id > ? ORDER BY id`, [id, afterEventId])).map(asEvent)
+    : (await getDatabase().all<EventRow>(`${eventSelect} WHERE session_id = ? ORDER BY id DESC LIMIT ?`, [id, eventLimit])).reverse().map(asEvent);
   return { session, taskRuns, events };
 }
 

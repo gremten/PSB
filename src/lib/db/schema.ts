@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS research_control (
 
 INSERT OR IGNORE INTO research_control (id, updated_at) VALUES (1, datetime('now'));
 
+CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_presence ON sessions(ended_at, last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_task_runs_session ON task_runs(session_id, started_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_task_runs_active_interactive_session ON task_runs(session_id)
   WHERE ended_at IS NULL AND task_code IN ('CARD_COPY', 'CASHBACK_CONNECT', 'CASHBACK_NEXT');

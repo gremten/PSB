@@ -53,6 +53,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
   const [summaryLoading, setSummaryLoading] = useState(false);
   const selectionRequest = useRef(0);
   const seenMissclick = useRef({ sessionId: initialSnapshot?.session.id ?? null, id: initialSnapshot?.events.filter(isDemoMissclick).at(-1)?.id ?? 0 });
+  const eventsCursor = useRef({ sessionId: initialSnapshot?.session.id ?? null, lastId: initialSnapshot?.events.at(-1)?.id ?? 0 });
   const selectedId = snapshot?.session.id;
   const sortedScenarioMetrics = useMemo(() => {
     if (!researchSummary) return [];
@@ -75,6 +76,7 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
       const payload = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(id)}`);
       if (requestNumber === selectionRequest.current) {
         seenMissclick.current = { sessionId: id, id: payload.snapshot.events.filter(isDemoMissclick).at(-1)?.id ?? 0 };
+        eventsCursor.current = { sessionId: id, lastId: payload.snapshot.events.at(-1)?.id ?? 0 };
         setLiveMissclickId(null);
         setSnapshot(payload.snapshot);
       }
@@ -99,12 +101,24 @@ export function ModeratorDashboard({ initialSessions, initialSnapshot, initialMe
         if (cancelled) return;
         setSessions(payload.sessions);
         if (selectedId && payload.sessions.some((session) => session.id === selectedId)) {
-          const data = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(selectedId)}`);
+          // Live view only needs events newer than what it already has, not the whole window again.
+          const cursor = eventsCursor.current.sessionId === selectedId ? eventsCursor.current.lastId : undefined;
+          const incremental = typeof cursor === "number";
+          const data = await readJson<{ snapshot: SessionSnapshot }>(`/api/moderator/sessions/${encodeURIComponent(selectedId)}${incremental ? `?after=${cursor}` : ""}`);
           if (!cancelled) {
-            const latest = data.snapshot.events.filter(isDemoMissclick).at(-1);
-            if (seenMissclick.current.sessionId === selectedId && latest && latest.id > seenMissclick.current.id) setLiveMissclickId(latest.id);
-            seenMissclick.current = { sessionId: selectedId, id: latest?.id ?? 0 };
-            setSnapshot((current) => current?.session.id === selectedId ? data.snapshot : current);
+            const newEvents = data.snapshot.events;
+            const latest = newEvents.filter(isDemoMissclick).at(-1);
+            const flagMissclick = incremental ? Boolean(latest) : Boolean(seenMissclick.current.sessionId === selectedId && latest && latest.id > seenMissclick.current.id);
+            if (flagMissclick && latest) setLiveMissclickId(latest.id);
+            seenMissclick.current = { sessionId: selectedId, id: latest?.id ?? seenMissclick.current.id };
+            eventsCursor.current = { sessionId: selectedId, lastId: newEvents.at(-1)?.id ?? eventsCursor.current.lastId };
+            setSnapshot((current) => {
+              if (!current || current.session.id !== selectedId) return current;
+              if (!incremental) return data.snapshot;
+              return newEvents.length
+                ? { session: data.snapshot.session, taskRuns: data.snapshot.taskRuns, events: [...current.events, ...newEvents].slice(-2000) }
+                : { ...current, session: data.snapshot.session, taskRuns: data.snapshot.taskRuns };
+            });
           }
         } else if (payload.sessions[0]) void openSession(payload.sessions[0].id);
         else setSnapshot(null);
