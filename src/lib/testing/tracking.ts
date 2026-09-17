@@ -8,6 +8,7 @@ export interface TrackData {
 }
 
 export const PARTICIPANT_SESSION_KEY = "psb-participant-session-v1";
+export const PARTICIPANT_NAME_KEY = "psb-participant-name-v1";
 export const PARTICIPANT_SESSION_CHANGED = "psb:participant-session-changed";
 export const PARTICIPANT_ACTIVE_SCENARIO_KEY = "psb-participant-active-scenario-v1";
 export const PARTICIPANT_COMPLETION_LOCK_KEY = "psb-participant-completion-lock-v1";

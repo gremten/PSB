@@ -12,6 +12,7 @@ import { ParticipantProvider } from "./participant-provider";
 import {
   PARTICIPANT_ACTIVE_SCENARIO_KEY,
   PARTICIPANT_COMPLETION_LOCK_KEY,
+  PARTICIPANT_NAME_KEY,
   PARTICIPANT_SCENARIO_COMPLETED,
   PARTICIPANT_SCENARIO_COMPLETING,
   PARTICIPANT_SCENARIO_COMPLETION_FAILED,
@@ -215,6 +216,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
       const payload = await response.json() as { session?: { id: string }; error?: string };
       if (!response.ok || !payload.session) throw new Error(payload.error ?? "Не удалось начать тест");
       window.sessionStorage.setItem(PARTICIPANT_SESSION_KEY, payload.session.id);
+      window.sessionStorage.setItem(PARTICIPANT_NAME_KEY, cleanName);
       window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
       window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
       window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);
@@ -231,6 +233,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
 
   const skipParticipantSession = () => {
     window.sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
+    window.sessionStorage.removeItem(PARTICIPANT_NAME_KEY);
     window.sessionStorage.removeItem(PARTICIPANT_ACTIVE_SCENARIO_KEY);
     window.sessionStorage.removeItem(PARTICIPANT_COMPLETION_LOCK_KEY);
     window.sessionStorage.removeItem(PENDING_EASE_SCORE_KEY);

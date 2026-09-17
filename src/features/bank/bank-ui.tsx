@@ -241,13 +241,17 @@ type BankHeaderProps =
   | { variant: "profile" }
   | { variant: "detail"; title: string; subtitle?: string; backHref: string; trailing?: ReactNode };
 
+const DEFAULT_PROFILE_NAME = "Александр К.";
+
 function BankHeader(props: BankHeaderProps) {
+  const { researchState } = useParticipant();
+  const profileName = (researchState.participantCode?.trim() || DEFAULT_PROFILE_NAME).slice(0, DEFAULT_PROFILE_NAME.length);
   return (
     <header className={`${styles.bankHeader} ${props.variant === "profile" ? styles.profileHeader : styles.detailHeaderRow}`}>
       {props.variant === "profile" ? <>
         <div className={styles.profile}>
           <span className={styles.avatar}><Image src="/figma/home/avatar.svg" alt="" width={38} height={54} /></span>
-          <span>Александр К.</span>
+          <span>{profileName}</span>
         </div>
         <HeaderToolbar />
       </> : <>

@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { getInitialParticipantState, loadParticipantState, saveParticipantState } from "@/lib/testing/participant-state";
-import { PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
+import { PARTICIPANT_NAME_KEY, PARTICIPANT_SESSION_CHANGED, PARTICIPANT_SESSION_KEY, track } from "@/lib/testing/tracking";
 import { SESSION_HEARTBEAT_MS } from "@/lib/testing/session-presence";
 import type { ParticipantProductState, ResearchSessionState } from "@/lib/testing/types";
 import { REPLAY_APPLIED, REPLAY_MESSAGE, REPLAY_READY, REPLAY_SCREENS, type ReplayVisualState } from "./replay-state";
@@ -12,6 +12,19 @@ const idleResearchState: ResearchSessionState = {
   cashbackVariant: "disconnected", sessionId: null, participantCode: null,
   currentTask: null, currentTaskRunId: null, currentScreen: "/", resetVersion: 0, sessionStatus: "idle",
 };
+
+function subscribeToParticipantName(callback: () => void) {
+  window.addEventListener(PARTICIPANT_SESSION_CHANGED, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(PARTICIPANT_SESSION_CHANGED, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function participantNameSnapshot() {
+  return window.sessionStorage.getItem(PARTICIPANT_NAME_KEY);
+}
 
 interface ParticipantContextValue {
   productState: ParticipantProductState;
@@ -25,7 +38,8 @@ const ParticipantContext = createContext<ParticipantContextValue | null>(null);
 export function ParticipantProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [researchState] = useState(idleResearchState);
+  const participantName = useSyncExternalStore(subscribeToParticipantName, participantNameSnapshot, () => null);
+  const researchState = useMemo(() => ({ ...idleResearchState, participantCode: participantName }), [participantName]);
   const [productState, setProductState] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("replay")
     ? getInitialParticipantState("disconnected") : loadParticipantState("disconnected"));
   const [replayVisualState, setReplayVisualState] = useState<ReplayVisualState | null>(null);
